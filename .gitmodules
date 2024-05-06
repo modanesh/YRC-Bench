@@ -4,3 +4,9 @@
 [submodule "Matterport"]
 	path = Matterport
 	url = https://github.com/niessner/Matterport.git
+[submodule "robot-colosseum"]
+	path = robot-colosseum
+	url = https://github.com/robot-colosseum/robot-colosseum.git
+[submodule "cliport"]
+	path = cliport
+	url = https://github.com/cliport/cliport.git
