@@ -1,3 +1,6 @@
 [submodule "procgen"]
 	path = procgen
 	url = https://github.com/openai/procgen.git
+[submodule "Matterport"]
+	path = Matterport
+	url = https://github.com/niessner/Matterport.git
