@@ -2,3 +2,4 @@
 demos.log
 venv/
 .idea
+tmp*
