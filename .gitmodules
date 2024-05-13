@@ -7,3 +7,6 @@
 [submodule "Matterport3DSimulator"]
 	path = Matterport3DSimulator
 	url = https://github.com/peteanderson80/Matterport3DSimulator.git
+[submodule "ravens"]
+	path = ravens
+	url = https://github.com/google-research/ravens.git
