@@ -1,0 +1,52 @@
+2024-05-17 15:14:00,841 INFO    MainThread:238899 [wandb_setup.py:_flush():70] setting env: {}
+2024-05-17 15:14:00,841 INFO    MainThread:238899 [wandb_setup.py:_flush():70] multiprocessing start_methods=fork,spawn,forkserver
+2024-05-17 15:14:00,841 INFO    MainThread:238899 [wandb_setup.py:_flush():70] setting login settings: {}
+2024-05-17 15:14:00,841 INFO    MainThread:238899 [wandb_init.py:_log_setup():318] Logging user logs to /home/mohamad/Research/CHAI/yield_request_control/algorithms/wandb/run-20240517_151400-0xjm9f3t/logs/debug.log
+2024-05-17 15:14:00,841 INFO    MainThread:238899 [wandb_init.py:_log_setup():319] Logging internal logs to /home/mohamad/Research/CHAI/yield_request_control/algorithms/wandb/run-20240517_151400-0xjm9f3t/logs/debug-internal.log
+2024-05-17 15:14:02,930 INFO    MainThread:238899 [wandb_run.py:_console_start():1396] atexit reg
+2024-05-17 15:14:02,930 INFO    MainThread:238899 [wandb_run.py:_redirect():1259] redirect: SettingsConsole.REDIRECT
+2024-05-17 15:14:02,930 INFO    MainThread:238899 [wandb_run.py:_redirect():1264] Redirecting console.
+2024-05-17 15:14:02,930 INFO    MainThread:238899 [redirect.py:install():213] install start
+2024-05-17 15:14:02,930 INFO    MainThread:238899 [redirect.py:install():228] install stop
+2024-05-17 15:14:02,930 INFO    MainThread:238899 [redirect.py:install():213] install start
+2024-05-17 15:14:02,930 INFO    MainThread:238899 [redirect.py:install():228] install stop
+2024-05-17 15:14:02,931 INFO    MainThread:238899 [wandb_run.py:_redirect():1310] Redirects installed.
+2024-05-17 15:14:22,668 INFO    MainThread:238899 [wandb_run.py:_atexit_cleanup():1366] got exitcode: 1
+2024-05-17 15:14:22,669 INFO    MainThread:238899 [wandb_run.py:_restore():1338] restore
+2024-05-17 15:14:22,669 INFO    MainThread:238899 [redirect.py:uninstall():232] uninstall start
+2024-05-17 15:14:22,669 INFO    MainThread:238899 [redirect.py:_stop():287] _stop: stdout
+2024-05-17 15:14:22,669 INFO    MainThread:238899 [redirect.py:_stop():293] _stop closed: stdout
+2024-05-17 15:14:22,669 INFO    stdout    :238899 [redirect.py:_pipe_relay():129] relay done saw last write: stdout
+2024-05-17 15:14:22,669 INFO    stdout    :238899 [redirect.py:_pipe_relay():145] relay done done: stdout
+2024-05-17 15:14:22,669 INFO    MainThread:238899 [redirect.py:_stop():299] _stop joined: stdout
+2024-05-17 15:14:22,669 INFO    MainThread:238899 [redirect.py:_stop():301] _stop rd closed: stdout
+2024-05-17 15:14:22,669 INFO    MainThread:238899 [redirect.py:uninstall():236] uninstall done
+2024-05-17 15:14:22,669 INFO    MainThread:238899 [redirect.py:uninstall():232] uninstall start
+2024-05-17 15:14:22,669 INFO    MainThread:238899 [redirect.py:_stop():287] _stop: stderr
+2024-05-17 15:14:22,669 INFO    MainThread:238899 [redirect.py:_stop():293] _stop closed: stderr
+2024-05-17 15:14:22,669 INFO    stderr    :238899 [redirect.py:_pipe_relay():129] relay done saw last write: stderr
+2024-05-17 15:14:22,669 INFO    stderr    :238899 [redirect.py:_pipe_relay():145] relay done done: stderr
+2024-05-17 15:14:22,669 INFO    MainThread:238899 [redirect.py:_stop():299] _stop joined: stderr
+2024-05-17 15:14:22,669 INFO    MainThread:238899 [redirect.py:_stop():301] _stop rd closed: stderr
+2024-05-17 15:14:22,669 INFO    MainThread:238899 [redirect.py:uninstall():236] uninstall done
+2024-05-17 15:14:23,288 INFO    MainThread:238899 [wandb_run.py:_wait_for_finish():1489] got exit ret: file_counts {
+  wandb_count: 2
+  other_count: 1
+}
+pusher_stats {
+  uploaded_bytes: 962089
+  total_bytes: 962089
+}
+
+2024-05-17 15:14:25,291 INFO    MainThread:238899 [wandb_run.py:_wait_for_finish():1489] got exit ret: done: true
+exit_result {
+}
+file_counts {
+  wandb_count: 6
+  other_count: 1
+}
+pusher_stats {
+  uploaded_bytes: 971416
+  total_bytes: 971416
+}
+

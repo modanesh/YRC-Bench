@@ -1,0 +1,95 @@
+2024-05-17 14:32:39,498 INFO    MainThread:231181 [internal.py:wandb_internal():64] W&B internal server running at pid: 231181
+2024-05-17 14:32:39,499 DEBUG   HandlerThread:231181 [handler.py:handle_request():55] handle_request: check_version
+2024-05-17 14:32:39,500 INFO    WriterThread:231181 [datastore.py:open_for_write():77] open: /home/mohamad/Research/CHAI/yield_request_control/algorithms/wandb/run-20240517_143239-hjii9kit/run-hjii9kit.wandb
+2024-05-17 14:32:39,500 DEBUG   SenderThread:231181 [sender.py:send():117] send: header
+2024-05-17 14:32:39,500 DEBUG   SenderThread:231181 [sender.py:send():117] send: request
+2024-05-17 14:32:39,500 DEBUG   SenderThread:231181 [sender.py:send_request():126] send_request: check_version
+2024-05-17 14:32:39,501 DEBUG   Thread-4  :231181 [connectionpool.py:_new_conn():1055] Starting new HTTPS connection (1): pypi.org:443
+2024-05-17 14:32:39,525 DEBUG   Thread-4  :231181 [connectionpool.py:_make_request():549] https://pypi.org:443 "GET /pypi/wandb/json HTTP/1.1" 200 86728
+2024-05-17 14:32:39,535 DEBUG   SenderThread:231181 [sender.py:send():117] send: run
+2024-05-17 14:32:39,539 INFO    SenderThread:231181 [sender.py:_maybe_setup_resume():307] checking resume status for None/YRC/hjii9kit
+2024-05-17 14:32:39,540 DEBUG   SenderThread:231181 [connectionpool.py:_new_conn():1055] Starting new HTTPS connection (1): api.wandb.ai:443
+2024-05-17 14:32:39,612 DEBUG   SenderThread:231181 [connectionpool.py:_make_request():549] https://api.wandb.ai:443 "POST /graphql HTTP/1.1" 200 None
+2024-05-17 14:32:39,617 DEBUG   SenderThread:231181 [cmd.py:execute():1253] Popen(['git', 'cat-file', '--batch-check'], cwd=/home/mohamad/Research/CHAI/yield_request_control, stdin=<valid stream>, shell=False, universal_newlines=False)
+2024-05-17 14:32:39,621 DEBUG   SenderThread:231181 [connectionpool.py:_new_conn():1055] Starting new HTTPS connection (1): api.wandb.ai:443
+2024-05-17 14:32:39,770 DEBUG   SenderThread:231181 [connectionpool.py:_make_request():549] https://api.wandb.ai:443 "POST /graphql HTTP/1.1" 200 None
+2024-05-17 14:32:39,773 INFO    SenderThread:231181 [dir_watcher.py:__init__():165] watching files in: /home/mohamad/Research/CHAI/yield_request_control/algorithms/wandb/run-20240517_143239-hjii9kit/files
+2024-05-17 14:32:39,773 INFO    SenderThread:231181 [sender.py:_start_run_threads():593] run started: hjii9kit with start time 1715970759
+2024-05-17 14:32:39,775 DEBUG   SenderThread:231181 [sender.py:send():117] send: summary
+2024-05-17 14:32:39,775 INFO    SenderThread:231181 [sender.py:_save_file():682] saving file wandb-summary.json with policy end
+2024-05-17 14:32:39,775 DEBUG   HandlerThread:231181 [handler.py:handle_request():55] handle_request: run_start
+2024-05-17 14:32:40,539 INFO    WriterThread:231181 [datastore.py:close():258] close: /home/mohamad/Research/CHAI/yield_request_control/algorithms/wandb/run-20240517_143239-hjii9kit/run-hjii9kit.wandb
+2024-05-17 14:32:40,774 INFO    Thread-8  :231181 [dir_watcher.py:_on_file_created():213] file/dir created: /home/mohamad/Research/CHAI/yield_request_control/algorithms/wandb/run-20240517_143239-hjii9kit/files/wandb-summary.json
+2024-05-17 14:32:40,775 INFO    SenderThread:231181 [sender.py:finish():756] shutting down sender
+2024-05-17 14:32:40,775 INFO    SenderThread:231181 [dir_watcher.py:finish():279] shutting down directory watcher
+2024-05-17 14:32:41,775 INFO    SenderThread:231181 [dir_watcher.py:finish():309] scan: /home/mohamad/Research/CHAI/yield_request_control/algorithms/wandb/run-20240517_143239-hjii9kit/files
+2024-05-17 14:32:41,775 INFO    SenderThread:231181 [dir_watcher.py:finish():315] scan save: /home/mohamad/Research/CHAI/yield_request_control/algorithms/wandb/run-20240517_143239-hjii9kit/files/config.yaml config.yaml
+2024-05-17 14:32:41,775 INFO    SenderThread:231181 [dir_watcher.py:finish():315] scan save: /home/mohamad/Research/CHAI/yield_request_control/algorithms/wandb/run-20240517_143239-hjii9kit/files/wandb-summary.json wandb-summary.json
+2024-05-17 14:32:41,775 INFO    SenderThread:231181 [file_pusher.py:finish():174] shutting down file pusher
+2024-05-17 14:32:41,775 INFO    SenderThread:231181 [file_pusher.py:join():179] waiting for file pusher
+2024-05-17 14:32:41,776 DEBUG   Thread-5  :231181 [connectionpool.py:_new_conn():1055] Starting new HTTPS connection (1): api.wandb.ai:443
+2024-05-17 14:32:41,778 DEBUG   Thread-10 :231181 [connectionpool.py:_new_conn():1055] Starting new HTTPS connection (1): api.wandb.ai:443
+2024-05-17 14:32:41,779 DEBUG   Thread-11 :231181 [connectionpool.py:_new_conn():1055] Starting new HTTPS connection (1): api.wandb.ai:443
+2024-05-17 14:32:41,868 DEBUG   Thread-5  :231181 [connectionpool.py:_make_request():549] https://api.wandb.ai:443 "POST /files/modanesh/YRC/hjii9kit/file_stream HTTP/1.1" 200 None
+2024-05-17 14:32:41,923 DEBUG   Thread-11 :231181 [connectionpool.py:_make_request():549] https://api.wandb.ai:443 "POST /graphql HTTP/1.1" 200 None
+2024-05-17 14:32:41,925 DEBUG   Thread-11 :231181 [connectionpool.py:_new_conn():1055] Starting new HTTPS connection (1): storage.googleapis.com:443
+2024-05-17 14:32:41,946 DEBUG   Thread-10 :231181 [connectionpool.py:_make_request():549] https://api.wandb.ai:443 "POST /graphql HTTP/1.1" 200 None
+2024-05-17 14:32:41,948 DEBUG   Thread-10 :231181 [connectionpool.py:_new_conn():1055] Starting new HTTPS connection (1): storage.googleapis.com:443
+2024-05-17 14:32:42,197 DEBUG   Thread-10 :231181 [connectionpool.py:_make_request():549] https://storage.googleapis.com:443 "PUT /wandb-production.appspot.com/modanesh/YRC/hjii9kit/config.yaml?Expires=1716057161&GoogleAccessId=gorilla-files-url-signer-man%40wandb-production.iam.gserviceaccount.com&Signature=AWgJbL3urMJD%2FEKb34jL3qAoaVApWKysRtw08gkw7oEUqJouIj4eIYYCXM5dgqnZ4YTblpTw0W%2FQuEf2o%2B69UiJs5MshkV9esxJwjV5QcdFtAhXv3SxWNdZiCpGTLXUfI1OHSo%2BWUMiDZHhciF2HqEAn1AyMODOIGuEJYoxUC%2FveR1WowSubX%2BgtfrNLcJkiuTbrl1qt7%2FA4IHD66DKdpKaOtQ6t1m%2FqdM8%2BmIeYnMgVCD%2B3%2BlX9xdgCrkUSe%2FwF1DfUJw3y6rX%2BLMorqszMoO%2BFBlQ4%2Bpb1uZZ4KaGOF0gDrX4cbOs84z1C5IPpYgV6r%2BsUxdzpt5ZX%2Bv5DGSnZXA%3D%3D HTTP/1.1" 200 0
+2024-05-17 14:32:42,198 INFO    Thread-10 :231181 [upload_job.py:push():133] Uploaded file /home/mohamad/Research/CHAI/yield_request_control/algorithms/wandb/run-20240517_143239-hjii9kit/files/config.yaml
+2024-05-17 14:32:42,198 DEBUG   Thread-11 :231181 [connectionpool.py:_make_request():549] https://storage.googleapis.com:443 "PUT /wandb-production.appspot.com/modanesh/YRC/hjii9kit/wandb-summary.json?Expires=1716057161&GoogleAccessId=gorilla-files-url-signer-man%40wandb-production.iam.gserviceaccount.com&Signature=NZ4eaGFxkbLzZ79bbMMEIAvA5yg8i7DoI3kRmtFKJ%2BTlhUSkHhZiQTHnwD4oES85aOFJWCrU1OVHXzlD2gsO%2B5CUzxXYOyDhuwtcts%2FCqcf6Wogt0q%2Fyi%2FDnSwM29cf%2BLgbO6wZYdOAeFNirjLNqjOx3jYBrsTtMB1bJTSOmnac6b6Ly%2BPzqCkIm0pRR1CbS7A8fIB41rILis%2B55%2Baj6QIEkvWjXlq7bgEzRcVdX3c2%2FwUMgDeYinaZsNtxgYqArf1drN706ovGP%2BMtW8X3CTlko6b2Ly4GLYwl1rYC9h1HORPM%2F4iMqMvK%2BgQOaCQIR6kzFFbJ0h8F6K7BLbB3yMg%3D%3D HTTP/1.1" 200 0
+2024-05-17 14:32:42,199 INFO    Thread-11 :231181 [upload_job.py:push():133] Uploaded file /home/mohamad/Research/CHAI/yield_request_control/algorithms/wandb/run-20240517_143239-hjii9kit/files/wandb-summary.json
+2024-05-17 14:32:42,861 DEBUG   Thread-5  :231181 [connectionpool.py:_make_request():549] https://api.wandb.ai:443 "POST /files/modanesh/YRC/hjii9kit/file_stream HTTP/1.1" 200 None
+2024-05-17 14:32:42,862 ERROR   MainThread:231181 [internal.py:wandb_internal():130] Thread HandlerThread:
+Traceback (most recent call last):
+  File "/home/mohamad/Research/CHAI/yield_request_control/venv/lib/python3.8/site-packages/wandb/sdk/internal/internal_util.py", line 34, in run
+    self._run()
+  File "/home/mohamad/Research/CHAI/yield_request_control/venv/lib/python3.8/site-packages/wandb/sdk/internal/internal_util.py", line 61, in _run
+    self._process(record)
+  File "/home/mohamad/Research/CHAI/yield_request_control/venv/lib/python3.8/site-packages/wandb/sdk/internal/internal.py", line 204, in _process
+    self._hm.handle(record)
+  File "/home/mohamad/Research/CHAI/yield_request_control/venv/lib/python3.8/site-packages/wandb/sdk/internal/handler.py", line 48, in handle
+    handler(record)
+  File "/home/mohamad/Research/CHAI/yield_request_control/venv/lib/python3.8/site-packages/wandb/sdk/internal/handler.py", line 57, in handle_request
+    handler(record)
+  File "/home/mohamad/Research/CHAI/yield_request_control/venv/lib/python3.8/site-packages/wandb/sdk/internal/handler.py", line 207, in handle_request_run_start
+    self._system_stats = stats.SystemStats(pid=pid, interface=self._interface,)
+  File "/home/mohamad/Research/CHAI/yield_request_control/venv/lib/python3.8/site-packages/wandb/sdk/internal/stats.py", line 85, in __init__
+    if tpu.is_tpu_available():
+  File "/home/mohamad/Research/CHAI/yield_request_control/venv/lib/python3.8/site-packages/wandb/sdk/internal/tpu.py", line 91, in is_tpu_available
+    from tensorflow.python.distribute.cluster_resolver import tpu_cluster_resolver  # type: ignore  # noqa
+  File "/home/mohamad/Research/CHAI/yield_request_control/venv/lib/python3.8/site-packages/tensorflow/__init__.py", line 41, in <module>
+    from tensorflow.python.tools import module_util as _module_util
+  File "/home/mohamad/Research/CHAI/yield_request_control/venv/lib/python3.8/site-packages/tensorflow/python/__init__.py", line 45, in <module>
+    from tensorflow.python import data
+  File "/home/mohamad/Research/CHAI/yield_request_control/venv/lib/python3.8/site-packages/tensorflow/python/data/__init__.py", line 25, in <module>
+    from tensorflow.python.data import experimental
+  File "/home/mohamad/Research/CHAI/yield_request_control/venv/lib/python3.8/site-packages/tensorflow/python/data/experimental/__init__.py", line 96, in <module>
+    from tensorflow.python.data.experimental import service
+  File "/home/mohamad/Research/CHAI/yield_request_control/venv/lib/python3.8/site-packages/tensorflow/python/data/experimental/service/__init__.py", line 21, in <module>
+    from tensorflow.python.data.experimental.ops.data_service_ops import distribute
+  File "/home/mohamad/Research/CHAI/yield_request_control/venv/lib/python3.8/site-packages/tensorflow/python/data/experimental/ops/data_service_ops.py", line 25, in <module>
+    from tensorflow.python.data.experimental.ops import compression_ops
+  File "/home/mohamad/Research/CHAI/yield_request_control/venv/lib/python3.8/site-packages/tensorflow/python/data/experimental/ops/compression_ops.py", line 20, in <module>
+    from tensorflow.python.data.util import structure
+  File "/home/mohamad/Research/CHAI/yield_request_control/venv/lib/python3.8/site-packages/tensorflow/python/data/util/structure.py", line 26, in <module>
+    from tensorflow.python.data.util import nest
+  File "/home/mohamad/Research/CHAI/yield_request_control/venv/lib/python3.8/site-packages/tensorflow/python/data/util/nest.py", line 41, in <module>
+    from tensorflow.python.framework import sparse_tensor as _sparse_tensor
+  File "/home/mohamad/Research/CHAI/yield_request_control/venv/lib/python3.8/site-packages/tensorflow/python/framework/sparse_tensor.py", line 29, in <module>
+    from tensorflow.python.framework import constant_op
+  File "/home/mohamad/Research/CHAI/yield_request_control/venv/lib/python3.8/site-packages/tensorflow/python/framework/constant_op.py", line 29, in <module>
+    from tensorflow.python.eager import execute
+  File "/home/mohamad/Research/CHAI/yield_request_control/venv/lib/python3.8/site-packages/tensorflow/python/eager/execute.py", line 27, in <module>
+    from tensorflow.python.framework import dtypes
+  File "/home/mohamad/Research/CHAI/yield_request_control/venv/lib/python3.8/site-packages/tensorflow/python/framework/dtypes.py", line 513, in <module>
+    np.object,
+  File "/home/mohamad/Research/CHAI/yield_request_control/venv/lib/python3.8/site-packages/numpy/__init__.py", line 305, in __getattr__
+    raise AttributeError(__former_attrs__[attr])
+AttributeError: module 'numpy' has no attribute 'object'.
+`np.object` was a deprecated alias for the builtin `object`. To avoid this error in existing code, use `object` by itself. Doing this will not modify any behavior and is safe. 
+The aliases was originally deprecated in NumPy 1.20; for more details and guidance see the original release note at:
+    https://numpy.org/devdocs/release/1.20.0-notes.html#deprecations
+2024-05-17 14:32:42,871 DEBUG   sentry-sdk.BackgroundWorker:231181 [connectionpool.py:_new_conn():1055] Starting new HTTPS connection (1): o151352.ingest.sentry.io:443
+2024-05-17 14:32:42,962 DEBUG   sentry-sdk.BackgroundWorker:231181 [connectionpool.py:_make_request():549] https://o151352.ingest.sentry.io:443 "POST /api/5288891/envelope/ HTTP/1.1" 200 0
+2024-05-17 14:32:44,871 INFO    MainThread:231181 [internal.py:handle_exit():139] Internal process exited

@@ -10,3 +10,6 @@
 [submodule "ravens"]
 	path = ravens
 	url = https://github.com/google-research/ravens.git
+[submodule "procgenAISC"]
+	path = procgenAISC
+	url = https://github.com/JacobPfau/procgenAISC.git

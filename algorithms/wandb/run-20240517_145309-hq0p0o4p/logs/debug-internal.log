@@ -1,0 +1,192 @@
+2024-05-17 14:53:09,809 INFO    MainThread:233848 [internal.py:wandb_internal():64] W&B internal server running at pid: 233848
+2024-05-17 14:53:09,811 INFO    WriterThread:233848 [datastore.py:open_for_write():77] open: /home/mohamad/Research/CHAI/yield_request_control/algorithms/wandb/run-20240517_145309-hq0p0o4p/run-hq0p0o4p.wandb
+2024-05-17 14:53:09,811 DEBUG   SenderThread:233848 [sender.py:send():117] send: header
+2024-05-17 14:53:09,811 DEBUG   HandlerThread:233848 [handler.py:handle_request():55] handle_request: check_version
+2024-05-17 14:53:09,811 DEBUG   SenderThread:233848 [sender.py:send():117] send: request
+2024-05-17 14:53:09,811 DEBUG   SenderThread:233848 [sender.py:send_request():126] send_request: check_version
+2024-05-17 14:53:09,813 DEBUG   Thread-4  :233848 [connectionpool.py:_new_conn():1055] Starting new HTTPS connection (1): pypi.org:443
+2024-05-17 14:53:09,839 DEBUG   Thread-4  :233848 [connectionpool.py:_make_request():549] https://pypi.org:443 "GET /pypi/wandb/json HTTP/1.1" 200 86728
+2024-05-17 14:53:09,852 DEBUG   SenderThread:233848 [sender.py:send():117] send: run
+2024-05-17 14:53:09,855 INFO    SenderThread:233848 [sender.py:_maybe_setup_resume():307] checking resume status for None/YRC/hq0p0o4p
+2024-05-17 14:53:09,856 DEBUG   SenderThread:233848 [connectionpool.py:_new_conn():1055] Starting new HTTPS connection (1): api.wandb.ai:443
+2024-05-17 14:53:09,994 DEBUG   SenderThread:233848 [connectionpool.py:_make_request():549] https://api.wandb.ai:443 "POST /graphql HTTP/1.1" 200 None
+2024-05-17 14:53:09,998 DEBUG   SenderThread:233848 [cmd.py:execute():1253] Popen(['git', 'cat-file', '--batch-check'], cwd=/home/mohamad/Research/CHAI/yield_request_control, stdin=<valid stream>, shell=False, universal_newlines=False)
+2024-05-17 14:53:10,003 DEBUG   SenderThread:233848 [connectionpool.py:_new_conn():1055] Starting new HTTPS connection (1): api.wandb.ai:443
+2024-05-17 14:53:10,160 DEBUG   SenderThread:233848 [connectionpool.py:_make_request():549] https://api.wandb.ai:443 "POST /graphql HTTP/1.1" 200 None
+2024-05-17 14:53:10,163 INFO    SenderThread:233848 [dir_watcher.py:__init__():165] watching files in: /home/mohamad/Research/CHAI/yield_request_control/algorithms/wandb/run-20240517_145309-hq0p0o4p/files
+2024-05-17 14:53:10,163 INFO    SenderThread:233848 [sender.py:_start_run_threads():593] run started: hq0p0o4p with start time 1715971989
+2024-05-17 14:53:10,164 DEBUG   SenderThread:233848 [sender.py:send():117] send: summary
+2024-05-17 14:53:10,164 INFO    SenderThread:233848 [sender.py:_save_file():682] saving file wandb-summary.json with policy end
+2024-05-17 14:53:10,165 DEBUG   HandlerThread:233848 [handler.py:handle_request():55] handle_request: run_start
+2024-05-17 14:53:10,457 DEBUG   HandlerThread:233848 [tpu_cluster_resolver.py:<module>():34] Falling back to TensorFlow client; we recommended you install the Cloud TPU client directly with pip install cloud-tpu-client.
+2024-05-17 14:53:11,067 DEBUG   HandlerThread:233848 [meta.py:__init__():34] meta init
+2024-05-17 14:53:11,067 DEBUG   HandlerThread:233848 [meta.py:__init__():48] meta init done
+2024-05-17 14:53:11,067 DEBUG   HandlerThread:233848 [meta.py:probe():190] probe
+2024-05-17 14:53:11,073 DEBUG   HandlerThread:233848 [meta.py:_setup_git():180] setup git
+2024-05-17 14:53:11,073 DEBUG   HandlerThread:233848 [cmd.py:execute():1253] Popen(['git', 'cat-file', '--batch-check'], cwd=/home/mohamad/Research/CHAI/yield_request_control, stdin=<valid stream>, shell=False, universal_newlines=False)
+2024-05-17 14:53:11,079 DEBUG   HandlerThread:233848 [cmd.py:execute():1253] Popen(['git', 'rev-parse', '--show-toplevel'], cwd=/home/mohamad/Research/CHAI/yield_request_control, stdin=None, shell=False, universal_newlines=False)
+2024-05-17 14:53:11,083 DEBUG   HandlerThread:233848 [meta.py:_setup_git():187] setup git done
+2024-05-17 14:53:11,083 DEBUG   HandlerThread:233848 [meta.py:_save_code():69] save code
+2024-05-17 14:53:11,083 DEBUG   HandlerThread:233848 [cmd.py:execute():1253] Popen(['git', 'rev-parse', '--show-toplevel'], cwd=/home/mohamad/Research/CHAI/yield_request_control, stdin=None, shell=False, universal_newlines=False)
+2024-05-17 14:53:11,087 DEBUG   HandlerThread:233848 [meta.py:_save_code():90] save code done
+2024-05-17 14:53:11,087 DEBUG   HandlerThread:233848 [meta.py:_save_patches():107] save patches
+2024-05-17 14:53:11,087 DEBUG   HandlerThread:233848 [cmd.py:execute():1253] Popen(['git', 'rev-parse', '--show-toplevel'], cwd=/home/mohamad/Research/CHAI/yield_request_control, stdin=None, shell=False, universal_newlines=False)
+2024-05-17 14:53:11,091 DEBUG   HandlerThread:233848 [cmd.py:execute():1253] Popen(['git', 'version'], cwd=/home/mohamad/Research/CHAI/yield_request_control, stdin=None, shell=False, universal_newlines=False)
+2024-05-17 14:53:11,094 DEBUG   HandlerThread:233848 [cmd.py:execute():1253] Popen(['git', 'diff', '--cached', '--abbrev=40', '--full-index', '--raw'], cwd=/home/mohamad/Research/CHAI/yield_request_control, stdin=None, shell=False, universal_newlines=False)
+2024-05-17 14:53:11,164 INFO    Thread-8  :233848 [dir_watcher.py:_on_file_created():213] file/dir created: /home/mohamad/Research/CHAI/yield_request_control/algorithms/wandb/run-20240517_145309-hq0p0o4p/files/diff.patch
+2024-05-17 14:53:11,164 INFO    Thread-8  :233848 [dir_watcher.py:_on_file_created():213] file/dir created: /home/mohamad/Research/CHAI/yield_request_control/algorithms/wandb/run-20240517_145309-hq0p0o4p/files/code/algorithms/main.py
+2024-05-17 14:53:11,164 INFO    Thread-8  :233848 [dir_watcher.py:_on_file_created():213] file/dir created: /home/mohamad/Research/CHAI/yield_request_control/algorithms/wandb/run-20240517_145309-hq0p0o4p/files/wandb-summary.json
+2024-05-17 14:53:11,164 INFO    Thread-8  :233848 [dir_watcher.py:_on_file_created():213] file/dir created: /home/mohamad/Research/CHAI/yield_request_control/algorithms/wandb/run-20240517_145309-hq0p0o4p/files/code/algorithms
+2024-05-17 14:53:11,164 INFO    Thread-8  :233848 [dir_watcher.py:_on_file_created():213] file/dir created: /home/mohamad/Research/CHAI/yield_request_control/algorithms/wandb/run-20240517_145309-hq0p0o4p/files/code
+2024-05-17 14:53:11,416 DEBUG   HandlerThread:233848 [cmd.py:execute():1253] Popen(['git', 'merge-base', 'HEAD', '6b50cab145ee9e2ff7add71ee933f7c71fa856dd'], cwd=/home/mohamad/Research/CHAI/yield_request_control, stdin=None, shell=False, universal_newlines=False)
+2024-05-17 14:53:11,420 DEBUG   HandlerThread:233848 [meta.py:_save_patches():149] save patches done
+2024-05-17 14:53:11,420 DEBUG   HandlerThread:233848 [meta.py:_save_pip():52] save pip
+2024-05-17 14:53:11,421 DEBUG   HandlerThread:233848 [meta.py:_save_pip():66] save pip done
+2024-05-17 14:53:11,421 DEBUG   HandlerThread:233848 [meta.py:probe():231] probe done
+2024-05-17 14:53:11,423 DEBUG   SenderThread:233848 [sender.py:send():117] send: files
+2024-05-17 14:53:11,423 INFO    SenderThread:233848 [sender.py:_save_file():682] saving file wandb-metadata.json with policy now
+2024-05-17 14:53:11,423 INFO    SenderThread:233848 [sender.py:_save_file():682] saving file code/algorithms/main.py with policy now
+2024-05-17 14:53:11,423 INFO    SenderThread:233848 [sender.py:_save_file():682] saving file diff.patch with policy now
+2024-05-17 14:53:11,425 DEBUG   HandlerThread:233848 [handler.py:handle_request():55] handle_request: status
+2024-05-17 14:53:11,427 DEBUG   Thread-12 :233848 [connectionpool.py:_new_conn():1055] Starting new HTTPS connection (1): api.wandb.ai:443
+2024-05-17 14:53:11,427 DEBUG   SenderThread:233848 [sender.py:send():117] send: request
+2024-05-17 14:53:11,428 DEBUG   SenderThread:233848 [sender.py:send_request():126] send_request: status
+2024-05-17 14:53:11,428 DEBUG   Thread-11 :233848 [connectionpool.py:_new_conn():1055] Starting new HTTPS connection (1): api.wandb.ai:443
+2024-05-17 14:53:11,429 DEBUG   SenderThread:233848 [connectionpool.py:_new_conn():1055] Starting new HTTPS connection (1): api.wandb.ai:443
+2024-05-17 14:53:11,430 DEBUG   Thread-13 :233848 [connectionpool.py:_new_conn():1055] Starting new HTTPS connection (1): api.wandb.ai:443
+2024-05-17 14:53:11,555 DEBUG   Thread-13 :233848 [connectionpool.py:_make_request():549] https://api.wandb.ai:443 "POST /graphql HTTP/1.1" 200 None
+2024-05-17 14:53:11,558 DEBUG   Thread-13 :233848 [connectionpool.py:_new_conn():1055] Starting new HTTPS connection (1): storage.googleapis.com:443
+2024-05-17 14:53:11,558 DEBUG   Thread-12 :233848 [connectionpool.py:_make_request():549] https://api.wandb.ai:443 "POST /graphql HTTP/1.1" 200 None
+2024-05-17 14:53:11,561 DEBUG   Thread-12 :233848 [connectionpool.py:_new_conn():1055] Starting new HTTPS connection (1): storage.googleapis.com:443
+2024-05-17 14:53:11,564 DEBUG   SenderThread:233848 [connectionpool.py:_make_request():549] https://api.wandb.ai:443 "POST /graphql HTTP/1.1" 200 None
+2024-05-17 14:53:11,750 DEBUG   Thread-12 :233848 [connectionpool.py:_make_request():549] https://storage.googleapis.com:443 "PUT /wandb-production.appspot.com/modanesh/YRC/hq0p0o4p/code/algorithms/main.py?Expires=1716058391&GoogleAccessId=gorilla-files-url-signer-man%40wandb-production.iam.gserviceaccount.com&Signature=EJYGrzI3E4sroWwWPnrSAH80laifgHTzfsE5sVbEPW5oVrmOekh6A1VY9rLkjjwEycwgL4pbkWdh3uT3CXMpq13X6BgtqQheUXcEl11yuE4huTJ5Ki24M8bIi6WtzVy5mPO1G4IquuoiSfr%2Bseef7nSL7p5rmL8At%2B9qamG%2B4fgGZ3KKQZvDKHQm%2FwCp4C2vqzsocHzqczzTY23pb3f8hqutyz0yY59owaCBdPe1kTgfD%2BgYk%2B1aJcdl23NawjROG3JmHnJ0gPO5ZECjWibOoKN2UcwIQVfrZvEg%2B4TZVtxkXwmNleRGBLUYjkUI%2Fc27Kcpb3nL%2B9cCPxGKHxIGcsA%3D%3D HTTP/1.1" 200 0
+2024-05-17 14:53:11,752 INFO    Thread-12 :233848 [upload_job.py:push():133] Uploaded file /tmp/tmp7i0keaxhwandb/j3ou6ylj-code/algorithms/main.py
+2024-05-17 14:53:11,826 DEBUG   Thread-13 :233848 [connectionpool.py:_make_request():549] https://storage.googleapis.com:443 "PUT /wandb-production.appspot.com/modanesh/YRC/hq0p0o4p/diff.patch?Expires=1716058391&GoogleAccessId=gorilla-files-url-signer-man%40wandb-production.iam.gserviceaccount.com&Signature=Ycl6Lz0YH4ulkMmD9voX2CUjynxtI0dBXXHioVV5zLgNJBi0udYZqx0JLKkYGSpXYjgbx2tNyeNszgHlcjLgTMRDmeCmf%2BsrZTR4v9BvqTQeolfQbYxVzbHkSr5RTgIlBrUsurxjAeq5HrXis2aOnk%2FQqkrD37iDSlZ5lVgiS5OIbzK6%2FoeyMGS4LMilJanvpD%2B5NWCzSLZGQSqergVTmfkMBw5PX4W4BGKN3qQDhK29M9NFMbM2A9qwrJGMPYtF8K4Kp%2F9qcgclEiqYZtwP2wcMzo3sQPsQZmzqLlwLYHvBXf9Y%2BaennQPYMZxVtKjFJmq9caUho06bU%2FKXnUaxYw%3D%3D HTTP/1.1" 200 0
+2024-05-17 14:53:11,828 INFO    Thread-13 :233848 [upload_job.py:push():133] Uploaded file /tmp/tmp7i0keaxhwandb/pmb1ht07-diff.patch
+2024-05-17 14:53:12,164 INFO    Thread-8  :233848 [dir_watcher.py:_on_file_modified():226] file/dir modified: /home/mohamad/Research/CHAI/yield_request_control/algorithms/wandb/run-20240517_145309-hq0p0o4p/files/diff.patch
+2024-05-17 14:53:12,164 INFO    Thread-8  :233848 [dir_watcher.py:_on_file_created():213] file/dir created: /home/mohamad/Research/CHAI/yield_request_control/algorithms/wandb/run-20240517_145309-hq0p0o4p/files/requirements.txt
+2024-05-17 14:53:12,164 INFO    Thread-8  :233848 [dir_watcher.py:_on_file_created():213] file/dir created: /home/mohamad/Research/CHAI/yield_request_control/algorithms/wandb/run-20240517_145309-hq0p0o4p/files/output.log
+2024-05-17 14:53:12,164 INFO    Thread-8  :233848 [dir_watcher.py:_on_file_created():213] file/dir created: /home/mohamad/Research/CHAI/yield_request_control/algorithms/wandb/run-20240517_145309-hq0p0o4p/files/wandb-metadata.json
+2024-05-17 14:53:12,237 DEBUG   Thread-11 :233848 [connectionpool.py:_make_request():549] https://api.wandb.ai:443 "POST /graphql HTTP/1.1" 200 None
+2024-05-17 14:53:12,241 DEBUG   Thread-11 :233848 [connectionpool.py:_new_conn():1055] Starting new HTTPS connection (1): storage.googleapis.com:443
+2024-05-17 14:53:12,436 DEBUG   Thread-11 :233848 [connectionpool.py:_make_request():549] https://storage.googleapis.com:443 "PUT /wandb-production.appspot.com/modanesh/YRC/hq0p0o4p/wandb-metadata.json?Expires=1716058392&GoogleAccessId=gorilla-files-url-signer-man%40wandb-production.iam.gserviceaccount.com&Signature=ulCAbXOkVt9%2Fgoow4Pp2wYXRQfZtnhd6NBQ8merogOl8cnzAzaRHfHd6FDI8ZSSz2bGjViNa9mGbJ8eFUfwEBRzEBPOb%2FSDtfQ48H8X4s2c8XA%2Fv01emwX%2BmooB00mnNgTyNxqNsXeUOHOtiACZQLcV4oyGuZVBnHYG1O5VEs3OiMjqFH90YWDWWwtWuNRYk%2B79%2Fo%2BfrKKbQlAGYl2dC6wZKB3vNjDIU93734AhrUHyJQniS8j0gmQumHK2KMdWsW9g6ZA%2FlTVujxUya7PAA0lGKXsFjGI6o%2Bb30hSCYB4PoPAXeOWd7NPYjvM25N33e55lTIP42Q5uhGU5oWil8rQ%3D%3D HTTP/1.1" 200 0
+2024-05-17 14:53:12,437 INFO    Thread-11 :233848 [upload_job.py:push():133] Uploaded file /tmp/tmp7i0keaxhwandb/4u2q1ui1-wandb-metadata.json
+2024-05-17 14:53:13,566 DEBUG   Thread-5  :233848 [connectionpool.py:_new_conn():1055] Starting new HTTPS connection (1): api.wandb.ai:443
+2024-05-17 14:53:13,673 DEBUG   Thread-5  :233848 [connectionpool.py:_make_request():549] https://api.wandb.ai:443 "POST /files/modanesh/YRC/hq0p0o4p/file_stream HTTP/1.1" 200 None
+2024-05-17 14:53:14,467 DEBUG   SenderThread:233848 [sender.py:send():117] send: stats
+2024-05-17 14:53:16,559 DEBUG   Thread-5  :233848 [connectionpool.py:_make_request():549] https://api.wandb.ai:443 "POST /files/modanesh/YRC/hq0p0o4p/file_stream HTTP/1.1" 200 None
+2024-05-17 14:53:18,166 INFO    Thread-8  :233848 [dir_watcher.py:_on_file_modified():226] file/dir modified: /home/mohamad/Research/CHAI/yield_request_control/algorithms/wandb/run-20240517_145309-hq0p0o4p/files/output.log
+2024-05-17 14:53:18,760 DEBUG   Thread-5  :233848 [connectionpool.py:_make_request():549] https://api.wandb.ai:443 "POST /files/modanesh/YRC/hq0p0o4p/file_stream HTTP/1.1" 200 None
+2024-05-17 14:53:18,928 DEBUG   SenderThread:233848 [sender.py:send():117] send: stats
+2024-05-17 14:53:19,166 INFO    Thread-8  :233848 [dir_watcher.py:_on_file_modified():226] file/dir modified: /home/mohamad/Research/CHAI/yield_request_control/algorithms/wandb/run-20240517_145309-hq0p0o4p/files/output.log
+2024-05-17 14:53:19,516 DEBUG   HandlerThread:233848 [handler.py:handle_request():55] handle_request: poll_exit
+2024-05-17 14:53:19,516 DEBUG   SenderThread:233848 [sender.py:send():117] send: telemetry
+2024-05-17 14:53:19,518 DEBUG   SenderThread:233848 [connectionpool.py:_new_conn():1055] Starting new HTTPS connection (1): api.wandb.ai:443
+2024-05-17 14:53:19,623 DEBUG   SenderThread:233848 [connectionpool.py:_make_request():549] https://api.wandb.ai:443 "POST /graphql HTTP/1.1" 200 None
+2024-05-17 14:53:19,628 DEBUG   SenderThread:233848 [sender.py:send():117] send: exit
+2024-05-17 14:53:19,628 INFO    SenderThread:233848 [sender.py:send_exit():195] handling exit code: 1
+2024-05-17 14:53:19,628 INFO    SenderThread:233848 [sender.py:send_exit():203] send defer
+2024-05-17 14:53:19,628 DEBUG   SenderThread:233848 [sender.py:send():117] send: request
+2024-05-17 14:53:19,628 DEBUG   SenderThread:233848 [sender.py:send_request():126] send_request: poll_exit
+2024-05-17 14:53:19,629 DEBUG   HandlerThread:233848 [handler.py:handle_request():55] handle_request: defer
+2024-05-17 14:53:19,629 INFO    HandlerThread:233848 [handler.py:handle_request_defer():69] handle defer: 0
+2024-05-17 14:53:19,629 DEBUG   SenderThread:233848 [sender.py:send():117] send: request
+2024-05-17 14:53:19,629 DEBUG   SenderThread:233848 [sender.py:send_request():126] send_request: defer
+2024-05-17 14:53:19,629 INFO    SenderThread:233848 [sender.py:send_request_defer():212] handle sender defer: 0
+2024-05-17 14:53:19,629 INFO    SenderThread:233848 [sender.py:send_request_defer():248] send defer: 1
+2024-05-17 14:53:19,629 DEBUG   HandlerThread:233848 [handler.py:handle_request():55] handle_request: defer
+2024-05-17 14:53:19,629 INFO    HandlerThread:233848 [handler.py:handle_request_defer():69] handle defer: 1
+2024-05-17 14:53:19,738 DEBUG   SenderThread:233848 [sender.py:send():117] send: request
+2024-05-17 14:53:19,738 DEBUG   SenderThread:233848 [sender.py:send_request():126] send_request: defer
+2024-05-17 14:53:19,738 INFO    SenderThread:233848 [sender.py:send_request_defer():212] handle sender defer: 1
+2024-05-17 14:53:19,738 INFO    SenderThread:233848 [sender.py:send_request_defer():248] send defer: 2
+2024-05-17 14:53:19,738 DEBUG   SenderThread:233848 [sender.py:send():117] send: stats
+2024-05-17 14:53:19,738 DEBUG   HandlerThread:233848 [handler.py:handle_request():55] handle_request: defer
+2024-05-17 14:53:19,738 INFO    HandlerThread:233848 [handler.py:handle_request_defer():69] handle defer: 2
+2024-05-17 14:53:19,738 DEBUG   SenderThread:233848 [sender.py:send():117] send: request
+2024-05-17 14:53:19,738 DEBUG   SenderThread:233848 [sender.py:send_request():126] send_request: defer
+2024-05-17 14:53:19,738 INFO    SenderThread:233848 [sender.py:send_request_defer():212] handle sender defer: 2
+2024-05-17 14:53:19,738 INFO    SenderThread:233848 [sender.py:send_request_defer():248] send defer: 3
+2024-05-17 14:53:19,738 DEBUG   HandlerThread:233848 [handler.py:handle_request():55] handle_request: defer
+2024-05-17 14:53:19,738 INFO    HandlerThread:233848 [handler.py:handle_request_defer():69] handle defer: 3
+2024-05-17 14:53:19,738 DEBUG   SenderThread:233848 [sender.py:send():117] send: summary
+2024-05-17 14:53:19,739 INFO    SenderThread:233848 [sender.py:_save_file():682] saving file wandb-summary.json with policy end
+2024-05-17 14:53:19,739 DEBUG   SenderThread:233848 [sender.py:send():117] send: request
+2024-05-17 14:53:19,739 DEBUG   SenderThread:233848 [sender.py:send_request():126] send_request: defer
+2024-05-17 14:53:19,739 INFO    SenderThread:233848 [sender.py:send_request_defer():212] handle sender defer: 3
+2024-05-17 14:53:19,739 INFO    SenderThread:233848 [sender.py:send_request_defer():248] send defer: 4
+2024-05-17 14:53:19,739 DEBUG   HandlerThread:233848 [handler.py:handle_request():55] handle_request: defer
+2024-05-17 14:53:19,739 INFO    HandlerThread:233848 [handler.py:handle_request_defer():69] handle defer: 4
+2024-05-17 14:53:19,739 DEBUG   SenderThread:233848 [sender.py:send():117] send: request
+2024-05-17 14:53:19,739 DEBUG   SenderThread:233848 [sender.py:send_request():126] send_request: defer
+2024-05-17 14:53:19,739 INFO    SenderThread:233848 [sender.py:send_request_defer():212] handle sender defer: 4
+2024-05-17 14:53:19,739 INFO    SenderThread:233848 [dir_watcher.py:finish():279] shutting down directory watcher
+2024-05-17 14:53:20,166 INFO    Thread-8  :233848 [dir_watcher.py:_on_file_modified():226] file/dir modified: /home/mohamad/Research/CHAI/yield_request_control/algorithms/wandb/run-20240517_145309-hq0p0o4p/files/config.yaml
+2024-05-17 14:53:20,167 INFO    SenderThread:233848 [dir_watcher.py:_on_file_modified():226] file/dir modified: /home/mohamad/Research/CHAI/yield_request_control/algorithms/wandb/run-20240517_145309-hq0p0o4p/files/output.log
+2024-05-17 14:53:20,167 INFO    SenderThread:233848 [dir_watcher.py:_on_file_modified():226] file/dir modified: /home/mohamad/Research/CHAI/yield_request_control/algorithms/wandb/run-20240517_145309-hq0p0o4p/files/wandb-summary.json
+2024-05-17 14:53:20,167 INFO    SenderThread:233848 [dir_watcher.py:finish():309] scan: /home/mohamad/Research/CHAI/yield_request_control/algorithms/wandb/run-20240517_145309-hq0p0o4p/files
+2024-05-17 14:53:20,167 INFO    SenderThread:233848 [dir_watcher.py:finish():315] scan save: /home/mohamad/Research/CHAI/yield_request_control/algorithms/wandb/run-20240517_145309-hq0p0o4p/files/wandb-metadata.json wandb-metadata.json
+2024-05-17 14:53:20,167 INFO    SenderThread:233848 [dir_watcher.py:finish():315] scan save: /home/mohamad/Research/CHAI/yield_request_control/algorithms/wandb/run-20240517_145309-hq0p0o4p/files/config.yaml config.yaml
+2024-05-17 14:53:20,167 INFO    SenderThread:233848 [dir_watcher.py:finish():315] scan save: /home/mohamad/Research/CHAI/yield_request_control/algorithms/wandb/run-20240517_145309-hq0p0o4p/files/output.log output.log
+2024-05-17 14:53:20,169 DEBUG   Thread-14 :233848 [connectionpool.py:_new_conn():1055] Starting new HTTPS connection (1): api.wandb.ai:443
+2024-05-17 14:53:20,169 INFO    SenderThread:233848 [dir_watcher.py:finish():315] scan save: /home/mohamad/Research/CHAI/yield_request_control/algorithms/wandb/run-20240517_145309-hq0p0o4p/files/wandb-summary.json wandb-summary.json
+2024-05-17 14:53:20,169 INFO    SenderThread:233848 [dir_watcher.py:finish():315] scan save: /home/mohamad/Research/CHAI/yield_request_control/algorithms/wandb/run-20240517_145309-hq0p0o4p/files/requirements.txt requirements.txt
+2024-05-17 14:53:20,169 INFO    SenderThread:233848 [dir_watcher.py:finish():315] scan save: /home/mohamad/Research/CHAI/yield_request_control/algorithms/wandb/run-20240517_145309-hq0p0o4p/files/diff.patch diff.patch
+2024-05-17 14:53:20,169 INFO    SenderThread:233848 [dir_watcher.py:finish():315] scan save: /home/mohamad/Research/CHAI/yield_request_control/algorithms/wandb/run-20240517_145309-hq0p0o4p/files/code/algorithms/main.py code/algorithms/main.py
+2024-05-17 14:53:20,169 INFO    SenderThread:233848 [sender.py:send_request_defer():248] send defer: 5
+2024-05-17 14:53:20,171 DEBUG   Thread-16 :233848 [connectionpool.py:_new_conn():1055] Starting new HTTPS connection (1): api.wandb.ai:443
+2024-05-17 14:53:20,171 DEBUG   HandlerThread:233848 [handler.py:handle_request():55] handle_request: defer
+2024-05-17 14:53:20,172 DEBUG   Thread-15 :233848 [connectionpool.py:_new_conn():1055] Starting new HTTPS connection (1): api.wandb.ai:443
+2024-05-17 14:53:20,174 DEBUG   Thread-17 :233848 [connectionpool.py:_new_conn():1055] Starting new HTTPS connection (1): api.wandb.ai:443
+2024-05-17 14:53:20,174 INFO    HandlerThread:233848 [handler.py:handle_request_defer():69] handle defer: 5
+2024-05-17 14:53:20,174 DEBUG   SenderThread:233848 [sender.py:send():117] send: request
+2024-05-17 14:53:20,174 DEBUG   SenderThread:233848 [sender.py:send_request():126] send_request: defer
+2024-05-17 14:53:20,174 INFO    SenderThread:233848 [sender.py:send_request_defer():212] handle sender defer: 5
+2024-05-17 14:53:20,174 INFO    SenderThread:233848 [file_pusher.py:finish():174] shutting down file pusher
+2024-05-17 14:53:20,174 INFO    SenderThread:233848 [sender.py:send_request_defer():248] send defer: 6
+2024-05-17 14:53:20,174 DEBUG   HandlerThread:233848 [handler.py:handle_request():55] handle_request: defer
+2024-05-17 14:53:20,174 INFO    HandlerThread:233848 [handler.py:handle_request_defer():69] handle defer: 6
+2024-05-17 14:53:20,174 DEBUG   SenderThread:233848 [sender.py:send():117] send: request
+2024-05-17 14:53:20,174 DEBUG   SenderThread:233848 [sender.py:send_request():126] send_request: defer
+2024-05-17 14:53:20,174 INFO    SenderThread:233848 [sender.py:send_request_defer():212] handle sender defer: 6
+2024-05-17 14:53:20,267 DEBUG   Thread-17 :233848 [connectionpool.py:_make_request():549] https://api.wandb.ai:443 "POST /graphql HTTP/1.1" 200 None
+2024-05-17 14:53:20,269 DEBUG   Thread-17 :233848 [connectionpool.py:_new_conn():1055] Starting new HTTPS connection (1): storage.googleapis.com:443
+2024-05-17 14:53:20,271 DEBUG   Thread-5  :233848 [connectionpool.py:_make_request():549] https://api.wandb.ai:443 "POST /files/modanesh/YRC/hq0p0o4p/file_stream HTTP/1.1" 200 None
+2024-05-17 14:53:20,309 DEBUG   Thread-16 :233848 [connectionpool.py:_make_request():549] https://api.wandb.ai:443 "POST /graphql HTTP/1.1" 200 None
+2024-05-17 14:53:20,309 DEBUG   Thread-15 :233848 [connectionpool.py:_make_request():549] https://api.wandb.ai:443 "POST /graphql HTTP/1.1" 200 None
+2024-05-17 14:53:20,311 DEBUG   Thread-16 :233848 [connectionpool.py:_new_conn():1055] Starting new HTTPS connection (1): storage.googleapis.com:443
+2024-05-17 14:53:20,313 DEBUG   Thread-15 :233848 [connectionpool.py:_new_conn():1055] Starting new HTTPS connection (1): storage.googleapis.com:443
+2024-05-17 14:53:20,325 DEBUG   Thread-5  :233848 [connectionpool.py:_make_request():549] https://api.wandb.ai:443 "POST /files/modanesh/YRC/hq0p0o4p/file_stream HTTP/1.1" 200 None
+2024-05-17 14:53:20,326 INFO    SenderThread:233848 [sender.py:send_request_defer():248] send defer: 7
+2024-05-17 14:53:20,327 DEBUG   HandlerThread:233848 [handler.py:handle_request():55] handle_request: defer
+2024-05-17 14:53:20,327 INFO    HandlerThread:233848 [handler.py:handle_request_defer():69] handle defer: 7
+2024-05-17 14:53:20,327 DEBUG   SenderThread:233848 [sender.py:send():117] send: request
+2024-05-17 14:53:20,327 DEBUG   SenderThread:233848 [sender.py:send_request():126] send_request: defer
+2024-05-17 14:53:20,327 INFO    SenderThread:233848 [sender.py:send_request_defer():212] handle sender defer: 7
+2024-05-17 14:53:20,327 INFO    SenderThread:233848 [sender.py:send_request_defer():248] send defer: 8
+2024-05-17 14:53:20,327 DEBUG   SenderThread:233848 [sender.py:send():117] send: final
+2024-05-17 14:53:20,327 DEBUG   HandlerThread:233848 [handler.py:handle_request():55] handle_request: defer
+2024-05-17 14:53:20,328 DEBUG   SenderThread:233848 [sender.py:send():117] send: footer
+2024-05-17 14:53:20,328 INFO    HandlerThread:233848 [handler.py:handle_request_defer():69] handle defer: 8
+2024-05-17 14:53:20,328 DEBUG   SenderThread:233848 [sender.py:send():117] send: request
+2024-05-17 14:53:20,328 DEBUG   SenderThread:233848 [sender.py:send_request():126] send_request: defer
+2024-05-17 14:53:20,328 INFO    SenderThread:233848 [sender.py:send_request_defer():212] handle sender defer: 8
+2024-05-17 14:53:20,343 DEBUG   Thread-14 :233848 [connectionpool.py:_make_request():549] https://api.wandb.ai:443 "POST /graphql HTTP/1.1" 200 None
+2024-05-17 14:53:20,346 DEBUG   Thread-14 :233848 [connectionpool.py:_new_conn():1055] Starting new HTTPS connection (1): storage.googleapis.com:443
+2024-05-17 14:53:20,453 DEBUG   Thread-17 :233848 [connectionpool.py:_make_request():549] https://storage.googleapis.com:443 "PUT /wandb-production.appspot.com/modanesh/YRC/hq0p0o4p/requirements.txt?Expires=1716058400&GoogleAccessId=gorilla-files-url-signer-man%40wandb-production.iam.gserviceaccount.com&Signature=AYw%2Fw8lv40xWPcYR5gcXmnQUzb%2Fes8%2BHnKJysarEwKYZ5K%2BVjoLW0M6heY5BL2c%2B5j3bFmU357SB4UsFkptJGUh%2FSg88RjCf90AJnKjdGrT6o0jRnoyXAZvUJg59%2FrsaVMLkMpZzXMICWBr%2FvT8cxfl%2BC33gT%2BX%2F6Ne3m5%2BDKCZlNEdcu1rk2sNQd8VV8NfCg0iOMn01Ixnli05QO1DIG0mZbWmkco52FRkkgJRbobFMxoomGGRDfeGU6rOGgkIh%2F69vkZQ4c9YE93HtoTTCDsR8ky6k7TX22glxSD22zUVgSFIVhq2SmvMmF8vBKQyseJqLb5gCBJ%2Ft%2FluXwiSeLA%3D%3D HTTP/1.1" 200 0
+2024-05-17 14:53:20,454 INFO    Thread-17 :233848 [upload_job.py:push():133] Uploaded file /home/mohamad/Research/CHAI/yield_request_control/algorithms/wandb/run-20240517_145309-hq0p0o4p/files/requirements.txt
+2024-05-17 14:53:20,491 DEBUG   Thread-15 :233848 [connectionpool.py:_make_request():549] https://storage.googleapis.com:443 "PUT /wandb-production.appspot.com/modanesh/YRC/hq0p0o4p/output.log?Expires=1716058400&GoogleAccessId=gorilla-files-url-signer-man%40wandb-production.iam.gserviceaccount.com&Signature=FQQJ%2BxYiQ%2FVSw4hJvqz%2F5IeqQTllunuP3LcmqQkWje7otu5JRf%2BOpqP4fTDltqTN6c881118lnks2SOwuPrc19Xo%2BvGogylPzz5Hf59HRzjAVGix%2Bh0yEgdrX%2F4slsR23uWcuPHYmPd9%2Fu7ER2UYMMii6C0ahJox%2FiBdHVfcLz8mNDC39nMiiU30reOIT0t5OrrAQiNlxMm0NDLd5kVOeyrB%2BuNqRpOONOTEkGOUFwKG38Ig41vzT1%2BUDMtkFhGfx1tgw7TYe8bfIXxJTv9H4vDwjyosC16N53S7jg36OzbBujS1fn7wRwufaAVq2aMUOEcQKQ1XabV56ingvO%2FRIQ%3D%3D HTTP/1.1" 200 0
+2024-05-17 14:53:20,492 INFO    Thread-15 :233848 [upload_job.py:push():133] Uploaded file /home/mohamad/Research/CHAI/yield_request_control/algorithms/wandb/run-20240517_145309-hq0p0o4p/files/output.log
+2024-05-17 14:53:20,497 DEBUG   Thread-16 :233848 [connectionpool.py:_make_request():549] https://storage.googleapis.com:443 "PUT /wandb-production.appspot.com/modanesh/YRC/hq0p0o4p/wandb-summary.json?Expires=1716058400&GoogleAccessId=gorilla-files-url-signer-man%40wandb-production.iam.gserviceaccount.com&Signature=u3jmJ%2BypIawwXU5kjP7j%2FsxmUwN6JkrBz7f%2FvNsJedTJVlX9ulEJ7FABpKwtlY51MDcUxN1rRB3odLfr2G8J3%2BPhcxVTNHFTZXVwxl%2FKwHJ98z8i%2B6coddjm7ZtFpGSCawD4XmKBpRqEJmAdIvmHAvOelf2kN6fjH9LxBRgPXxPiTg7vo3RH%2FCxo0p%2BMuA%2Bel4AkKz1uDZHJeEg2VSoZ8spVEsBrq2I1tXKnN%2BvQBWt3JDGPLiDEPzde16wzpRFcVQbEJ9EHrpL41VsyCuF54FBKD%2F9SbNYAEA54uXIyQzCDXZtB8Go3PTRPbyf4lsN1DhPAXn%2Bf5Uw1D9HOYXF2dg%3D%3D HTTP/1.1" 200 0
+2024-05-17 14:53:20,497 INFO    Thread-16 :233848 [upload_job.py:push():133] Uploaded file /home/mohamad/Research/CHAI/yield_request_control/algorithms/wandb/run-20240517_145309-hq0p0o4p/files/wandb-summary.json
+2024-05-17 14:53:20,534 DEBUG   Thread-14 :233848 [connectionpool.py:_make_request():549] https://storage.googleapis.com:443 "PUT /wandb-production.appspot.com/modanesh/YRC/hq0p0o4p/config.yaml?Expires=1716058400&GoogleAccessId=gorilla-files-url-signer-man%40wandb-production.iam.gserviceaccount.com&Signature=qIkA8veYtWxJz6WsR%2FvMvsZNWBQ0PZrppBuK44LIgLN%2FSpNShKHP7CCs1zQrCkdAF9C1BvtpnSPUYlAHGYNg1dkt0HzHkMQ8kCLhIbauf9HQehv%2BvSO1nasiyerQ%2FgtBsdddto1yjh6TdTLfj1fd2pC80J2vMBuGWrGHdWAA%2F0UzT2IGbxYEB5l4ezL04g%2FBYJ8gRoEUIKaCoYRv%2Bs8WvX6LKiVFMdKsz6moWMRMEd1mATkfz0WAdGa1ck51bUEw1TYbWH%2FxDZoQUw6yARPQ5Ru1hLebKPnYjVas3wd5RvrGaOkYlxOsEY151nNZb3%2F4m%2FadDauNL%2FYu9C99GnMmNg%3D%3D HTTP/1.1" 200 0
+2024-05-17 14:53:20,535 INFO    Thread-14 :233848 [upload_job.py:push():133] Uploaded file /home/mohamad/Research/CHAI/yield_request_control/algorithms/wandb/run-20240517_145309-hq0p0o4p/files/config.yaml
+2024-05-17 14:53:21,258 WARNING MainThread:233848 [internal.py:wandb_internal():118] Internal process interrupt: 1
+2024-05-17 14:53:27,263 WARNING MainThread:233848 [internal.py:is_dead():286] Internal process exiting, parent pid 233813 disappeared
+2024-05-17 14:53:27,263 ERROR   MainThread:233848 [internal.py:wandb_internal():114] Internal process shutdown.
+2024-05-17 14:53:27,328 INFO    WriterThread:233848 [datastore.py:close():258] close: /home/mohamad/Research/CHAI/yield_request_control/algorithms/wandb/run-20240517_145309-hq0p0o4p/run-hq0p0o4p.wandb
+2024-05-17 14:53:27,329 INFO    SenderThread:233848 [sender.py:finish():756] shutting down sender
+2024-05-17 14:53:27,329 INFO    SenderThread:233848 [file_pusher.py:finish():174] shutting down file pusher
+2024-05-17 14:53:27,329 INFO    SenderThread:233848 [file_pusher.py:join():179] waiting for file pusher
+2024-05-17 14:53:27,334 INFO    HandlerThread:233848 [handler.py:finish():274] shutting down handler
+2024-05-17 14:53:27,335 INFO    MainThread:233848 [internal.py:handle_exit():139] Internal process exited

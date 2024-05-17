@@ -1,0 +1,24 @@
+{
+    "os": "Linux-5.15.0-107-generic-x86_64-with-glibc2.29",
+    "python": "3.8.10",
+    "heartbeatAt": "2024-05-17T18:55:10.892656",
+    "startedAt": "2024-05-17T18:55:08.441922",
+    "docker": null,
+    "gpu": "NVIDIA GeForce RTX 4070",
+    "gpu_count": 1,
+    "cpu_count": 24,
+    "cuda": null,
+    "args": [],
+    "state": "running",
+    "codePath": "algorithms/main.py",
+    "program": "/home/mohamad/Research/CHAI/yield_request_control/algorithms/main.py",
+    "git": {
+        "remote": "https://github.com/modanesh/yield_request_control.git",
+        "commit": "6b50cab145ee9e2ff7add71ee933f7c71fa856dd"
+    },
+    "email": "mohamad4danesh@gmail.com",
+    "root": "/home/mohamad/Research/CHAI/yield_request_control",
+    "host": "mohamad",
+    "username": "mohamad",
+    "executable": "/home/mohamad/Research/CHAI/yield_request_control/venv/bin/python"
+}
