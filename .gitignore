@@ -3,3 +3,4 @@ demos.log
 venv/
 .idea
 tmp*
+wandb/
