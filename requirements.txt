@@ -5,7 +5,6 @@ certifi==2024.2.2
 cffi==1.16.0
 charset-normalizer==3.3.2
 click==8.1.7
--e git+https://github.com/cliport/cliport.git@2be5c47b5bb9bb7040ad90693288b87b1e18e7ad#egg=cliport&subdirectory=../../cliport
 cloudpickle==1.6.0
 configparser==7.0.0
 contourpy==1.1.1
