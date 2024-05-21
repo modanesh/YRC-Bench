@@ -1,3 +1,4 @@
+import os
 import random
 import uuid
 
@@ -31,6 +32,8 @@ def logger_setup(args, hyperparameters):
     uuid_stamp = str(uuid.uuid4())[:8]
     run_name = f"PPO-procgen-{args.env_name}-{uuid_stamp}"
     logdir = os.path.join('logs', 'train', args.env_name)
+    if not (os.path.exists(logdir)):
+        os.makedirs(logdir)
     logdir_folders = [os.path.join(logdir, d) for d in os.listdir(logdir)]
     if args.model_file == "auto":  # try to figure out which file to load
         logdirs_with_model = [d for d in logdir_folders if any(['model' in filename for filename in os.listdir(d)])]
@@ -46,7 +49,7 @@ def logger_setup(args, hyperparameters):
     else:
         logdir = os.path.join(logdir, run_name)
     if not (os.path.exists(logdir)):
-        os.makedirs(logdir)
+        os.mkdir(logdir)
 
     print(f'Logging to {logdir}')
     cfg = vars(args)
