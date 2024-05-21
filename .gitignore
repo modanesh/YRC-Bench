@@ -4,3 +4,4 @@ venv/
 .idea
 tmp*
 wandb/
+__pycache__/
