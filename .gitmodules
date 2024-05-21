@@ -13,3 +13,9 @@
 [submodule "procgenAISC"]
 	path = procgenAISC
 	url = https://github.com/JacobPfau/procgenAISC.git
+[submodule "robot-colosseum"]
+	path = robot-colosseum
+	url = https://github.com/robot-colosseum/robot-colosseum.git
+[submodule "factor-world"]
+	path = factor-world
+	url = https://github.com/RLAgent/factor-world.git
