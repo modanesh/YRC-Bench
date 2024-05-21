@@ -1,21 +1,9 @@
-[submodule "procgen"]
-	path = procgen
-	url = https://github.com/openai/procgen.git
-[submodule "cliport"]
-	path = cliport
-	url = https://github.com/cliport/cliport.git
-[submodule "Matterport3DSimulator"]
-	path = Matterport3DSimulator
-	url = https://github.com/peteanderson80/Matterport3DSimulator.git
-[submodule "ravens"]
-	path = ravens
-	url = https://github.com/google-research/ravens.git
 [submodule "procgenAISC"]
 	path = procgenAISC
 	url = https://github.com/JacobPfau/procgenAISC.git
-[submodule "robot-colosseum"]
-	path = robot-colosseum
-	url = https://github.com/robot-colosseum/robot-colosseum.git
 [submodule "factor-world"]
 	path = factor-world
 	url = https://github.com/RLAgent/factor-world.git
+[submodule "Metaworld"]
+	path = Metaworld
+	url = https://github.com/Farama-Foundation/Metaworld.git
