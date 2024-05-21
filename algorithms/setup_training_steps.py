@@ -6,7 +6,7 @@ import yaml
 
 from logger import Logger
 from models import CategoricalPolicy, ImpalaModel, PPO
-from procgenAISC.procgen import ProcgenEnv
+from procgen import ProcgenEnv
 from procgen_wrappers import *
 from utils import set_global_seeds, get_latest_model
 
