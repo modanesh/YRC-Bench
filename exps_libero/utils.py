@@ -52,18 +52,21 @@ def evaluate(model_path, task_suite_name, task_id, camera_heights, camera_widths
     agent.eval()
 
     episodic_returns = []
+    horizon = 1000
     while len(episodic_returns) < eval_episodes:
+        ep_step = 0
         done = False
         ep_return = 0
         next_full_obs = env.reset()
         next_image_obs = torch.Tensor(extract_image_obs(next_full_obs)).to(device)
         next_vector_obs = torch.Tensor(extract_vector_obs(next_full_obs)).to(device)
-        while not done:
+        while not done and ep_step < horizon:
             action, _, _, _ = agent.get_action_and_value(next_image_obs, next_vector_obs)
             next_full_obs, reward, done, infos = env.step(action.cpu().numpy().flatten())
             next_image_obs = torch.Tensor(extract_image_obs(next_full_obs)).to(device)
             next_vector_obs = torch.Tensor(extract_vector_obs(next_full_obs)).to(device)
             ep_return += reward
+            ep_step += 1
         episodic_returns.append(ep_return)
     return episodic_returns
 

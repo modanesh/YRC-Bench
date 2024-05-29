@@ -26,7 +26,7 @@ def get_args():
     parser.add_argument("--camera_widths", type=int, default=128)
     parser.add_argument("--cuda", action="store_true")
     parser.add_argument("--learning_rate", type=float, default=3e-4)
-    parser.add_argument("--num_steps", type=int, default=2048)
+    parser.add_argument("--num_exploration_eps", type=int, default=10)
     parser.add_argument("--num_iterations", type=int, default=1_000)
     parser.add_argument("--total_timesteps", type=int, default=1_000_000)
     parser.add_argument("--batch_size", type=int, default=1024)
@@ -84,54 +84,57 @@ if __name__ == '__main__':
     agent = Agent(image_obs_shape, vector_obs_shape, action_shape).to(device)
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
-    image_obs = torch.zeros((args.num_steps,) + image_obs_shape).to(device)
-    vector_obs = torch.zeros((args.num_steps,) + vector_obs_shape).to(device)
-    actions = torch.zeros(args.num_steps, action_shape).to(device)
-    logprobs = torch.zeros(args.num_steps, ).to(device)
-    rewards = torch.zeros(args.num_steps, ).to(device)
-    dones = torch.zeros(args.num_steps, ).to(device)
-    values = torch.zeros(args.num_steps, ).to(device)
+    horizon = 1000
+    image_obs = torch.zeros((args.num_exploration_eps * horizon,) + image_obs_shape).to(device)
+    vector_obs = torch.zeros((args.num_exploration_eps * horizon,) + vector_obs_shape).to(device)
+    actions = torch.zeros(args.num_exploration_eps * horizon, action_shape).to(device)
+    logprobs = torch.zeros(args.num_exploration_eps * horizon, ).to(device)
+    rewards = torch.zeros(args.num_exploration_eps * horizon, ).to(device)
+    dones = torch.zeros(args.num_exploration_eps * horizon, ).to(device)
+    values = torch.zeros(args.num_exploration_eps * horizon, ).to(device)
 
     global_step = 0
-    next_full_obs = env.reset()
-    next_image_obs = torch.Tensor(extract_image_obs(next_full_obs)).to(device)
-    next_vector_obs = torch.Tensor(extract_vector_obs(next_full_obs)).to(device)
-    next_done = 0
-
-    for iteration in trange(1, args.num_iterations + 1):
-        for step in range(0, args.num_steps):
-            global_step += 1
-            image_obs[step] = next_image_obs
-            vector_obs[step] = next_vector_obs
-            dones[step] = next_done
-
-            with torch.no_grad():
-                action, logprob, _, value = agent.get_action_and_value(next_image_obs, next_vector_obs)
-                values[step] = value.flatten()
-            actions[step] = action
-            logprobs[step] = logprob
-
-            next_full_obs, reward, next_done, infos = env.step(action.cpu().numpy().flatten())
+    for iteration in trange(args.num_iterations):
+        for exp_eps in range(args.num_exploration_eps):
+            ep_reward = 0
+            ep_step = 0
+            next_done = 0
+            next_full_obs = env.reset()
             next_image_obs = torch.Tensor(extract_image_obs(next_full_obs)).to(device)
             next_vector_obs = torch.Tensor(extract_vector_obs(next_full_obs)).to(device)
-            rewards[step] = torch.tensor(reward).to(device).view(-1)
-            next_done = 1 if next_done else 0
-            next_image_obs, next_vector_obs = torch.Tensor(next_image_obs).to(device), torch.Tensor(next_vector_obs).to(device)
+            while not next_done and ep_step < horizon:
+                step = exp_eps * horizon + ep_step
+                image_obs[step] = next_image_obs
+                vector_obs[step] = next_vector_obs
+                dones[step] = next_done
 
-            if "final_info" in infos:
-                for info in infos["final_info"]:
-                    if info and "episode" in info:
-                        print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
-                        writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
-                        writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
+                with torch.no_grad():
+                    action, logprob, _, value = agent.get_action_and_value(next_image_obs, next_vector_obs)
+                    values[step] = value.flatten()
+                actions[step] = action
+                logprobs[step] = logprob
+
+                next_full_obs, reward, next_done, infos = env.step(action.cpu().numpy().flatten())
+                next_image_obs = torch.Tensor(extract_image_obs(next_full_obs)).to(device)
+                next_vector_obs = torch.Tensor(extract_vector_obs(next_full_obs)).to(device)
+                rewards[step] = torch.tensor(reward).to(device).view(-1)
+                next_done = 1 if next_done else 0
+                next_image_obs, next_vector_obs = torch.Tensor(next_image_obs).to(device), torch.Tensor(next_vector_obs).to(device)
+
+                ep_reward += reward
+
+                global_step += 1
+                ep_step += 1
+            writer.add_scalar("charts/episodic_return", ep_reward, exp_eps)
+
 
         # bootstrap value if not done
         with torch.no_grad():
             next_value = agent.get_value(next_image_obs, next_vector_obs).reshape(1, -1)
             advantages = torch.zeros_like(rewards).to(device)
             lastgaelam = 0
-            for t in reversed(range(args.num_steps)):
-                if t == args.num_steps - 1:
+            for t in reversed(range(args.num_exploration_eps * horizon)):
+                if t == args.num_exploration_eps * horizon - 1:
                     nextnonterminal = 1.0 - next_done
                     nextvalues = next_value
                 else:
@@ -142,12 +145,12 @@ if __name__ == '__main__':
             returns = advantages + values
 
         # Optimizing the policy and value network
-        b_inds = np.arange(min(args.batch_size, args.num_steps))
+        b_inds = np.arange(min(args.batch_size, args.num_exploration_eps * horizon))
         clipfracs = []
-        minibatch_size = min(args.batch_size, args.num_steps) // 16
+        minibatch_size = min(args.batch_size, args.num_exploration_eps * horizon) // 16
         for epoch in trange(args.update_epochs):
             np.random.shuffle(b_inds)
-            for start in range(0, min(args.batch_size, args.num_steps), minibatch_size):
+            for start in range(0, min(args.batch_size, args.num_exploration_eps * horizon), minibatch_size):
                 end = start + minibatch_size
                 mb_inds = b_inds[start:end]
 
@@ -176,7 +179,7 @@ if __name__ == '__main__':
                     newvalue - values[mb_inds],
                     -args.clip_coef,
                     args.clip_coef,
-                )
+                    )
                 v_loss_clipped = (v_clipped - returns[mb_inds]) ** 2
                 v_loss_max = torch.max(v_loss_unclipped, v_loss_clipped)
                 v_loss = 0.5 * v_loss_max.mean()
