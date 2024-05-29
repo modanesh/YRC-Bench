@@ -6,6 +6,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from tqdm import trange
+
 import wandb
 
 from libero.libero import benchmark, get_libero_path, envs
@@ -96,7 +98,7 @@ if __name__ == '__main__':
     next_vector_obs = torch.Tensor(extract_vector_obs(next_full_obs)).to(device)
     next_done = 0
 
-    for iteration in range(1, args.num_iterations + 1):
+    for iteration in trange(1, args.num_iterations + 1):
         for step in range(0, args.num_steps):
             global_step += 1
             image_obs[step] = next_image_obs
