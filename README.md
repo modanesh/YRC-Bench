@@ -7,19 +7,11 @@ Added environments and benchmarks:
 IMPORTANT: Cliport is heavily based on Ravens (link: https://github.com/google-research/ravens). Cliport contains additional tasks that incorporate human language instructions as additional inputs to the agent. 
 
 
-### Environment Structure
-#### Procgen
 
-```python
-import gym3
-from procgen.procgen import ProcgenGym3Env
-env = ProcgenGym3Env(num=2, env_name="coinrun")
-step = 0
-while True:
-    # take a random action
-    env.act(gym3.types_np.sample(env.ac_space, bshape=(env.num,)))
-    
-    rew, obs, first = env.observe()
-    print(f"step {step} reward {rew} first {first}")
-    step += 1
+## Setup LIBERO on CHAI cluster
+```shell
+export MUJOCO_GL="osmesa"
+export MJLIB_PATH=/nas/ucb/$(whoami)/.mujoco/mujoco200/bin/libmujoco200.so
+export LD_LIBRARY_PATH=/nas/ucb/$(whoami)/.mujoco/mujoco200/bin:$LD_LIBRARY_PATH
+export MUJOCO_PY_MJPRO_PATH=/nas/ucb/$(whoami)/.mujoco/mujoco200/
 ```
