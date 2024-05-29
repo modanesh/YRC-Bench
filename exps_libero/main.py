@@ -145,7 +145,7 @@ if __name__ == '__main__':
         b_inds = np.arange(min(args.batch_size, args.num_steps))
         clipfracs = []
         minibatch_size = min(args.batch_size, args.num_steps) // 16
-        for epoch in range(args.update_epochs):
+        for epoch in trange(args.update_epochs):
             np.random.shuffle(b_inds)
             for start in range(0, min(args.batch_size, args.num_steps), minibatch_size):
                 end = start + minibatch_size
