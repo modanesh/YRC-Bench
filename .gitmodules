@@ -4,3 +4,6 @@
 [submodule "LIBERO"]
 	path = LIBERO
 	url = https://github.com/Lifelong-Robot-Learning/LIBERO.git
+[submodule "RLzoo"]
+	path = RLzoo
+	url = https://github.com/tensorlayer/RLzoo.git
