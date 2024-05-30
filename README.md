@@ -15,3 +15,11 @@ export MJLIB_PATH=/nas/ucb/$(whoami)/.mujoco/mujoco200/bin/libmujoco200.so
 export LD_LIBRARY_PATH=/nas/ucb/$(whoami)/.mujoco/mujoco200/bin:$LD_LIBRARY_PATH
 export MUJOCO_PY_MJPRO_PATH=/nas/ucb/$(whoami)/.mujoco/mujoco200/
 ```
+
+## Setup RLBench on CHAI cluster
+```shell
+export COPPELIASIM_ROOT=/nas/ucb/mohamad/CoppeliaSim_Edu_V4_1_0_Ubuntu20_04
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$COPPELIASIM_ROOT
+export QT_QPA_PLATFORM_PLUGIN_PATH=$COPPELIASIM_ROOT
+export QT_QPA_PLATFORM=offscreen
+```
