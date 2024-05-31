@@ -1,3 +1,5 @@
+-e git+https://github.com/JacobPfau/procgenAISC.git@7821f2c00be9a4ff753c6d54b20aed26028ca812#egg=procgen&subdirectory=../../procgenAISC
+-e git+https://github.com/modanesh/cliport.git@ec9d1c96e0fd6d8f2028d743d4107ad3081c0c6b#egg=cliport&subdirectory=../../cliport
 absl-py==0.7.0
 antlr4-python3-runtime==4.8
 cachetools==5.3.3
