@@ -1,3 +1,6 @@
 [submodule "procgenAISC"]
 	path = procgenAISC
 	url = https://github.com/JacobPfau/procgenAISC.git
+[submodule "cliport"]
+	path = cliport
+	url = https://github.com/cliport/cliport.git
