@@ -1,12 +1,11 @@
-import os
 import random
 import uuid
 
-import wandb
 import yaml
 
+import wandb
 from logger import Logger
-from models import CategoricalPolicy, ImpalaModel, PPO
+from models import CategoricalPolicy, ImpalaModel, PPO, PPOFreezed
 from procgen import ProcgenEnv
 from procgen_wrappers import *
 from utils import set_global_seeds, get_latest_model
@@ -19,7 +18,7 @@ def hyperparam_setup(args):
     set_global_seeds(args.seed)
     if args.start_level == args.start_level_val:
         raise ValueError("Seeds for training and validation envs are equal.")
-    with open(f'./hyperparams/{args.config_path}', 'r') as f:
+    with open(f'./configs/{args.config_path}', 'r') as f:
         hyperparameters = yaml.safe_load(f)[args.param_name]
     args.n_envs = hyperparameters.get('n_envs', 256)
     args.n_steps = hyperparameters.get('n_steps', 256)
@@ -27,10 +26,10 @@ def hyperparam_setup(args):
     return args, hyperparameters
 
 
-def logger_setup(args):
+def logger_setup(args, hyperparameters):
     print('::[LOGGING]::INITIALIZING LOGGER...')
     uuid_stamp = str(uuid.uuid4())[:8]
-    run_name = f"PPO-procgen-{args.env_name}-{uuid_stamp}"
+    run_name = f"PPO-procgen-{args.env_name}-{args.param_name}-{uuid_stamp}"
     logdir = os.path.join('logs', 'train', args.env_name)
     if not (os.path.exists(logdir)):
         os.makedirs(logdir)
@@ -53,6 +52,8 @@ def logger_setup(args):
 
     print(f'Logging to {logdir}')
     cfg = vars(args)
+    cfg.update(hyperparameters)
+
     wb_resume = "allow" if args.model_file is None else "must"
     wandb.init(config=cfg, resume=wb_resume, project="YRC", name=run_name)
     logger = Logger(args.n_envs, logdir)
@@ -82,8 +83,7 @@ def create_env(args, is_valid=False):
     return env
 
 
-def load_model(env, env_valid, model_file, policy, device):
-    agent = PPO(env, policy, device, env_valid=env_valid)
+def load_model(agent, model_file):
     print("Loading agent from %s" % model_file)
     checkpoint = torch.load(model_file)
     agent.policy.load_state_dict(checkpoint["model_state_dict"])
@@ -91,7 +91,7 @@ def load_model(env, env_valid, model_file, policy, device):
     return agent
 
 
-def model_setup(env, env_valid, configs):
+def model_setup(env, env_valid, configs, trainable):
     observation_shape = env.observation_space.shape
     in_channels = observation_shape[0]
     action_space = env.action_space
@@ -102,11 +102,14 @@ def model_setup(env, env_valid, configs):
     action_size = action_space.n
     policy = CategoricalPolicy(model, recurrent, action_size)
     policy.to(configs['device'])
-
-    weak_agent = load_model(env, env_valid, configs['weak_model_file'], policy, configs['device'])
-    oracle_agent = load_model(env, env_valid, configs['oracle_model_file'], policy, configs['device'])
-
-    return weak_agent, oracle_agent
+    if trainable:
+        return model, policy
+    else:
+        weak_agent = PPOFreezed(env, policy, configs['device'], env_valid=env_valid)
+        weak_agent = load_model(weak_agent, configs['weak_model_file'])
+        oracle_agent = PPOFreezed(env, policy, configs['device'], env_valid=env_valid)
+        oracle_agent = load_model(oracle_agent, configs['oracle_model_file'])
+        return weak_agent, oracle_agent
 
 
 def agent_setup(env, env_valid, policy, logger, storage, storage_valid, device, num_checkpoints, model_file, hyperparameters):
@@ -117,8 +120,5 @@ def agent_setup(env, env_valid, policy, logger, storage, storage_valid, device, 
                 storage_valid=storage_valid,
                 **hyperparameters)
     if model_file is not None:
-        print("Loading agent from %s" % model_file)
-        checkpoint = torch.load(model_file)
-        agent.policy.load_state_dict(checkpoint["model_state_dict"])
-        agent.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+        agent = load_model(agent, model_file)
     return agent
