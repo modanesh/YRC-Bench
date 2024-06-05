@@ -98,10 +98,10 @@ def model_setup(env, env_valid, configs, trainable):
 
     model = ImpalaModel(in_channels=in_channels)
 
-    recurrent = configs.get('recurrent', False)
+    recurrent = configs.recurrent
     action_size = action_space.n
     policy = CategoricalPolicy(model, recurrent, action_size)
-    policy.to(configs['device'])
+    policy.to(configs.device)
     if trainable:
         return model, policy
     else:
