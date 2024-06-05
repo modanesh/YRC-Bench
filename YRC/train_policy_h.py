@@ -1,7 +1,12 @@
 import argparse
+import os
+import random
 
-import setup_training_steps
-from utils import Storage
+import torch
+import yaml
+
+from procgen_wrapper import setup_training_steps as procgen_setup
+from procgen_wrapper import utils
 
 
 def get_args():
@@ -18,27 +23,41 @@ def get_args():
     parser.add_argument('--seed', type=int, default=0, help='Random generator seed')
     parser.add_argument('--log_level', type=int, default=int(40), help='[10,20,30,40]')
     parser.add_argument('--num_checkpoints', type=int, default=int(1), help='number of checkpoints to store')
-    parser.add_argument('--model_file', type=str)
+    parser.add_argument('--weak_model_file', type=str, required=True)
+    parser.add_argument('--oracle_model_file', type=str, required=True)
     parser.add_argument('--random_percent', type=int, default=0, help='COINRUN: percent of environments in which coin is randomized (only for coinrun)')
     parser.add_argument('--key_penalty', type=int, default=0, help='HEIST_AISC: Penalty for picking up keys (divided by 10)')
     parser.add_argument('--step_penalty', type=int, default=0, help='HEIST_AISC: Time penalty per step (divided by 1000)')
     parser.add_argument('--rand_region', type=int, default=0, help='MAZE: size of region (in upper left corner) in which goal is sampled.')
-    parser.add_argument('--config_path', type=str, default='procgen/config.yml', help='path to hyperparameter config yaml')
+    parser.add_argument('--config_path', type=str, default='config.yml', help='path to hyperparameter config yaml')
     parser.add_argument('--num_threads', type=int, default=8)
     return parser.parse_args()
 
 
+def config_merger(cfgs, config_path):
+    with open(os.path.join(config_path, 'config.yml')) as f:
+        specific_cfgs = yaml.load(f, Loader=yaml.FullLoader)[cfgs.param_name]
+    cfgs.val_env_name = cfgs.val_env_name if cfgs.val_env_name else cfgs.env_name
+    cfgs.start_level_val = random.randint(0, 9999)
+    utils.set_global_seeds(cfgs.seed)
+    if cfgs.start_level == cfgs.start_level_val:
+        raise ValueError("Seeds for training and validation envs are equal.")
+    cfgs.device = torch.device(cfgs.device)
+    cfgs.update(specific_cfgs)
+    return cfgs
+
+
+def load_task(cfgs):
+    env = procgen_setup.create_env(cfgs)
+    env_valid = procgen_setup.create_env(cfgs, is_valid=True)
+    return env, env_valid
+
+
 if __name__ == '__main__':
     args = get_args()
-    args, hyperparameters = setup_training_steps.hyperparam_setup(args)
-    args, logger = setup_training_steps.logger_setup(args, hyperparameters)
+    configs = config_merger(args, './procgen_wrapper/configs')
+    task, task_valid = load_task(configs)
+    weak_agent, oracle_agent = procgen_setup.model_setup(task, task_valid, configs)
 
-    env = setup_training_steps.create_env(args, hyperparameters)
-    env_valid = setup_training_steps.create_env(args, hyperparameters, is_valid=True)
-
-    model, policy = setup_training_steps.model_setup(env, hyperparameters, args.device)
-    storage = Storage(env.observation_space.shape, model.output_dim, args.n_steps, args.n_envs, args.device)
-    storage_valid = Storage(env.observation_space.shape, model.output_dim, args.n_steps, args.n_envs, args.device)
-
-    agent = setup_training_steps.agent_setup(env, env_valid, policy, logger, storage, storage_valid, args.device, args.num_checkpoints, args.model_file, hyperparameters)
-    agent.train(args.num_timesteps)
+    pi_h = train(task, pi_w, pi_o)
+    evaluate(task, pi_h)

@@ -27,7 +27,7 @@ def hyperparam_setup(args):
     return args, hyperparameters
 
 
-def logger_setup(args, hyperparameters):
+def logger_setup(args):
     print('::[LOGGING]::INITIALIZING LOGGER...')
     uuid_stamp = str(uuid.uuid4())[:8]
     run_name = f"PPO-procgen-{args.env_name}-{uuid_stamp}"
@@ -53,8 +53,6 @@ def logger_setup(args, hyperparameters):
 
     print(f'Logging to {logdir}')
     cfg = vars(args)
-    cfg.update(hyperparameters)
-
     wb_resume = "allow" if args.model_file is None else "must"
     wandb.init(config=cfg, resume=wb_resume, project="YRC", name=run_name)
     logger = Logger(args.n_envs, logdir)
@@ -63,9 +61,9 @@ def logger_setup(args, hyperparameters):
     return args, logger
 
 
-def create_env(args, hyperparameters, is_valid=False):
+def create_env(args, is_valid=False):
     print('::[LOGGING]::INITIALIZING ENVIRONMENTS...')
-    env = ProcgenEnv(num_envs=hyperparameters.get('n_steps', 256),
+    env = ProcgenEnv(num_envs=args.n_steps,
                      env_name=args.val_env_name if is_valid else args.env_name,
                      num_levels=0 if is_valid else args.num_levels,
                      start_level=args.start_level_val if is_valid else args.start_level,
@@ -76,8 +74,7 @@ def create_env(args, hyperparameters, is_valid=False):
                      key_penalty=args.key_penalty,
                      rand_region=args.rand_region)
     env = VecExtractDictObs(env, "rgb")
-    normalize_rew = hyperparameters.get('normalize_rew', True)
-    if normalize_rew:
+    if args.normalize_rew:
         env = VecNormalize(env, ob=False)  # normalizing returns, but not
         # the img frames
     env = TransposeFrame(env)
@@ -85,24 +82,31 @@ def create_env(args, hyperparameters, is_valid=False):
     return env
 
 
-def model_setup(env, hyperparameters, device):
-    print('::[LOGGING]::INTIALIZIINITIALIZINGNG MODEL...')
+def load_model(env, env_valid, model_file, policy, device):
+    agent = PPO(env, policy, device, env_valid=env_valid)
+    print("Loading agent from %s" % model_file)
+    checkpoint = torch.load(model_file)
+    agent.policy.load_state_dict(checkpoint["model_state_dict"])
+    agent.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+    return agent
+
+
+def model_setup(env, env_valid, configs):
     observation_shape = env.observation_space.shape
     in_channels = observation_shape[0]
     action_space = env.action_space
 
-    # Model architecture
     model = ImpalaModel(in_channels=in_channels)
 
-    # Discrete action space
-    recurrent = hyperparameters.get('recurrent', False)
-    if isinstance(action_space, gym.spaces.Discrete):
-        action_size = action_space.n
-        policy = CategoricalPolicy(model, recurrent, action_size)
-    else:
-        raise NotImplementedError
-    policy.to(device)
-    return model, policy
+    recurrent = configs.get('recurrent', False)
+    action_size = action_space.n
+    policy = CategoricalPolicy(model, recurrent, action_size)
+    policy.to(configs['device'])
+
+    weak_agent = load_model(env, env_valid, configs['weak_model_file'], policy, configs['device'])
+    oracle_agent = load_model(env, env_valid, configs['oracle_model_file'], policy, configs['device'])
+
+    return weak_agent, oracle_agent
 
 
 def agent_setup(env, env_valid, policy, logger, storage, storage_valid, device, num_checkpoints, model_file, hyperparameters):
