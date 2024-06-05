@@ -19,8 +19,6 @@ def get_args():
     parser.add_argument('--log_level', type=int, default=int(40), help='[10,20,30,40]')
     parser.add_argument('--num_checkpoints', type=int, default=int(1), help='number of checkpoints to store')
     parser.add_argument('--model_file', type=str)
-    parser.add_argument('--use_wandb', action="store_true")
-    parser.add_argument('--wandb_tags', type=str, nargs='+')
     parser.add_argument('--random_percent', type=int, default=0, help='COINRUN: percent of environments in which coin is randomized (only for coinrun)')
     parser.add_argument('--key_penalty', type=int, default=0, help='HEIST_AISC: Penalty for picking up keys (divided by 10)')
     parser.add_argument('--step_penalty', type=int, default=0, help='HEIST_AISC: Time penalty per step (divided by 1000)')
@@ -34,10 +32,13 @@ if __name__ == '__main__':
     args = get_args()
     args, hyperparameters = setup_training_steps.hyperparam_setup(args)
     args, logger = setup_training_steps.logger_setup(args, hyperparameters)
+
     env = setup_training_steps.create_env(args, hyperparameters)
     env_valid = setup_training_steps.create_env(args, hyperparameters, is_valid=True)
+
     model, policy = setup_training_steps.model_setup(env, hyperparameters, args.device)
     storage = Storage(env.observation_space.shape, model.output_dim, args.n_steps, args.n_envs, args.device)
     storage_valid = Storage(env.observation_space.shape, model.output_dim, args.n_steps, args.n_envs, args.device)
+
     agent = setup_training_steps.agent_setup(env, env_valid, policy, logger, storage, storage_valid, args.device, args.num_checkpoints, args.model_file, hyperparameters)
     agent.train(args.num_timesteps)
