@@ -85,5 +85,4 @@ if __name__ == '__main__':
     agent = procgen_setup.agent_setup(task, task_valid, policy, writer, storage, storage_valid, configs.device, configs.num_checkpoints,
                                       configs.model_file, pi_w=weak_agent, pi_o=oracle_agent)
 
-    # todo: implement the following
     agent.train(configs.num_timesteps, pi_h=True)

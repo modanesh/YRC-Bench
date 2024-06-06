@@ -55,7 +55,7 @@ def logger_setup(args, hyperparameters):
     cfg.update(hyperparameters)
 
     wb_resume = "allow" if args.model_file is None else "must"
-    wandb.init(config=cfg, resume=wb_resume, project="YRC", name=run_name)
+    wandb.init(config=cfg, resume=wb_resume, project="YRC", name=run_name, dir=os.getcwd().split("YRC")[0])
     logger = Logger(args.n_envs, logdir)
     for key, value in cfg.items():
         print(f"{key} : {value}")
