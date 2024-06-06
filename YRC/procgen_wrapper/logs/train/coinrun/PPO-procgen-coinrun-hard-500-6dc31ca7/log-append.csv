@@ -1,0 +1,14 @@
+timesteps,wall_time,num_episodes,max_episode_rewards,mean_episode_rewards,min_episode_rewards,max_episode_len,mean_episode_len,min_episode_len,mean_timeouts,val_max_episode_rewards,val_mean_episode_rewards,val_min_episode_rewards,val_max_episode_len,val_mean_episode_len,val_min_episode_len,val_mean_timeouts
+64,1.9038548469543457,0,0.0,nan,0.0,0.0,nan,0.0,nan,0.0,nan,0.0,0.0,nan,0.0,nan
+128,2.148116111755371,0,0.0,nan,0.0,0.0,nan,0.0,nan,0.0,nan,0.0,0.0,nan,0.0,nan
+192,2.4066827297210693,0,0.0,nan,0.0,0.0,nan,0.0,nan,0.0,nan,0.0,0.0,nan,0.0,nan
+256,2.6993093490600586,0,0.0,nan,0.0,0.0,nan,0.0,nan,0.0,nan,0.0,0.0,nan,0.0,nan
+320,2.973064422607422,0,0.0,nan,0.0,0.0,nan,0.0,nan,0.0,nan,0.0,0.0,nan,0.0,nan
+384,3.1827988624572754,0,0.0,nan,0.0,0.0,nan,0.0,nan,0.0,nan,0.0,0.0,nan,0.0,nan
+448,3.4094035625457764,0,0.0,nan,0.0,0.0,nan,0.0,nan,0.0,nan,0.0,0.0,nan,0.0,nan
+512,3.656486749649048,0,0.0,nan,0.0,0.0,nan,0.0,nan,0.0,nan,0.0,0.0,nan,0.0,nan
+576,3.8948795795440674,0,0.0,nan,0.0,0.0,nan,0.0,nan,0.0,nan,0.0,0.0,nan,0.0,nan
+640,4.125973701477051,0,0.0,nan,0.0,0.0,nan,0.0,nan,0.0,nan,0.0,0.0,nan,0.0,nan
+704,4.362628221511841,0,0.0,nan,0.0,0.0,nan,0.0,nan,0.0,nan,0.0,0.0,nan,0.0,nan
+768,4.609166860580444,0,0.0,nan,0.0,0.0,nan,0.0,nan,0.0,nan,0.0,0.0,nan,0.0,nan
+832,4.840296745300293,0,0.0,nan,0.0,0.0,nan,0.0,nan,0.0,nan,0.0,0.0,nan,0.0,nan

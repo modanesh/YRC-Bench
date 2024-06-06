@@ -1,12 +1,14 @@
 import argparse
 import os
 import random
+import uuid
 
 import torch
+import wandb
 import yaml
 
 from procgen_wrapper import setup_training_steps as procgen_setup
-from procgen_wrapper import utils
+from procgen_wrapper import utils, logger
 
 
 def get_args():
@@ -53,12 +55,35 @@ def load_task(cfgs):
     return env, env_valid
 
 
+def logger_setup(cfgs):
+    uuid_stamp = str(uuid.uuid4())[:8]
+    run_name = f"PPO-procgen-help-{cfgs.env_name}-w{cfgs.weak_model_file}-o{cfgs.oracle_model_file}-{uuid_stamp}"
+    logdir = os.path.join('logs', 'train', cfgs.env_name)
+    if not (os.path.exists(logdir)):
+        os.makedirs(logdir)
+    logdir = os.path.join(logdir, run_name)
+    if not (os.path.exists(logdir)):
+        os.mkdir(logdir)
+    print(f'Logging to {logdir}')
+    wb_resume = "allow" if cfgs.model_file is None else "must"
+    wandb.init(config=vars(cfgs), resume=wb_resume, project="YRC", name=run_name)
+    writer = logger.Logger(cfgs.n_envs, logdir)
+    return writer
+
+
 if __name__ == '__main__':
-    args = get_args()
-    configs = config_merger(args, './procgen_wrapper/configs')
+    configs = get_args()
+    configs = config_merger(configs, './procgen_wrapper/configs')
+    writer = logger_setup(configs)
+
     task, task_valid = load_task(configs)
     weak_agent, oracle_agent = procgen_setup.model_setup(task, task_valid, configs, trainable=False)
 
+    model, policy = procgen_setup.model_setup(task, task_valid, configs, trainable=True, helper_policy=True)
+    storage = utils.Storage(task.observation_space.shape, configs.n_steps, configs.n_envs, configs.device)
+    storage_valid = utils.Storage(task.observation_space.shape, configs.n_steps, configs.n_envs, configs.device)
+    agent = procgen_setup.agent_setup(task, task_valid, policy, writer, storage, storage_valid, configs.device, configs.num_checkpoints,
+                                      configs.model_file, pi_w=weak_agent, pi_o=oracle_agent)
+
     # todo: implement the following
-    pi_h = train(task, pi_w, pi_o)
-    evaluate(task, pi_h)
+    agent.train(configs.num_timesteps, pi_h=True)

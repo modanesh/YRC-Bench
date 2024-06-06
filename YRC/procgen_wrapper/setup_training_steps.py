@@ -1,9 +1,9 @@
 import random
 import uuid
 
+import wandb
 import yaml
 
-import wandb
 from logger import Logger
 from models import CategoricalPolicy, ImpalaModel, PPO, PPOFreezed
 from procgen import ProcgenEnv
@@ -91,16 +91,19 @@ def load_model(agent, model_file):
     return agent
 
 
-def model_setup(env, env_valid, configs, trainable):
+def model_setup(env, env_valid, configs, trainable, helper_policy=False):
     observation_shape = env.observation_space.shape
     in_channels = observation_shape[0]
     action_space = env.action_space
 
     model = ImpalaModel(in_channels=in_channels)
 
-    recurrent = configs.recurrent
-    action_size = action_space.n
-    policy = CategoricalPolicy(model, recurrent, action_size)
+    if helper_policy:
+        # trick to make the action space for pi_h to be 1: 0 means weak agent, 1 means oracle agent
+        action_size = 2
+    else:
+        action_size = action_space.n
+    policy = CategoricalPolicy(model, action_size)
     policy.to(configs.device)
     if trainable:
         return model, policy
@@ -112,12 +115,14 @@ def model_setup(env, env_valid, configs, trainable):
         return weak_agent, oracle_agent
 
 
-def agent_setup(env, env_valid, policy, logger, storage, storage_valid, device, num_checkpoints, model_file, hyperparameters):
+def agent_setup(env, env_valid, policy, logger, storage, storage_valid, device, num_checkpoints, model_file, hyperparameters=None, pi_w=None, pi_o=None):
     print('::[LOGGING]::INTIALIZING AGENT...')
     agent = PPO(env, policy, logger, storage, device,
                 num_checkpoints,
                 env_valid=env_valid,
                 storage_valid=storage_valid,
+                pi_w=pi_w,
+                pi_o=pi_o,
                 **hyperparameters)
     if model_file is not None:
         agent = load_model(agent, model_file)

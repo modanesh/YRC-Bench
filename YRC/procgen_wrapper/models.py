@@ -33,6 +33,8 @@ class PPO:
                  normalize_adv=True,
                  normalize_rew=True,
                  use_gae=True,
+                 pi_w=None,
+                 pi_o=None,
                  **kwargs):
 
         super().__init__()
@@ -61,30 +63,28 @@ class PPO:
         self.normalize_adv = normalize_adv
         self.normalize_rew = normalize_rew
         self.use_gae = use_gae
+        self.pi_w = pi_w
+        self.pi_o = pi_o
 
-    def predict(self, obs, hidden_state, done):
+    def predict(self, obs):
         with torch.no_grad():
             obs = torch.FloatTensor(obs).to(device=self.device)
-            hidden_state = torch.FloatTensor(hidden_state).to(device=self.device)
-            mask = torch.FloatTensor(1 - done).to(device=self.device)
-            dist, value, hidden_state = self.policy(obs, hidden_state, mask)
+            dist, value = self.policy(obs)
             act = dist.sample()
             log_prob_act = dist.log_prob(act)
 
-        return act.cpu().numpy(), log_prob_act.cpu().numpy(), value.cpu().numpy(), hidden_state.cpu().numpy()
+        return act.cpu().numpy(), log_prob_act.cpu().numpy(), value.cpu().numpy()
 
-    def predict_w_value_saliency(self, obs, hidden_state, done):
+    def predict_w_value_saliency(self, obs):
         obs = torch.FloatTensor(obs).to(device=self.device)
         obs.requires_grad_()
         obs.retain_grad()
-        hidden_state = torch.FloatTensor(hidden_state).to(device=self.device)
-        mask = torch.FloatTensor(1 - done).to(device=self.device)
-        dist, value, hidden_state = self.policy(obs, hidden_state, mask)
+        dist, value = self.policy(obs)
         value.backward(retain_graph=True)
         act = dist.sample()
         log_prob_act = dist.log_prob(act)
 
-        return act.detach().cpu().numpy(), log_prob_act.detach().cpu().numpy(), value.detach().cpu().numpy(), hidden_state.detach().cpu().numpy(), obs.grad.data.detach().cpu().numpy()
+        return act.detach().cpu().numpy(), log_prob_act.detach().cpu().numpy(), value.detach().cpu().numpy(), obs.grad.data.detach().cpu().numpy()
 
     def optimize(self):
         pi_loss_list, value_loss_list, entropy_loss_list = [], [], []
@@ -96,14 +96,10 @@ class PPO:
 
         self.policy.train()
         for e in range(self.epoch):
-            recurrent = self.policy.is_recurrent()
-            generator = self.storage.fetch_train_generator(mini_batch_size=self.mini_batch_size,
-                                                           recurrent=recurrent)
+            generator = self.storage.fetch_train_generator(mini_batch_size=self.mini_batch_size)
             for sample in generator:
-                obs_batch, hidden_state_batch, act_batch, done_batch, \
-                    old_log_prob_act_batch, old_value_batch, return_batch, adv_batch = sample
-                mask_batch = (1 - done_batch)
-                dist_batch, value_batch, _ = self.policy(obs_batch, hidden_state_batch, mask_batch)
+                obs_batch, act_batch, done_batch, old_log_prob_act_batch, old_value_batch, return_batch, adv_batch = sample
+                dist_batch, value_batch = self.policy(obs_batch)
 
                 # Clipped Surrogate Objective
                 log_prob_act_batch = dist_batch.log_prob(act_batch)
@@ -138,46 +134,53 @@ class PPO:
                    'Loss/entropy': np.mean(entropy_loss_list)}
         return summary
 
-    def train(self, num_timesteps):
+    def train(self, num_timesteps, pi_h=False):
         print('::[LOGGING]::START TRAINING...')
         save_every = num_timesteps // self.num_checkpoints
         checkpoint_cnt = 0
         obs = self.env.reset()
-        hidden_state = np.zeros((self.n_envs, self.storage.hidden_state_size))
         done = np.zeros(self.n_envs)
 
         if self.env_valid is not None:
             obs_v = self.env_valid.reset()
-            hidden_state_v = np.zeros((self.n_envs, self.storage.hidden_state_size))
             done_v = np.zeros(self.n_envs)
 
         while self.t < num_timesteps:
             # Run Policy
             self.policy.eval()
             for _ in range(self.n_steps):
-                act, log_prob_act, value, next_hidden_state = self.predict(obs, hidden_state, done)
-                next_obs, rew, done, info = self.env.step(act)
-                self.storage.store(obs, hidden_state, act, rew, done, info, log_prob_act, value)
+                act, log_prob_act, value = self.predict(obs)
+
+                if pi_h:
+                    act_exec = self.action_wrapper(obs, act)
+                    next_obs, rew, done, info = self.env.step(act_exec)
+                else:
+                    next_obs, rew, done, info = self.env.step(act)
+
+                self.storage.store(obs, act, rew, done, info, log_prob_act, value)
                 obs = next_obs
-                hidden_state = next_hidden_state
             value_batch = self.storage.value_batch[:self.n_steps]
-            _, _, last_val, hidden_state = self.predict(obs, hidden_state, done)
-            self.storage.store_last(obs, hidden_state, last_val)
+            _, _, last_val = self.predict(obs)
+            self.storage.store_last(obs, last_val)
             # Compute advantage estimates
             self.storage.compute_estimates(self.gamma, self.lmbda, self.use_gae, self.normalize_adv)
 
             # valid
             if self.env_valid is not None:
                 for _ in range(self.n_steps):
-                    act_v, log_prob_act_v, value_v, next_hidden_state_v = self.predict(obs_v, hidden_state_v, done_v)
-                    next_obs_v, rew_v, done_v, info_v = self.env_valid.step(act_v)
-                    self.storage_valid.store(obs_v, hidden_state_v, act_v,
+                    act_v, log_prob_act_v, value_v = self.predict(obs_v)
+
+                    if pi_h:
+                        act_exec_v = self.action_wrapper(obs_v, act_v)
+                        next_obs_v, rew_v, done_v, info_v = self.env_valid.step(act_exec_v)
+                    else:
+                        next_obs_v, rew_v, done_v, info_v = self.env_valid.step(act_v)
+                    self.storage_valid.store(obs_v, act_v,
                                              rew_v, done_v, info_v,
                                              log_prob_act_v, value_v)
                     obs_v = next_obs_v
-                    hidden_state_v = next_hidden_state_v
-                _, _, last_val_v, hidden_state_v = self.predict(obs_v, hidden_state_v, done_v)
-                self.storage_valid.store_last(obs_v, hidden_state_v, last_val_v)
+                _, _, last_val_v = self.predict(obs_v)
+                self.storage_valid.store_last(obs_v, last_val_v)
                 self.storage_valid.compute_estimates(self.gamma, self.lmbda, self.use_gae, self.normalize_adv)
 
             # Optimize policy & valueq
@@ -202,6 +205,17 @@ class PPO:
         self.env.close()
         if self.env_valid is not None:
             self.env_valid.close()
+
+    def action_wrapper(self, obs, act):
+        if act[0] == 0:
+            # query action from weak agent
+            act_exec, _, _ = self.pi_w.predict(obs)
+        elif act[0] == 1:
+            # query action from oracle agent
+            act_exec, _, _ = self.pi_o.predict(obs)
+        else:
+            raise ValueError("Invalid action! Something fishy is going on.")
+        return act_exec
 
 
 class PPOFreezed:
@@ -248,35 +262,29 @@ class PPOFreezed:
         self.normalize_rew = normalize_rew
         self.use_gae = use_gae
 
-    def predict(self, obs, hidden_state, done):
+    def predict(self, obs):
         with torch.no_grad():
             obs = torch.FloatTensor(obs).to(device=self.device)
-            hidden_state = torch.FloatTensor(hidden_state).to(device=self.device)
-            mask = torch.FloatTensor(1 - done).to(device=self.device)
-            dist, value, hidden_state = self.policy(obs, hidden_state, mask)
+            dist, value = self.policy(obs)
             act = dist.sample()
             log_prob_act = dist.log_prob(act)
 
-        return act.cpu().numpy(), log_prob_act.cpu().numpy(), value.cpu().numpy(), hidden_state.cpu().numpy()
+        return act.cpu().numpy(), log_prob_act.cpu().numpy(), value.cpu().numpy()
 
-    def predict_w_value_saliency(self, obs, hidden_state, done):
+    def predict_w_value_saliency(self, obs):
         obs = torch.FloatTensor(obs).to(device=self.device)
         obs.requires_grad_()
         obs.retain_grad()
-        hidden_state = torch.FloatTensor(hidden_state).to(device=self.device)
-        mask = torch.FloatTensor(1 - done).to(device=self.device)
-        dist, value, hidden_state = self.policy(obs, hidden_state, mask)
+        dist, value = self.policy(obs)
         value.backward(retain_graph=True)
         act = dist.sample()
         log_prob_act = dist.log_prob(act)
-        return (act.detach().cpu().numpy(), log_prob_act.detach().cpu().numpy(), value.detach().cpu().numpy(), hidden_state.detach().cpu().numpy(),
-                obs.grad.data.detach().cpu().numpy())
+        return (act.detach().cpu().numpy(), log_prob_act.detach().cpu().numpy(), value.detach().cpu().numpy(), obs.grad.data.detach().cpu().numpy())
 
 
 class CategoricalPolicy(nn.Module):
     def __init__(self,
                  embedder,
-                 recurrent,
                  action_size):
         """
         embedder: (torch.Tensor) model to extract the embedding for observation
@@ -288,92 +296,13 @@ class CategoricalPolicy(nn.Module):
         self.fc_policy = orthogonal_init(nn.Linear(self.embedder.output_dim, action_size), gain=0.01)
         self.fc_value = orthogonal_init(nn.Linear(self.embedder.output_dim, 1), gain=1.0)
 
-        self.recurrent = recurrent
-        if self.recurrent:
-            self.gru = GRU(self.embedder.output_dim, self.embedder.output_dim)
-
-    def is_recurrent(self):
-        return self.recurrent
-
-    def forward(self, x, hx, masks):
+    def forward(self, x):
         hidden = self.embedder(x)
-        if self.recurrent:
-            hidden, hx = self.gru(hidden, hx, masks)
         logits = self.fc_policy(hidden)
         log_probs = F.log_softmax(logits, dim=1)
         p = Categorical(logits=log_probs)
         v = self.fc_value(hidden).reshape(-1)
-        return p, v, hx
-
-
-class GRU(nn.Module):
-    def __init__(self, input_size, hidden_size):
-        super(GRU, self).__init__()
-        self.gru = orthogonal_init(nn.GRU(input_size, hidden_size), gain=1.0)
-
-    def forward(self, x, hxs, masks):
-        # Prediction
-        if x.size(0) == hxs.size(0):
-            # input for GRU-CELL: (L=sequence_length, N, H)
-            # output for GRU-CELL: (output: (L, N, H), hidden: (L, N, H))
-            masks = masks.unsqueeze(-1)
-            x, hxs = self.gru(x.unsqueeze(0), (hxs * masks).unsqueeze(0))
-            x = x.squeeze(0)
-            hxs = hxs.squeeze(0)
-        # Training
-        # We will recompute the hidden state to allow gradient to be back-propagated through time
-        else:
-            # x is a (T, N, -1) tensor that has been flatten to (T * N, -1)
-            N = hxs.size(0)
-            T = int(x.size(0) / N)
-
-            # unflatten
-            x = x.view(T, N, x.size(1))
-
-            # Same deal with masks
-            masks = masks.view(T, N)
-
-            # Let's figure out which steps in the sequence have a zero for any agent
-            # We will always assume t=0 has a zero in it as that makes the logic cleaner
-            # (can be interpreted as a truncated back-propagation through time)
-            has_zeros = ((masks[1:] == 0.0) \
-                         .any(dim=-1)
-                         .nonzero()
-                         .squeeze()
-                         .cpu())
-
-            # +1 to correct the masks[1:]
-            if has_zeros.dim() == 0:
-                # Deal with scalar
-                has_zeros = [has_zeros.item() + 1]
-            else:
-                has_zeros = (has_zeros + 1).numpy().tolist()
-
-            # add t=0 and t=T to the list
-            has_zeros = [0] + has_zeros + [T]
-
-            hxs = hxs.unsqueeze(0)
-            outputs = []
-            for i in range(len(has_zeros) - 1):
-                # We can now process steps that don't have any zeros in masks together!
-                # This is much faster
-                start_idx = has_zeros[i]
-                end_idx = has_zeros[i + 1]
-
-                rnn_scores, hxs = self.gru(
-                    x[start_idx:end_idx],
-                    hxs * masks[start_idx].view(1, -1, 1))
-
-                outputs.append(rnn_scores)
-
-            # assert len(outputs) == T
-            # x is a (T, N, -1) tensor
-            x = torch.cat(outputs, dim=0)
-            # flatten
-            x = x.view(T * N, -1)
-            hxs = hxs.squeeze(0)
-
-        return x, hxs
+        return p, v
 
 
 class ResidualBlock(nn.Module):

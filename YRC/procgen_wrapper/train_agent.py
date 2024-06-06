@@ -37,8 +37,9 @@ if __name__ == '__main__':
     env_valid = setup_training_steps.create_env(args, is_valid=True)
 
     model, policy = setup_training_steps.model_setup(env, env_valid, args, trainable=True)
-    storage = Storage(env.observation_space.shape, model.output_dim, args.n_steps, args.n_envs, args.device)
-    storage_valid = Storage(env.observation_space.shape, model.output_dim, args.n_steps, args.n_envs, args.device)
-    agent = setup_training_steps.agent_setup(env, env_valid, policy, logger, storage, storage_valid, args.device, args.num_checkpoints, args.model_file, hyperparameters)
+    storage = Storage(env.observation_space.shape, args.n_steps, args.n_envs, args.device)
+    storage_valid = Storage(env.observation_space.shape, args.n_steps, args.n_envs, args.device)
+    agent = setup_training_steps.agent_setup(env, env_valid, policy, logger, storage, storage_valid, args.device, args.num_checkpoints, args.model_file,
+                                             hyperparameters)
 
     agent.train(args.num_timesteps)
