@@ -115,7 +115,8 @@ def model_setup(env, env_valid, configs, trainable, helper_policy=False):
         return weak_agent, oracle_agent
 
 
-def agent_setup(env, env_valid, policy, logger, storage, storage_valid, device, num_checkpoints, model_file, hyperparameters=None, pi_w=None, pi_o=None):
+def agent_setup(env, env_valid, policy, logger, storage, storage_valid, device, num_checkpoints, model_file,
+                hyperparameters=None, pi_w=None, pi_o=None, oracle_cost=0.8, switching_cost=0.2):
     print('::[LOGGING]::INTIALIZING AGENT...')
     agent = PPO(env, policy, logger, storage, device,
                 num_checkpoints,
@@ -123,6 +124,8 @@ def agent_setup(env, env_valid, policy, logger, storage, storage_valid, device, 
                 storage_valid=storage_valid,
                 pi_w=pi_w,
                 pi_o=pi_o,
+                oracle_cost=oracle_cost,
+                switching_cost=switching_cost,
                 **hyperparameters)
     if model_file is not None:
         agent = load_model(agent, model_file)

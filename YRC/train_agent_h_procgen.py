@@ -33,6 +33,8 @@ def get_args():
     parser.add_argument('--rand_region', type=int, default=0, help='MAZE: size of region (in upper left corner) in which goal is sampled.')
     parser.add_argument('--config_path', type=str, default='config.yml', help='path to hyperparameter config yaml')
     parser.add_argument('--num_threads', type=int, default=8)
+    parser.add_argument('--switching_cost', type=float, default=0.2)
+    parser.add_argument('--oracle_cost', type=float, default=0.8)
     return parser.parse_args()
 
 
@@ -73,6 +75,9 @@ def logger_setup(cfgs):
 
 if __name__ == '__main__':
     configs = get_args()
+    if configs.oracle_cost < 0 or configs.switching_cost < 0 or configs.oracle_cost + configs.switching_cost > 1:
+        raise ValueError("Invalid values for switching_cost and oracle_cost. Please ensure that they are positive and "
+                         "their sum is less than 1.")
     configs = config_merger(configs, './procgen_wrapper/configs')
     writer = logger_setup(configs)
 
@@ -82,7 +87,8 @@ if __name__ == '__main__':
     model, policy = procgen_setup.model_setup(task, task_valid, configs, trainable=True, helper_policy=True)
     storage = utils.Storage(task.observation_space.shape, configs.n_steps, configs.n_envs, configs.device)
     storage_valid = utils.Storage(task.observation_space.shape, configs.n_steps, configs.n_envs, configs.device)
-    agent = procgen_setup.agent_setup(task, task_valid, policy, writer, storage, storage_valid, configs.device, configs.num_checkpoints,
-                                      configs.model_file, pi_w=weak_agent, pi_o=oracle_agent)
+    agent = procgen_setup.agent_setup(task, task_valid, policy, writer, storage, storage_valid, configs.device,
+                                      configs.num_checkpoints, configs.model_file, pi_w=weak_agent, pi_o=oracle_agent,
+                                      switching_cost=configs.switching_cost, oracle_cost=configs.oracle_cost)
 
     agent.train(configs.num_timesteps, pi_h=True)

@@ -35,6 +35,8 @@ class PPO:
                  use_gae=True,
                  pi_w=None,
                  pi_o=None,
+                 oracle_cost=0.1,
+                 switching_cost=0.1,
                  **kwargs):
 
         super().__init__()
@@ -65,6 +67,8 @@ class PPO:
         self.use_gae = use_gae
         self.pi_w = pi_w
         self.pi_o = pi_o
+        self.oracle_cost = oracle_cost
+        self.switching_cost = switching_cost
 
     def predict(self, obs):
         with torch.no_grad():
@@ -140,10 +144,11 @@ class PPO:
         checkpoint_cnt = 0
         obs = self.env.reset()
         done = np.zeros(self.n_envs)
-
+        past_executor = None
         if self.env_valid is not None:
             obs_v = self.env_valid.reset()
             done_v = np.zeros(self.n_envs)
+            past_executor_v = None
 
         while self.t < num_timesteps:
             # Run Policy
@@ -152,9 +157,12 @@ class PPO:
                 act, log_prob_act, value = self.predict(obs)
 
                 if pi_h:
-                    act_exec = self.query_agents(obs, act)
+                    act_exec, executor = self.query_agents(obs, act)
                     next_obs, rew, done, info = self.env.step(act_exec)
-                    rew = self.reward_shaping(rew, act)
+                    rew = self.oracle_query_cost(rew, act)
+                    if past_executor is not None and past_executor != executor:
+                        rew = self.switching_query_cost(rew)
+                    past_executor = executor
                 else:
                     next_obs, rew, done, info = self.env.step(act)
 
@@ -172,9 +180,12 @@ class PPO:
                     act_v, log_prob_act_v, value_v = self.predict(obs_v)
 
                     if pi_h:
-                        act_exec_v = self.query_agents(obs_v, act_v)
+                        act_exec_v, executor_v = self.query_agents(obs_v, act_v)
                         next_obs_v, rew_v, done_v, info_v = self.env_valid.step(act_exec_v)
-                        rew_v = self.reward_shaping(rew_v, act_v)
+                        rew_v = self.oracle_query_cost(rew_v, act_v)
+                        if past_executor_v is not None and past_executor_v != executor_v:
+                            rew_v = self.switching_query_cost(rew_v)
+                        past_executor_v = executor_v
                     else:
                         next_obs_v, rew_v, done_v, info_v = self.env_valid.step(act_v)
                     self.storage_valid.store(obs_v, act_v,
@@ -212,21 +223,29 @@ class PPO:
         if act[0] == 0:
             # query action from weak agent
             act_exec, _, _ = self.pi_w.predict(obs)
+            executor = "weak"
         elif act[0] == 1:
             # query action from oracle agent
             act_exec, _, _ = self.pi_o.predict(obs)
+            executor = "oracle"
         else:
             raise ValueError("Invalid action! Something fishy is going on.")
-        return act_exec
+        return act_exec, executor
 
-    # TODO: how the reward should be manipulated (deducted) when the action is made by the oracle agent
-    @staticmethod
-    def reward_shaping(rew, act):
+    def oracle_query_cost(self, rew, act):
         if act[0] == 1:
-            # query made from oracle agent. give half the reward if it's positive, otherwise give 1.5 times the reward
-            rew *= 0.5 if rew > 0 else 1.5
+            if rew > 0:
+                rew *= self.oracle_cost
+            else:
+                raise ValueError("Reward is negative! Figure out how to manage the oracle's reward.")
         return rew
 
+    def switching_query_cost(self, rew):
+        if rew > 0:
+            rew *= self.switching_cost
+        else:
+            raise ValueError("Reward is negative! Figure out how to manage the oracle's reward.")
+        return rew
 
 class PPOFreezed:
     def __init__(self,
