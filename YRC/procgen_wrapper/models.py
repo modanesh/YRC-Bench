@@ -152,8 +152,9 @@ class PPO:
                 act, log_prob_act, value = self.predict(obs)
 
                 if pi_h:
-                    act_exec = self.action_wrapper(obs, act)
+                    act_exec = self.query_agents(obs, act)
                     next_obs, rew, done, info = self.env.step(act_exec)
+                    rew = self.reward_shaping(rew, act)
                 else:
                     next_obs, rew, done, info = self.env.step(act)
 
@@ -171,8 +172,9 @@ class PPO:
                     act_v, log_prob_act_v, value_v = self.predict(obs_v)
 
                     if pi_h:
-                        act_exec_v = self.action_wrapper(obs_v, act_v)
+                        act_exec_v = self.query_agents(obs_v, act_v)
                         next_obs_v, rew_v, done_v, info_v = self.env_valid.step(act_exec_v)
+                        rew_v = self.reward_shaping(rew_v, act_v)
                     else:
                         next_obs_v, rew_v, done_v, info_v = self.env_valid.step(act_v)
                     self.storage_valid.store(obs_v, act_v,
@@ -206,7 +208,7 @@ class PPO:
         if self.env_valid is not None:
             self.env_valid.close()
 
-    def action_wrapper(self, obs, act):
+    def query_agents(self, obs, act):
         if act[0] == 0:
             # query action from weak agent
             act_exec, _, _ = self.pi_w.predict(obs)
@@ -216,6 +218,14 @@ class PPO:
         else:
             raise ValueError("Invalid action! Something fishy is going on.")
         return act_exec
+
+    # TODO: how the reward should be manipulated (deducted) when the action is made by the oracle agent
+    @staticmethod
+    def reward_shaping(rew, act):
+        if act[0] == 1:
+            # query made from oracle agent. give half the reward if it's positive, otherwise give 1.5 times the reward
+            rew *= 0.5 if rew > 0 else 1.5
+        return rew
 
 
 class PPOFreezed:
