@@ -37,6 +37,9 @@ class PPO:
                  pi_o=None,
                  oracle_cost=0.1,
                  switching_cost=0.1,
+                 reward_min=0.0,
+                 reward_max=1.0,
+                 timeout=1000.0,
                  **kwargs):
 
         super().__init__()
@@ -69,6 +72,9 @@ class PPO:
         self.pi_o = pi_o
         self.oracle_cost = oracle_cost
         self.switching_cost = switching_cost
+        self.reward_min = reward_min
+        self.reward_max = reward_max
+        self.timeout = timeout
 
     def predict(self, obs):
         with torch.no_grad():
@@ -144,11 +150,11 @@ class PPO:
         checkpoint_cnt = 0
         obs = self.env.reset()
         done = np.zeros(self.n_envs)
-        past_executor = None
+        past_act = None
         if self.env_valid is not None:
             obs_v = self.env_valid.reset()
             done_v = np.zeros(self.n_envs)
-            past_executor_v = None
+            past_act_v = None
 
         while self.t < num_timesteps:
             # Run Policy
@@ -157,12 +163,14 @@ class PPO:
                 act, log_prob_act, value = self.predict(obs)
 
                 if pi_h:
-                    act_exec, executor = self.query_agents(obs, act)
+                    act_exec = self.query_agents(obs, act)
                     next_obs, rew, done, info = self.env.step(act_exec)
                     rew = self.oracle_query_cost(rew, act)
-                    if past_executor is not None and past_executor != executor:
-                        rew = self.switching_query_cost(rew)
-                    past_executor = executor
+                    if past_act is not None:
+                        # get the index of elements where past_act and act are different
+                        switching_idx = np.where(past_act != act)[0]
+                        rew = self.switching_query_cost(rew, switching_idx)
+                    past_act = act
                 else:
                     next_obs, rew, done, info = self.env.step(act)
 
@@ -180,12 +188,14 @@ class PPO:
                     act_v, log_prob_act_v, value_v = self.predict(obs_v)
 
                     if pi_h:
-                        act_exec_v, executor_v = self.query_agents(obs_v, act_v)
+                        act_exec_v = self.query_agents(obs_v, act_v)
                         next_obs_v, rew_v, done_v, info_v = self.env_valid.step(act_exec_v)
                         rew_v = self.oracle_query_cost(rew_v, act_v)
-                        if past_executor_v is not None and past_executor_v != executor_v:
-                            rew_v = self.switching_query_cost(rew_v)
-                        past_executor_v = executor_v
+                        if past_act_v is not None:
+                            # get the index of elements where past_act and act are different
+                            switching_idx_v = np.where(past_act_v != act_v)[0]
+                            rew_v = self.switching_query_cost(rew_v, switching_idx_v)
+                        past_act_v = act_v
                     else:
                         next_obs_v, rew_v, done_v, info_v = self.env_valid.step(act_v)
                     self.storage_valid.store(obs_v, act_v,
@@ -220,32 +230,27 @@ class PPO:
             self.env_valid.close()
 
     def query_agents(self, obs, act):
-        if act[0] == 0:
-            # query action from weak agent
-            act_exec, _, _ = self.pi_w.predict(obs)
-            executor = "weak"
-        elif act[0] == 1:
-            # query action from oracle agent
-            act_exec, _, _ = self.pi_o.predict(obs)
-            executor = "oracle"
-        else:
-            raise ValueError("Invalid action! Something fishy is going on.")
-        return act_exec, executor
+        weak_act, _, _ = self.pi_w.predict(obs)
+        oracle_act, _, _ = self.pi_o.predict(obs)
+        act_exec = np.where(act == 0, weak_act, oracle_act)
+        return act_exec
 
     def oracle_query_cost(self, rew, act):
-        if act[0] == 1:
-            if rew > 0:
-                rew *= self.oracle_cost
-            else:
-                raise ValueError("Reward is negative! Figure out how to manage the oracle's reward.")
-        return rew
+        # multiply the reward with the oracle cost if the action is from the oracle, and if the reward is above zero.
+        # rew is a tensor of shape (n_envs, ), so the cost should be multiplied by all the rewards in the batch.
+        # Apply oracle cost to the rewards where action is from oracle
+        cost_per_action = (1 / self.timeout) * self.oracle_cost
+        adjusted_rew = np.where(act == 1, rew - cost_per_action, rew)
+        return adjusted_rew
 
-    def switching_query_cost(self, rew):
-        if rew > 0:
-            rew *= self.switching_cost
-        else:
-            raise ValueError("Reward is negative! Figure out how to manage the oracle's reward.")
-        return rew
+    def switching_query_cost(self, rew, switching_idx):
+        # multiply the reward with the switching cost if the action is different from the previous action
+        # rew is a tensor of shape (n_envs, ), so the cost should be multiplied by all the rewards in the batch.
+        # Apply switching cost to the rewards where action is different from the previous action
+        adjusted_rew = rew
+        cost_per_action = (1 / self.timeout) * self.switching_cost
+        adjusted_rew[switching_idx] -= cost_per_action
+        return adjusted_rew
 
 class PPOFreezed:
     def __init__(self,

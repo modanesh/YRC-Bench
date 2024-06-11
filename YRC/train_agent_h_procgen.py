@@ -31,24 +31,28 @@ def get_args():
     parser.add_argument('--key_penalty', type=int, default=0, help='HEIST_AISC: Penalty for picking up keys (divided by 10)')
     parser.add_argument('--step_penalty', type=int, default=0, help='HEIST_AISC: Time penalty per step (divided by 1000)')
     parser.add_argument('--rand_region', type=int, default=0, help='MAZE: size of region (in upper left corner) in which goal is sampled.')
-    parser.add_argument('--config_path', type=str, default='config.yml', help='path to hyperparameter config yaml')
+    parser.add_argument('--config_path', type=str, default='./procgen_wrapper/configs', help='path to hyperparameter config yaml')
     parser.add_argument('--num_threads', type=int, default=8)
     parser.add_argument('--switching_cost', type=float, default=0.2)
     parser.add_argument('--oracle_cost', type=float, default=0.8)
     return parser.parse_args()
 
 
-def config_merger(cfgs, config_path):
-    with open(os.path.join(config_path, 'config.yml')) as f:
+def config_merger(cfgs):
+    with open(os.path.join(cfgs.config_path, 'config.yml')) as f:
         specific_cfgs = yaml.load(f, Loader=yaml.FullLoader)[cfgs.param_name]
+    with open(os.path.join(cfgs.config_path, 'reward_range.yml')) as f:
+        env_cfgs = yaml.load(f, Loader=yaml.FullLoader)[cfgs.env_name.split("_")[0]][cfgs.distribution_mode]
     cfgs.val_env_name = cfgs.val_env_name if cfgs.val_env_name else cfgs.env_name
     cfgs.start_level_val = random.randint(0, 9999)
     utils.set_global_seeds(cfgs.seed)
     if cfgs.start_level == cfgs.start_level_val:
         raise ValueError("Seeds for training and validation envs are equal.")
     cfgs.device = torch.device(cfgs.device)
+    cfgs = vars(cfgs)
     cfgs.update(specific_cfgs)
-    return cfgs
+    cfgs = argparse.Namespace(**cfgs)
+    return cfgs, specific_cfgs, env_cfgs
 
 
 def load_task(cfgs):
@@ -57,9 +61,9 @@ def load_task(cfgs):
     return env, env_valid
 
 
-def logger_setup(cfgs):
+def logger_setup(cfgs, n_envs):
     uuid_stamp = str(uuid.uuid4())[:8]
-    run_name = f"PPO-procgen-help-{cfgs.env_name}-w{cfgs.weak_model_file}-o{cfgs.oracle_model_file}-{uuid_stamp}"
+    run_name = f"PPO-procgen-help-{cfgs.env_name}-{uuid_stamp}"
     logdir = os.path.join('logs', 'train', cfgs.env_name)
     if not (os.path.exists(logdir)):
         os.makedirs(logdir)
@@ -67,9 +71,8 @@ def logger_setup(cfgs):
     if not (os.path.exists(logdir)):
         os.mkdir(logdir)
     print(f'Logging to {logdir}')
-    wb_resume = "allow" if cfgs.model_file is None else "must"
-    wandb.init(config=vars(cfgs), resume=wb_resume, project="YRC", name=run_name)
-    writer = logger.Logger(cfgs.n_envs, logdir)
+    wandb.init(config=vars(cfgs), resume="allow", project="YRC", name=run_name)
+    writer = logger.Logger(n_envs, logdir)
     return writer
 
 
@@ -78,8 +81,8 @@ if __name__ == '__main__':
     if configs.oracle_cost < 0 or configs.switching_cost < 0 or configs.oracle_cost + configs.switching_cost > 1:
         raise ValueError("Invalid values for switching_cost and oracle_cost. Please ensure that they are positive and "
                          "their sum is less than 1.")
-    configs = config_merger(configs, './procgen_wrapper/configs')
-    writer = logger_setup(configs)
+    configs, hyperparameters, env_info = config_merger(configs)
+    writer = logger_setup(configs, hyperparameters['n_envs'])
 
     task, task_valid = load_task(configs)
     weak_agent, oracle_agent = procgen_setup.model_setup(task, task_valid, configs, trainable=False)
@@ -88,7 +91,8 @@ if __name__ == '__main__':
     storage = utils.Storage(task.observation_space.shape, configs.n_steps, configs.n_envs, configs.device)
     storage_valid = utils.Storage(task.observation_space.shape, configs.n_steps, configs.n_envs, configs.device)
     agent = procgen_setup.agent_setup(task, task_valid, policy, writer, storage, storage_valid, configs.device,
-                                      configs.num_checkpoints, configs.model_file, pi_w=weak_agent, pi_o=oracle_agent,
-                                      switching_cost=configs.switching_cost, oracle_cost=configs.oracle_cost)
+                                      configs.num_checkpoints, model_file=None, hyperparameters=hyperparameters, pi_w=weak_agent, pi_o=oracle_agent,
+                                      switching_cost=configs.switching_cost, oracle_cost=configs.oracle_cost, reward_min=env_info['min'],
+                                      reward_max=env_info['max'], env_timeout=env_info['timeout'])
 
     agent.train(configs.num_timesteps, pi_h=True)

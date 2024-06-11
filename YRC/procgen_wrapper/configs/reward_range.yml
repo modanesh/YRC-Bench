@@ -1,0 +1,29 @@
+coinrun:
+  easy:
+    min: 5.0
+    max: 10.0
+    timeout: 1000.0
+  hard:
+    min: 5.0
+    max: 10.0
+    timeout: 1000.0
+
+starpilot:
+  easy:
+    min: 1.5
+    max: 35.0
+    timeout: 1000.0
+  hard:
+    min: 2.5
+    max: 64.0
+    timeout: 1000.0
+
+chaser:
+  easy:
+    min: 0.5
+    max: 14.2
+    timeout: 1000.0
+  hard:
+    min: 0.5
+    max: 13.0
+    timeout: 1000.0

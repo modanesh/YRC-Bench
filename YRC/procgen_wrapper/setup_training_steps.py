@@ -108,15 +108,15 @@ def model_setup(env, env_valid, configs, trainable, helper_policy=False):
     if trainable:
         return model, policy
     else:
-        weak_agent = PPOFreezed(env, policy, configs['device'], env_valid=env_valid)
-        weak_agent = load_model(weak_agent, configs['weak_model_file'])
-        oracle_agent = PPOFreezed(env, policy, configs['device'], env_valid=env_valid)
-        oracle_agent = load_model(oracle_agent, configs['oracle_model_file'])
+        weak_agent = PPOFreezed(env, policy, configs.device, env_valid=env_valid)
+        weak_agent = load_model(weak_agent, configs.weak_model_file)
+        oracle_agent = PPOFreezed(env, policy, configs.device, env_valid=env_valid)
+        oracle_agent = load_model(oracle_agent, configs.oracle_model_file)
         return weak_agent, oracle_agent
 
 
 def agent_setup(env, env_valid, policy, logger, storage, storage_valid, device, num_checkpoints, model_file,
-                hyperparameters=None, pi_w=None, pi_o=None, oracle_cost=0.8, switching_cost=0.2):
+                hyperparameters, pi_w=None, pi_o=None, oracle_cost=0.8, switching_cost=0.2, reward_min=0.0, reward_max=1.0, env_timeout=1000):
     print('::[LOGGING]::INTIALIZING AGENT...')
     agent = PPO(env, policy, logger, storage, device,
                 num_checkpoints,
@@ -126,6 +126,9 @@ def agent_setup(env, env_valid, policy, logger, storage, storage_valid, device, 
                 pi_o=pi_o,
                 oracle_cost=oracle_cost,
                 switching_cost=switching_cost,
+                reward_min=reward_min,
+                reward_max=reward_max,
+                env_timeout=env_timeout,
                 **hyperparameters)
     if model_file is not None:
         agent = load_model(agent, model_file)
