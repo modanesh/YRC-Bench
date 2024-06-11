@@ -70,11 +70,8 @@ class PPO:
         self.use_gae = use_gae
         self.pi_w = pi_w
         self.pi_o = pi_o
-        self.oracle_cost = oracle_cost
-        self.switching_cost = switching_cost
-        self.reward_min = reward_min
-        self.reward_max = reward_max
-        self.timeout = timeout
+        self.switching_cost_per_action = (reward_max / timeout) * switching_cost
+        self.oracle_cost_per_action = (reward_max / timeout) * oracle_cost
 
     def predict(self, obs):
         with torch.no_grad():
@@ -239,18 +236,15 @@ class PPO:
         # multiply the reward with the oracle cost if the action is from the oracle, and if the reward is above zero.
         # rew is a tensor of shape (n_envs, ), so the cost should be multiplied by all the rewards in the batch.
         # Apply oracle cost to the rewards where action is from oracle
-        cost_per_action = (1 / self.timeout) * self.oracle_cost
-        adjusted_rew = np.where(act == 1, rew - cost_per_action, rew)
+        adjusted_rew = np.where(act == 1, rew - self.oracle_cost_per_action, rew)
         return adjusted_rew
 
     def switching_query_cost(self, rew, switching_idx):
         # multiply the reward with the switching cost if the action is different from the previous action
         # rew is a tensor of shape (n_envs, ), so the cost should be multiplied by all the rewards in the batch.
         # Apply switching cost to the rewards where action is different from the previous action
-        adjusted_rew = rew
-        cost_per_action = (1 / self.timeout) * self.switching_cost
-        adjusted_rew[switching_idx] -= cost_per_action
-        return adjusted_rew
+        rew[switching_idx] -= self.switching_cost_per_action
+        return rew
 
 class PPOFreezed:
     def __init__(self,
