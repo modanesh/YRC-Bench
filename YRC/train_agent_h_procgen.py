@@ -85,9 +85,9 @@ if __name__ == '__main__':
     writer = logger_setup(configs, hyperparameters['n_envs'])
 
     task, task_valid = load_task(configs)
-    weak_agent, oracle_agent = procgen_setup.model_setup(task, task_valid, configs, trainable=False)
+    weak_agent, oracle_agent = procgen_setup.model_setup(task, configs, trainable=False)
 
-    model, policy = procgen_setup.model_setup(task, task_valid, configs, trainable=True, helper_policy=True)
+    model, policy = procgen_setup.model_setup(task, configs, trainable=True, helper_policy=True)
     storage = utils.Storage(task.observation_space.shape, configs.n_steps, configs.n_envs, configs.device)
     storage_valid = utils.Storage(task.observation_space.shape, configs.n_steps, configs.n_envs, configs.device)
     agent = procgen_setup.agent_setup(task, task_valid, policy, writer, storage, storage_valid, configs.device,

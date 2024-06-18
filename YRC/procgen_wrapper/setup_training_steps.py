@@ -91,7 +91,7 @@ def load_model(agent, model_file):
     return agent
 
 
-def model_setup(env, env_valid, configs, trainable, helper_policy=False):
+def model_setup(env, configs, trainable, helper_policy=False):
     observation_shape = env.observation_space.shape
     in_channels = observation_shape[0]
     action_space = env.action_space
@@ -108,9 +108,9 @@ def model_setup(env, env_valid, configs, trainable, helper_policy=False):
     if trainable:
         return model, policy
     else:
-        weak_agent = PPOFreezed(env, policy, configs.device, env_valid=env_valid)
+        weak_agent = PPOFreezed(policy, configs.device)
         weak_agent = load_model(weak_agent, configs.weak_model_file)
-        oracle_agent = PPOFreezed(env, policy, configs.device, env_valid=env_valid)
+        oracle_agent = PPOFreezed(policy, configs.device)
         oracle_agent = load_model(oracle_agent, configs.oracle_model_file)
         return weak_agent, oracle_agent
 

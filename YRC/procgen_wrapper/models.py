@@ -246,49 +246,14 @@ class PPO:
         rew[switching_idx] -= self.switching_cost_per_action
         return rew
 
+
 class PPOFreezed:
     def __init__(self,
-                 env,
                  policy,
-                 device,
-                 env_valid=None,
-                 n_steps=128,
-                 n_envs=8,
-                 epoch=3,
-                 mini_batch_per_epoch=8,
-                 mini_batch_size=32 * 8,
-                 gamma=0.99,
-                 lmbda=0.95,
-                 learning_rate=2.5e-4,
-                 grad_clip_norm=0.5,
-                 eps_clip=0.2,
-                 value_coef=0.5,
-                 entropy_coef=0.01,
-                 normalize_adv=True,
-                 normalize_rew=True,
-                 use_gae=True):
+                 device):
         super().__init__()
-        self.env = env
         self.policy = policy
         self.device = device
-        self.env_valid = env_valid
-        self.t = 0
-        self.n_steps = n_steps
-        self.n_envs = n_envs
-        self.epoch = epoch
-        self.mini_batch_per_epoch = mini_batch_per_epoch
-        self.mini_batch_size = mini_batch_size
-        self.gamma = gamma
-        self.lmbda = lmbda
-        self.learning_rate = learning_rate
-        self.optimizer = optim.Adam(self.policy.parameters(), lr=learning_rate, eps=1e-5)
-        self.grad_clip_norm = grad_clip_norm
-        self.eps_clip = eps_clip
-        self.value_coef = value_coef
-        self.entropy_coef = entropy_coef
-        self.normalize_adv = normalize_adv
-        self.normalize_rew = normalize_rew
-        self.use_gae = use_gae
 
     def predict(self, obs):
         with torch.no_grad():
