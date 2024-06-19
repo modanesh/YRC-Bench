@@ -40,6 +40,7 @@ class PPO:
                  reward_min=0.0,
                  reward_max=1.0,
                  timeout=1000.0,
+                 help_policy_type=None,
                  **kwargs):
 
         super().__init__()
@@ -72,26 +73,28 @@ class PPO:
         self.pi_o = pi_o
         self.switching_cost_per_action = (reward_max / timeout) * switching_cost
         self.oracle_cost_per_action = (reward_max / timeout) * oracle_cost
+        self.help_policy_type = help_policy_type
 
     def predict(self, obs):
         with torch.no_grad():
-            obs = torch.FloatTensor(obs).to(device=self.device)
-            dist, value = self.policy(obs)
+            obs_tensor = torch.FloatTensor(obs).to(device=self.device)
+            dist, value = self.get_policy_output(obs_tensor)
             act = dist.sample()
             log_prob_act = dist.log_prob(act)
-
         return act.cpu().numpy(), log_prob_act.cpu().numpy(), value.cpu().numpy()
 
-    def predict_w_value_saliency(self, obs):
-        obs = torch.FloatTensor(obs).to(device=self.device)
-        obs.requires_grad_()
-        obs.retain_grad()
-        dist, value = self.policy(obs)
-        value.backward(retain_graph=True)
-        act = dist.sample()
-        log_prob_act = dist.log_prob(act)
-
-        return act.detach().cpu().numpy(), log_prob_act.detach().cpu().numpy(), value.detach().cpu().numpy(), obs.grad.data.detach().cpu().numpy()
+    def get_policy_output(self, obs):
+        if self.help_policy_type == "T1":
+            dist, value = self.policy(obs)
+        elif self.help_policy_type in ["T2", "T3"]:
+            pi_w_hidden, pi_w_softmax = self.pi_w.policy.get_inner_values(obs)
+            if self.help_policy_type == "T2":
+                dist, value = self.policy(obs, pi_w_hidden, pi_w_softmax)
+            elif self.help_policy_type == "T3":
+                dist, value = self.policy(pi_w_hidden)
+        else:
+            dist, value = self.policy(obs)
+        return dist, value
 
     def optimize(self):
         pi_loss_list, value_loss_list, entropy_loss_list = [], [], []
@@ -106,7 +109,8 @@ class PPO:
             generator = self.storage.fetch_train_generator(mini_batch_size=self.mini_batch_size)
             for sample in generator:
                 obs_batch, act_batch, done_batch, old_log_prob_act_batch, old_value_batch, return_batch, adv_batch = sample
-                dist_batch, value_batch = self.policy(obs_batch)
+
+                dist_batch, value_batch = self.get_policy_output(obs_batch)
 
                 # Clipped Surrogate Objective
                 log_prob_act_batch = dist_batch.log_prob(act_batch)
@@ -247,10 +251,8 @@ class PPO:
         return rew
 
 
-class PPOFreezed:
-    def __init__(self,
-                 policy,
-                 device):
+class PPOFrozen:
+    def __init__(self, policy, device):
         super().__init__()
         self.policy = policy
         self.device = device
@@ -264,21 +266,9 @@ class PPOFreezed:
 
         return act.cpu().numpy(), log_prob_act.cpu().numpy(), value.cpu().numpy()
 
-    def predict_w_value_saliency(self, obs):
-        obs = torch.FloatTensor(obs).to(device=self.device)
-        obs.requires_grad_()
-        obs.retain_grad()
-        dist, value = self.policy(obs)
-        value.backward(retain_graph=True)
-        act = dist.sample()
-        log_prob_act = dist.log_prob(act)
-        return (act.detach().cpu().numpy(), log_prob_act.detach().cpu().numpy(), value.detach().cpu().numpy(), obs.grad.data.detach().cpu().numpy())
-
 
 class CategoricalPolicy(nn.Module):
-    def __init__(self,
-                 embedder,
-                 action_size):
+    def __init__(self, embedder, action_size):
         """
         embedder: (torch.Tensor) model to extract the embedding for observation
         action_size: number of the categorical actions
@@ -291,6 +281,56 @@ class CategoricalPolicy(nn.Module):
 
     def forward(self, x):
         hidden = self.embedder(x)
+        logits = self.fc_policy(hidden)
+        log_probs = F.log_softmax(logits, dim=1)
+        p = Categorical(logits=log_probs)
+        v = self.fc_value(hidden).reshape(-1)
+        return p, v
+
+    def get_inner_values(self, x):
+        hidden = self.embedder(x)
+        logits = self.fc_policy(hidden)
+        action_probabilities = F.softmax(logits, dim=1)
+        return hidden, action_probabilities
+
+
+class CategoricalPolicyT2(nn.Module):
+    def __init__(self, embedder, action_size, additional_hidden_dim, additional_softmax_dim):
+        """
+        embedder: (torch.Tensor) model to extract the embedding for observation
+        action_size: number of the categorical actions
+        """
+        super(CategoricalPolicyT2, self).__init__()
+        self.embedder = embedder
+        # Compute total input dimension for fc_policy considering additional tensors
+        total_input_dim = self.embedder.output_dim + additional_hidden_dim + additional_softmax_dim
+        # small scale weight-initialization in policy enhances the stability
+        self.fc_policy = orthogonal_init(nn.Linear(total_input_dim, action_size), gain=0.01)
+        self.fc_value = orthogonal_init(nn.Linear(total_input_dim, 1), gain=1.0)
+
+    def forward(self, x, pi_w_hidden, pi_w_softmax):
+        hidden = self.embedder(x)
+        hidden = torch.cat([hidden, pi_w_hidden], dim=1)
+        hidden = torch.cat([hidden, pi_w_softmax], dim=1)
+        logits = self.fc_policy(hidden)
+        log_probs = F.log_softmax(logits, dim=1)
+        p = Categorical(logits=log_probs)
+        v = self.fc_value(hidden).reshape(-1)
+        return p, v
+
+
+class CategoricalPolicyT3(nn.Module):
+    def __init__(self, action_size, weak_agent_hidden_dim):
+        """
+        action_size: number of the categorical actions
+        """
+        super(CategoricalPolicyT3, self).__init__()
+        # small scale weight-initialization in policy enhances the stability
+        self.fc_policy = orthogonal_init(nn.Linear(weak_agent_hidden_dim, action_size), gain=0.01)
+        self.fc_value = orthogonal_init(nn.Linear(weak_agent_hidden_dim, 1), gain=1.0)
+
+    def forward(self, pi_w_hidden):
+        hidden = pi_w_hidden
         logits = self.fc_policy(hidden)
         log_probs = F.log_softmax(logits, dim=1)
         p = Categorical(logits=log_probs)
@@ -328,14 +368,12 @@ class ImpalaBlock(nn.Module):
         return x
 
 
-scale = 1
-
-
 class ImpalaModel(nn.Module):
     def __init__(self,
                  in_channels,
                  **kwargs):
         super(ImpalaModel, self).__init__()
+        scale = 1
         self.block1 = ImpalaBlock(in_channels=in_channels, out_channels=16 * scale)
         self.block2 = ImpalaBlock(in_channels=16 * scale, out_channels=32 * scale)
         self.block3 = ImpalaBlock(in_channels=32 * scale, out_channels=32 * scale)

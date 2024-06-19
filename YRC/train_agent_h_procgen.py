@@ -35,6 +35,10 @@ def get_args():
     parser.add_argument('--num_threads', type=int, default=8)
     parser.add_argument('--switching_cost', type=float, default=0.2)
     parser.add_argument('--oracle_cost', type=float, default=0.8)
+    parser.add_argument('--help_policy_type', choices=['T1', 'T2', 'T3'], required=True, help='Type of the helper policy. T1: vanilla PPO, '
+                                                                                              'T2: PPO with inputs concatenated by the weak agent '
+                                                                                              'features (conv + mlp), T3: PPO with inputs from the weak '
+                                                                                              'agent (mlp).')
     return parser.parse_args()
 
 
@@ -63,7 +67,7 @@ def load_task(cfgs):
 
 def logger_setup(cfgs, n_envs):
     uuid_stamp = str(uuid.uuid4())[:8]
-    run_name = f"PPO-procgen-help-{cfgs.env_name}-{uuid_stamp}"
+    run_name = f"PPO-procgen-help-{cfgs.env_name}-type{cfgs.help_policy_type}-{uuid_stamp}"
     logdir = os.path.join('logs', 'train', cfgs.env_name)
     if not (os.path.exists(logdir)):
         os.makedirs(logdir)
@@ -87,12 +91,12 @@ if __name__ == '__main__':
     task, task_valid = load_task(configs)
     weak_agent, oracle_agent = procgen_setup.model_setup(task, configs, trainable=False)
 
-    model, policy = procgen_setup.model_setup(task, configs, trainable=True, helper_policy=True)
+    model, policy = procgen_setup.model_setup(task, configs, trainable=True, weak_agent=weak_agent, help_policy_type=configs.help_policy_type)
     storage = utils.Storage(task.observation_space.shape, configs.n_steps, configs.n_envs, configs.device)
     storage_valid = utils.Storage(task.observation_space.shape, configs.n_steps, configs.n_envs, configs.device)
-    agent = procgen_setup.agent_setup(task, task_valid, policy, writer, storage, storage_valid, configs.device,
-                                      configs.num_checkpoints, model_file=None, hyperparameters=hyperparameters, pi_w=weak_agent, pi_o=oracle_agent,
-                                      switching_cost=configs.switching_cost, oracle_cost=configs.oracle_cost, reward_min=env_info['min'],
-                                      reward_max=env_info['max'], env_timeout=env_info['timeout'])
+    agent = procgen_setup.agent_setup(task, task_valid, policy, writer, storage, storage_valid, configs.device, configs.num_checkpoints, model_file=None,
+                                      hyperparameters=hyperparameters, pi_w=weak_agent, pi_o=oracle_agent, switching_cost=configs.switching_cost,
+                                      oracle_cost=configs.oracle_cost, reward_min=env_info['min'], reward_max=env_info['max'],
+                                      env_timeout=env_info['timeout'], help_policy_type=configs.help_policy_type)
 
     agent.train(configs.num_timesteps, pi_h=True)

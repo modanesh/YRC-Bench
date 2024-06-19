@@ -5,7 +5,7 @@ import wandb
 import yaml
 
 from logger import Logger
-from models import CategoricalPolicy, ImpalaModel, PPO, PPOFreezed
+from models import CategoricalPolicy, CategoricalPolicyT2, CategoricalPolicyT3, ImpalaModel, PPO, PPOFrozen
 from procgen import ProcgenEnv
 from procgen_wrappers import *
 from utils import set_global_seeds, get_latest_model
@@ -83,40 +83,52 @@ def create_env(args, is_valid=False):
     return env
 
 
-def load_model(agent, model_file):
+def load_model(agent, model_file, frozen=False):
     print("Loading agent from %s" % model_file)
     checkpoint = torch.load(model_file)
     agent.policy.load_state_dict(checkpoint["model_state_dict"])
-    agent.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+    if not frozen:
+        agent.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
     return agent
 
 
-def model_setup(env, configs, trainable, helper_policy=False):
+def model_setup(env, configs, trainable, weak_agent=None, help_policy_type=None):
+    assert not (help_policy_type is not None and weak_agent is None), "If using help policy, you must provide a weak agent."
     observation_shape = env.observation_space.shape
     in_channels = observation_shape[0]
     action_space = env.action_space
 
     model = ImpalaModel(in_channels=in_channels)
 
-    if helper_policy:
+    if weak_agent is not None:
         # trick to make the action space for pi_h to be 1: 0 means weak agent, 1 means oracle agent
         action_size = 2
+        hidden_size = weak_agent.policy.embedder.output_dim
+        softmax_size = weak_agent.policy.fc_policy.out_features
+        if help_policy_type == "T1":
+            policy = CategoricalPolicy(model, action_size)
+        elif help_policy_type == "T2":
+            policy = CategoricalPolicyT2(model, action_size, hidden_size, softmax_size)
+        elif help_policy_type == "T3":
+            policy = CategoricalPolicyT3(action_size, hidden_size)
+        else:
+            raise ValueError("Invalid help policy type.")
     else:
         action_size = action_space.n
-    policy = CategoricalPolicy(model, action_size)
+        policy = CategoricalPolicy(model, action_size)
     policy.to(configs.device)
     if trainable:
         return model, policy
     else:
-        weak_agent = PPOFreezed(policy, configs.device)
-        weak_agent = load_model(weak_agent, configs.weak_model_file)
-        oracle_agent = PPOFreezed(policy, configs.device)
-        oracle_agent = load_model(oracle_agent, configs.oracle_model_file)
+        weak_agent = PPOFrozen(policy, configs.device)
+        weak_agent = load_model(weak_agent, configs.weak_model_file, frozen=True)
+        oracle_agent = PPOFrozen(policy, configs.device)
+        oracle_agent = load_model(oracle_agent, configs.oracle_model_file, frozen=True)
         return weak_agent, oracle_agent
 
 
-def agent_setup(env, env_valid, policy, logger, storage, storage_valid, device, num_checkpoints, model_file,
-                hyperparameters, pi_w=None, pi_o=None, oracle_cost=0.8, switching_cost=0.2, reward_min=0.0, reward_max=1.0, env_timeout=1000):
+def agent_setup(env, env_valid, policy, logger, storage, storage_valid, device, num_checkpoints, model_file, hyperparameters, pi_w=None, pi_o=None,
+                oracle_cost=0.8, switching_cost=0.2, reward_min=0.0, reward_max=1.0, env_timeout=1000, help_policy_type=None):
     print('::[LOGGING]::INTIALIZING AGENT...')
     agent = PPO(env, policy, logger, storage, device,
                 num_checkpoints,
@@ -129,6 +141,7 @@ def agent_setup(env, env_valid, policy, logger, storage, storage_valid, device, 
                 reward_min=reward_min,
                 reward_max=reward_max,
                 env_timeout=env_timeout,
+                help_policy_type=help_policy_type,
                 **hyperparameters)
     if model_file is not None:
         agent = load_model(agent, model_file)
