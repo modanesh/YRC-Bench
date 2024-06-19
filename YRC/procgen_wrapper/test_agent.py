@@ -1,10 +1,12 @@
 import argparse
-import torch
-import numpy as np
 import random
-from models import CategoricalPolicy, ImpalaModel, PPOFreezed
+
+import numpy as np
+import torch
+
+from models import CategoricalPolicy, ImpalaModel, PPOFrozen
 from procgen import ProcgenEnv
-from procgen_wrappers import VecExtractDictObs, VecNormalize, TransposeFrame, ScaledFloatFrame
+from procgen_wrappers import VecExtractDictObs, TransposeFrame, ScaledFloatFrame
 from utils import set_global_seeds
 
 
@@ -36,7 +38,7 @@ def model_setup(env, configs):
     policy = CategoricalPolicy(model, action_size)
     policy.to(configs.device)
     policy.eval()
-    agent = PPOFreezed(policy, configs.device)
+    agent = PPOFrozen(policy, configs.device)
     agent = load_model(agent, configs.model_file)
     return agent
 
@@ -54,7 +56,6 @@ def create_env(args):
                      key_penalty=args.key_penalty,
                      rand_region=args.rand_region)
     env = VecExtractDictObs(env, "rgb")
-    env = VecNormalize(env, ob=False)  # normalizing returns, but not
     env = TransposeFrame(env)
     env = ScaledFloatFrame(env)
     return env
@@ -78,7 +79,10 @@ def test(env, agent, n_trials):
         obs = next_obs
         done_indices = np.where(done)[0]
         for i in done_indices:
-            rew_tracker.append(info[i]['env_reward'])
+            if 'env_reward' in info[i]:
+                rew_tracker.append(info[i]['env_reward'])
+            else:
+                rew_tracker.append(rew[i])
     print(f'::[LOGGING]::TESTING COMPLETE. Mean reward over {n_trials} trials: {np.mean(rew_tracker):.2f}+-{np.std(rew_tracker):.2f}')
     env.close()
 
