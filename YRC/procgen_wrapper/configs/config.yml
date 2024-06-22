@@ -13,7 +13,7 @@ debug:
     value_coef: 0.5
     entropy_coef: 0.01
     normalize_adv: True
-    normalize_rew: True
+    normalize_rew: False
     use_gae: True
     architecture: impala
 
@@ -108,7 +108,7 @@ hard-500-mem:
     value_coef: 0.5
     entropy_coef: 0.01
     normalize_adv: True
-    normalize_rew: True
+    normalize_rew: False
     use_gae: True
     architecture: impala
 
@@ -127,7 +127,7 @@ hard-rec:
     value_coef: 0.5
     entropy_coef: 0.01
     normalize_adv: True
-    normalize_rew: True
+    normalize_rew: False
     use_gae: True
     architecture: impala
 
@@ -146,7 +146,7 @@ hard-local-dev:
     value_coef: 0.5
     entropy_coef: 0.01
     normalize_adv: True
-    normalize_rew: True
+    normalize_rew: False
     use_gae: True
     architecture: impala
 
@@ -165,7 +165,7 @@ hard-local-dev-rec:
     value_coef: 0.5
     entropy_coef: 0.01
     normalize_adv: True
-    normalize_rew: True
+    normalize_rew: False
     use_gae: True
     architecture: impala
 
@@ -184,7 +184,7 @@ A100:
     value_coef: 0.5
     entropy_coef: 0.01
     normalize_adv: True
-    normalize_rew: True
+    normalize_rew: False
     use_gae: True
     architecture: impala
 
@@ -204,6 +204,6 @@ A100-large:  # for larger model (16x params)
     value_coef: 0.5
     entropy_coef: 0.01
     normalize_adv: True
-    normalize_rew: True
+    normalize_rew: False
     use_gae: True
     architecture: impala
