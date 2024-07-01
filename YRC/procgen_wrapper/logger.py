@@ -1,5 +1,7 @@
 import csv
+import os
 import time
+import uuid
 from collections import deque
 
 import numpy as np
@@ -107,3 +109,18 @@ class Logger(object):
         episode_statistics['[Valid] Len/min_episodes'] = np.min(self.episode_len_buffer_v, initial=0)
         episode_statistics['[Valid] Len/mean_timeout'] = np.mean(self.episode_timeout_buffer_v)
         return episode_statistics
+
+
+def logger_setup(cfgs, n_envs):
+    uuid_stamp = str(uuid.uuid4())[:8]
+    run_name = f"PPO-procgen-help-{cfgs.env_name}-type{cfgs.help_policy_type}-{uuid_stamp}"
+    logdir = os.path.join('logs', 'train', cfgs.env_name)
+    if not (os.path.exists(logdir)):
+        os.makedirs(logdir)
+    logdir = os.path.join(logdir, run_name)
+    if not (os.path.exists(logdir)):
+        os.mkdir(logdir)
+    print(f'Logging to {logdir}')
+    wandb.init(config=vars(cfgs), resume="allow", project="YRC", name=run_name)
+    writer = Logger(n_envs, logdir)
+    return writer
