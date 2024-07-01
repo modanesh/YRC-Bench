@@ -1,3 +1,4 @@
+import os
 import random
 import uuid
 
@@ -32,7 +33,7 @@ def logger_setup(args, hyperparameters):
     run_name = f"PPO-procgen-{args.env_name}-{args.param_name}-{uuid_stamp}"
     logdir = os.path.join('logs', 'train', args.env_name)
     if not (os.path.exists(logdir)):
-        os.makedirs(logdir)
+        os.mkdir(logdir)
     logdir_folders = [os.path.join(logdir, d) for d in os.listdir(logdir)]
     if args.model_file == "auto":  # try to figure out which file to load
         logdirs_with_model = [d for d in logdir_folders if any(['model' in filename for filename in os.listdir(d)])]
@@ -101,7 +102,7 @@ def model_setup(env, configs, trainable, weak_agent=None, help_policy_type=None)
     model = ImpalaModel(in_channels=in_channels)
 
     if weak_agent is not None:
-        # trick to make the action space for pi_h to be 1: 0 means weak agent, 1 means oracle agent
+        # make the action space for pi_h to be 2: 0 means weak agent, 1 means oracle agent
         action_size = 2
         hidden_size = weak_agent.policy.embedder.output_dim
         softmax_size = weak_agent.policy.fc_policy.out_features
