@@ -1,10 +1,7 @@
 import argparse
 import os
 import random
-import uuid
-
 import torch
-import wandb
 import yaml
 
 from procgen_wrapper import setup_training_steps as procgen_setup
@@ -56,6 +53,10 @@ def config_merger(cfgs):
     cfgs = vars(cfgs)
     cfgs.update(specific_cfgs)
     cfgs = argparse.Namespace(**cfgs)
+
+    cfgs.weak_model_file = os.path.join("procgen_wrapper", "logs", cfgs.env_name, cfgs.weak_model_file)
+    cfgs.oracle_model_file = os.path.join("procgen_wrapper", "logs", cfgs.env_name, cfgs.oracle_model_file)
+
     return cfgs, specific_cfgs, env_cfgs
 
 
@@ -65,32 +66,20 @@ def load_task(cfgs):
     return env, env_valid
 
 
-def logger_setup(cfgs, n_envs):
-    uuid_stamp = str(uuid.uuid4())[:8]
-    run_name = f"PPO-procgen-help-{cfgs.env_name}-type{cfgs.help_policy_type}-{uuid_stamp}"
-    logdir = os.path.join('logs', 'train', cfgs.env_name)
-    if not (os.path.exists(logdir)):
-        os.makedirs(logdir)
-    logdir = os.path.join(logdir, run_name)
-    if not (os.path.exists(logdir)):
-        os.mkdir(logdir)
-    print(f'Logging to {logdir}')
-    wandb.init(config=vars(cfgs), resume="allow", project="YRC", name=run_name)
-    writer = logger.Logger(n_envs, logdir)
-    return writer
-
-
 if __name__ == '__main__':
+    # setting up configs and logger
     configs = get_args()
     if configs.oracle_cost < 0 or configs.switching_cost < 0 or configs.oracle_cost + configs.switching_cost > 1:
         raise ValueError("Invalid values for switching_cost and oracle_cost. Please ensure that they are positive and "
                          "their sum is less than 1.")
     configs, hyperparameters, env_info = config_merger(configs)
-    writer = logger_setup(configs, hyperparameters['n_envs'])
+    writer = logger.logger_setup(configs, hyperparameters['n_envs'])
 
+    # loading the weak and strong agents
     task, task_valid = load_task(configs)
     weak_agent, oracle_agent = procgen_setup.model_setup(task, configs, trainable=False)
 
+    # defining the help policy and replay buffer
     model, policy = procgen_setup.model_setup(task, configs, trainable=True, weak_agent=weak_agent, help_policy_type=configs.help_policy_type)
     storage = utils.Storage(task.observation_space.shape, configs.n_steps, configs.n_envs, configs.device)
     storage_valid = utils.Storage(task.observation_space.shape, configs.n_steps, configs.n_envs, configs.device)
@@ -99,4 +88,5 @@ if __name__ == '__main__':
                                       oracle_cost=configs.oracle_cost, reward_min=env_info['min'], reward_max=env_info['max'],
                                       env_timeout=env_info['timeout'], help_policy_type=configs.help_policy_type)
 
+    # training the help policy
     agent.train(configs.num_timesteps, pi_h=True)
