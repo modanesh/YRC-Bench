@@ -5,7 +5,8 @@ venv/
 tmp*
 wandb/
 __pycache__/
-LIBERO/libero/datasets/
+*.pth
+
 
 # Created by .ignore support plugin (hsz.mobi)
 ### Python template
