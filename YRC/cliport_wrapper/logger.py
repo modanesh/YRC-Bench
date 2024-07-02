@@ -1,5 +1,7 @@
 import csv
+import os
 import time
+import uuid
 from collections import deque
 
 import numpy as np
@@ -9,15 +11,12 @@ import wandb
 
 class Logger(object):
 
-    def __init__(self, n_envs, logdir):
+    def __init__(self, logdir):
         self.start_time = time.time()
-        self.n_envs = n_envs
         self.logdir = logdir
 
         # training
         self.episode_rewards = []
-        for _ in range(n_envs):
-            self.episode_rewards.append([])
 
         self.episode_timeout_buffer = deque(maxlen=40)
         self.episode_len_buffer = deque(maxlen=40)
@@ -25,8 +24,6 @@ class Logger(object):
 
         # validation
         self.episode_rewards_v = []
-        for _ in range(n_envs):
-            self.episode_rewards_v.append([])
 
         self.episode_timeout_buffer_v = deque(maxlen=40)
         self.episode_len_buffer_v = deque(maxlen=40)
@@ -52,23 +49,21 @@ class Logger(object):
             rew_batch_v = rew_batch_v.T
             done_batch_v = done_batch_v.T
 
-        for i in range(self.n_envs):
-            for j in range(steps):
-                self.episode_rewards[i].append(rew_batch[i][j])
-                if valid:
-                    self.episode_rewards_v[i].append(rew_batch_v[i][j])
+        for i in range(steps):
+            self.episode_rewards.append(rew_batch)
+            if valid:
+                self.episode_rewards_v.append(rew_batch_v[i])
 
-                if done_batch[i][j]:
-                    self.episode_timeout_buffer.append(1 if j == steps - 1 else 0)
-                    self.episode_len_buffer.append(len(self.episode_rewards[i]))
-                    self.episode_reward_buffer.append(np.sum(self.episode_rewards[i]))
-                    self.episode_rewards[i] = []
-                    self.num_episodes += 1
-                if valid and done_batch_v[i][j]:
-                    self.episode_timeout_buffer_v.append(1 if j == steps - 1 else 0)
-                    self.episode_len_buffer_v.append(len(self.episode_rewards_v[i]))
-                    self.episode_reward_buffer_v.append(np.sum(self.episode_rewards_v[i]))
-                    self.episode_rewards_v[i] = []
+            if done_batch[i]:
+                self.episode_timeout_buffer.append(1 if i == steps - 1 else 0)
+                self.episode_len_buffer.append(len(self.episode_rewards))
+                self.episode_reward_buffer.append(np.sum(self.episode_rewards))
+                self.num_episodes += 1
+            if valid and done_batch_v[i]:
+                self.episode_timeout_buffer_v.append(1 if i == steps - 1 else 0)
+                self.episode_len_buffer_v.append(len(self.episode_rewards_v))
+                self.episode_reward_buffer_v.append(np.sum(self.episode_rewards_v))
+                self.episode_rewards_v = []
 
         self.timesteps += (self.n_envs * steps)
 
@@ -107,3 +102,20 @@ class Logger(object):
         episode_statistics['[Valid] Len/min_episodes'] = np.min(self.episode_len_buffer_v, initial=0)
         episode_statistics['[Valid] Len/mean_timeout'] = np.mean(self.episode_timeout_buffer_v)
         return episode_statistics
+
+
+def logger_setup(cfgs):
+    uuid_stamp = str(uuid.uuid4())[:8]
+    run_name = f"PPO-cliport-help-{cfgs.task}-{uuid_stamp}"
+    logdir = os.path.join('logs', 'train', cfgs.task)
+    if not (os.path.exists(logdir)):
+        os.makedirs(logdir)
+    logdir = os.path.join(logdir, run_name)
+    if not (os.path.exists(logdir)):
+        os.mkdir(logdir)
+    print(f'Logging to {logdir}')
+    wb_resume = "allow"
+    wandb.init(config=vars(cfgs), resume=wb_resume, project="YRC", name=run_name)
+    writer = Logger(logdir)
+    return writer
+

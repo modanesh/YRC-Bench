@@ -1,117 +1,126 @@
+import json
+import os
 import torch
-from collections import deque
 import numpy as np
-from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
-import random
+from cliport.environments.environment import Environment
+from cliport import tasks, agents
+import torch.optim as optim
+from models import Agent, ImpalaModel
 
 
-def adjust_lr(optimizer, init_lr, timesteps, max_timesteps):
-    lr = init_lr * (1 - (timesteps / max_timesteps))
-    for param_group in optimizer.param_groups:
-        param_group['lr'] = lr
-    return optimizer
-
-def set_global_seeds(seed, torch_deterministic=True):
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
-    torch.backends.cudnn.deterministic = torch_deterministic
-    torch.backends.cudnn.benchmark = not torch_deterministic
-
-class Storage:
-    def __init__(self, obs_shape, num_steps, num_envs, device):
-        print('::[LOGGING]::INITIALIZING STORAGE...')
-        self.obs_shape = obs_shape
-        self.num_steps = num_steps
-        self.num_envs = num_envs
-        self.device = device
-        self.reset()
-
-    def reset(self):
-        self.obs_batch = torch.zeros(self.num_steps + 1, self.num_envs, *self.obs_shape)
-        self.act_batch = torch.zeros(self.num_steps, self.num_envs)
-        self.rew_batch = torch.zeros(self.num_steps, self.num_envs)
-        self.done_batch = torch.zeros(self.num_steps, self.num_envs)
-        self.log_prob_act_batch = torch.zeros(self.num_steps, self.num_envs)
-        self.value_batch = torch.zeros(self.num_steps + 1, self.num_envs)
-        self.return_batch = torch.zeros(self.num_steps, self.num_envs)
-        self.adv_batch = torch.zeros(self.num_steps, self.num_envs)
-        self.info_batch = deque(maxlen=self.num_steps)
-        self.step = 0
-
-    def store(self, obs, act, rew, done, info, log_prob_act, value):
-        self.obs_batch[self.step] = torch.from_numpy(obs.copy())
-        self.act_batch[self.step] = torch.from_numpy(act.copy())
-        self.rew_batch[self.step] = torch.from_numpy(rew.copy())
-        self.done_batch[self.step] = torch.from_numpy(done.copy())
-        self.log_prob_act_batch[self.step] = torch.from_numpy(log_prob_act.copy())
-        self.value_batch[self.step] = torch.from_numpy(value.copy())
-        self.info_batch.append(info)
-
-        self.step = (self.step + 1) % self.num_steps
-
-    def store_last(self, last_obs, last_value):
-        self.obs_batch[-1] = torch.from_numpy(last_obs.copy())
-        self.value_batch[-1] = torch.from_numpy(last_value.copy())
-
-    def compute_estimates(self, gamma=0.99, lmbda=0.95, use_gae=True, normalize_adv=True):
-        rew_batch = self.rew_batch
-        if use_gae:
-            A = 0
-            for i in reversed(range(self.num_steps)):
-                rew = rew_batch[i]
-                done = self.done_batch[i]
-                value = self.value_batch[i]
-                next_value = self.value_batch[i + 1]
-
-                delta = (rew + gamma * next_value * (1 - done)) - value
-                self.adv_batch[i] = A = gamma * lmbda * A * (1 - done) + delta
+class ReplayBuffer:
+    def __init__(self, state_dim, action_dim, buffer_size, use_torch=False, device='cpu'):
+        self._buffer_size = buffer_size
+        self._pointer = 0
+        self._size = 0
+        self._device = device
+        self._use_torch = use_torch
+        if not use_torch:
+            self._states = np.zeros((buffer_size,) + state_dim, dtype=np.float32)
+            self._actions = np.zeros((buffer_size, action_dim), dtype=np.float32)
+            self._logprobs = np.zeros((buffer_size, 1), dtype=np.float32)
+            self._rewards = np.zeros((buffer_size, 1), dtype=np.float32)
+            self._next_states = np.zeros((buffer_size,) + state_dim, dtype=np.float32)
+            self._dones = np.zeros((buffer_size, 1), dtype=np.float32)
+            self._values = np.zeros((buffer_size, 1), dtype=np.float32)
         else:
-            G = self.value_batch[-1]
-            for i in reversed(range(self.num_steps)):
-                rew = rew_batch[i]
-                done = self.done_batch[i]
+            self._states = torch.zeros((buffer_size,) + state_dim, dtype=torch.float32, device=device)
+            self._actions = torch.zeros((buffer_size, action_dim), dtype=torch.float32, device=device)
+            self._logprobs = torch.zeros((buffer_size, 1), dtype=torch.float32, device=device)
+            self._rewards = torch.zeros((buffer_size, 1), dtype=torch.float32, device=device)
+            self._next_states = torch.zeros((buffer_size,) + state_dim, dtype=torch.float32, device=device)
+            self._dones = torch.zeros((buffer_size, 1), dtype=torch.float32, device=device)
+            self._values = torch.zeros((buffer_size, 1), dtype=torch.float32, device=device)
+        self._info = [None] * buffer_size
 
-                G = rew + gamma * G * (1 - done)
-                self.return_batch[i] = G
+    def _to_numpy(self, data):
+        if isinstance(data, torch.Tensor):
+            data = data.cpu()
+        return np.array(data, dtype=np.float32)
 
-        self.return_batch = self.adv_batch + self.value_batch[:-1]
-        if normalize_adv:
-            self.adv_batch = (self.adv_batch - torch.mean(self.adv_batch)) / (torch.std(self.adv_batch) + 1e-8)
+    def _to_torch(self, data):
+        return torch.tensor(data, dtype=torch.float32, device=self._device)
 
-    def fetch_train_generator(self, mini_batch_size=None):
-        batch_size = self.num_steps * self.num_envs
-        if mini_batch_size is None:
-            mini_batch_size = batch_size
-        sampler = BatchSampler(SubsetRandomSampler(range(batch_size)),
-                               mini_batch_size,
-                               drop_last=True)
-        for indices in sampler:
-            obs_batch = torch.FloatTensor(self.obs_batch[:-1]).reshape(-1, *self.obs_shape)[indices].to(self.device)
-            act_batch = torch.FloatTensor(self.act_batch).reshape(-1)[indices].to(self.device)
-            done_batch = torch.FloatTensor(self.done_batch).reshape(-1)[indices].to(self.device)
-            log_prob_act_batch = torch.FloatTensor(self.log_prob_act_batch).reshape(-1)[indices].to(self.device)
-            value_batch = torch.FloatTensor(self.value_batch[:-1]).reshape(-1)[indices].to(self.device)
-            return_batch = torch.FloatTensor(self.return_batch).reshape(-1)[indices].to(self.device)
-            adv_batch = torch.FloatTensor(self.adv_batch).reshape(-1)[indices].to(self.device)
-            yield obs_batch, act_batch, done_batch, log_prob_act_batch, value_batch, return_batch, adv_batch
+    def sample(self, batch_size):
+        indices = np.random.randint(0, self._size, size=batch_size)
+        return (
+            self._states[indices],
+            self._actions[indices],
+            self._logprobs[indices],
+            self._rewards[indices],
+            self._next_states[indices],
+            self._dones[indices],
+            self._values[indices],
+            np.array(self._info)[indices]
+        )
 
-    def fetch_log_data(self):
-        if 'env_reward' in self.info_batch[0][0]:
-            rew_batch = []
-            for step in range(self.num_steps):
-                infos = self.info_batch[step]
-                rew_batch.append([info['env_reward'] for info in infos])
-            rew_batch = np.array(rew_batch)
+    def add_transition(self, state, action, logprob, reward, next_state, done, value, info):
+        if not self._use_torch:
+            self._states[self._pointer] = self._to_numpy(state)
+            self._actions[self._pointer] = self._to_numpy(action)
+            self._logprobs[self._pointer] = self._to_numpy(logprob)
+            self._rewards[self._pointer] = self._to_numpy(reward)
+            self._next_states[self._pointer] = self._to_numpy(next_state)
+            self._dones[self._pointer] = self._to_numpy(done)
+            self._values[self._pointer] = self._to_numpy(value)
         else:
-            rew_batch = self.rew_batch.numpy()
-        if 'env_done' in self.info_batch[0][0]:
-            done_batch = []
-            for step in range(self.num_steps):
-                infos = self.info_batch[step]
-                done_batch.append([info['env_done'] for info in infos])
-            done_batch = np.array(done_batch)
-        else:
-            done_batch = self.done_batch.numpy()
-        return rew_batch, done_batch
+            self._states[self._pointer] = self._to_torch(state)
+            self._actions[self._pointer] = self._to_torch(action)
+            self._logprobs[self._pointer] = self._to_torch(logprob)
+            self._rewards[self._pointer] = self._to_torch(reward)
+            self._next_states[self._pointer] = self._to_torch(next_state)
+            self._dones[self._pointer] = self._to_torch(done)
+            self._values[self._pointer] = self._to_torch(value)
+        self._info[self._pointer] = info
+
+        self._pointer = (self._pointer + 1) % self._buffer_size
+        self._size = min(self._size + 1, self._buffer_size)
+
+    def get_info(self):
+        return self._info[:self._size]
+
+
+def load_ckpts(results_path, model_task):
+    result_jsons = [c for c in os.listdir(results_path) if "results-val" in c]
+    if 'multi' in model_task:
+        result_jsons = [r for r in result_jsons if "multi" in r]
+    else:
+        result_jsons = [r for r in result_jsons if "multi" not in r]
+
+    if len(result_jsons) > 0:
+        result_json = result_jsons[0]
+        with open(os.path.join(results_path, result_json), 'r') as f:
+            eval_res = json.load(f)
+        best_success = -1.0
+        for ckpt, res in eval_res.items():
+            if res['mean_reward'] > best_success:
+                best_checkpoint = ckpt
+                best_success = res['mean_reward']
+        ckpt = best_checkpoint
+    else:
+        raise ValueError(f"No best val ckpt found!")
+    return ckpt
+
+
+def environment_setup(assets_root, disp, shared_memory, task):
+    env = Environment(assets_root, disp=disp, shared_memory=shared_memory, hz=480)
+    tsk = tasks.names[task]()
+    env.set_task(tsk)
+    return env, tsk
+
+
+def load_agents(cfgs, env, tsk, train_d, val_d, in_feature_shape, out_shape, lr):
+    pi_o = tsk.oracle(env)
+    ckpt = load_ckpts(cfgs.results_path, cfgs.model_task)
+    model_file = os.path.join(cfgs.model_path, ckpt)
+    name = f'{cfgs.task}-{cfgs.agent}-n{cfgs.n_demos}'
+    pi_w = agents.names[cfgs.agent](name, vars(cfgs), train_d, val_d)
+    pi_w.load(model_file)
+    pi_w.eval()
+
+    embedder = ImpalaModel(in_feature_shape)
+    embedder.to(cfgs.device)
+    pi_h = Agent(embedder, out_shape)
+    pi_h.to(cfgs.device)
+    opt = optim.Adam(pi_h.parameters(), lr=lr, eps=1e-5)
+    return pi_w, pi_o, pi_h, opt
