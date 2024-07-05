@@ -5,8 +5,6 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.distributions.categorical import Categorical
 
-from utils import adjust_lr
-
 
 class PPO:
     def __init__(self,
@@ -18,6 +16,9 @@ class PPO:
                  n_checkpoints,
                  env_valid=None,
                  storage_valid=None,
+                 pi_w=None,
+                 pi_o=None,
+                 help_policy_type=None,
                  n_steps=128,
                  n_envs=8,
                  epoch=3,
@@ -33,14 +34,6 @@ class PPO:
                  normalize_adv=True,
                  normalize_rew=True,
                  use_gae=True,
-                 pi_w=None,
-                 pi_o=None,
-                 oracle_cost=0.1,
-                 switching_cost=0.1,
-                 reward_min=0.0,
-                 reward_max=1.0,
-                 timeout=1000.0,
-                 help_policy_type=None,
                  **kwargs):
 
         super().__init__()
@@ -71,8 +64,6 @@ class PPO:
         self.use_gae = use_gae
         self.pi_w = pi_w
         self.pi_o = pi_o
-        self.switching_cost_per_action = (reward_max / timeout) * switching_cost
-        self.oracle_cost_per_action = (reward_max / timeout) * oracle_cost
         self.help_policy_type = help_policy_type
 
     def predict(self, obs):
@@ -93,7 +84,7 @@ class PPO:
             elif self.help_policy_type == "T3":
                 dist, value = self.policy(pi_w_hidden)
         else:
-            dist, value = self.policy(obs)
+            raise ValueError("Invalid help policy type.")
         return dist, value
 
     def optimize(self):
@@ -145,36 +136,19 @@ class PPO:
                    'Loss/entropy': np.mean(entropy_loss_list)}
         return summary
 
-    def train(self, num_timesteps, pi_h=False):
+    def train(self, num_timesteps):
         print('::[LOGGING]::START TRAINING...')
         save_every = num_timesteps // self.num_checkpoints
         checkpoint_cnt = 0
         obs = self.env.reset()
-        done = np.zeros(self.n_envs)
-        past_act = None
         if self.env_valid is not None:
             obs_v = self.env_valid.reset()
-            done_v = np.zeros(self.n_envs)
-            past_act_v = None
 
         while self.t < num_timesteps:
-            # Run Policy
             self.policy.eval()
             for _ in range(self.n_steps):
                 act, log_prob_act, value = self.predict(obs)
-
-                if pi_h:
-                    act_exec = self.query_agents(obs, act)
-                    next_obs, rew, done, info = self.env.step(act_exec)
-                    rew = self.oracle_query_cost(rew, act)
-                    if past_act is not None:
-                        # get the index of elements where past_act and act are different
-                        switching_idx = np.where(past_act != act)[0]
-                        rew = self.switching_query_cost(rew, switching_idx)
-                    past_act = act
-                else:
-                    next_obs, rew, done, info = self.env.step(act)
-
+                next_obs, rew, done, info = self.env.step(act)
                 self.storage.store(obs, act, rew, done, info, log_prob_act, value)
                 obs = next_obs
             value_batch = self.storage.value_batch[:self.n_steps]
@@ -187,21 +161,8 @@ class PPO:
             if self.env_valid is not None:
                 for _ in range(self.n_steps):
                     act_v, log_prob_act_v, value_v = self.predict(obs_v)
-
-                    if pi_h:
-                        act_exec_v = self.query_agents(obs_v, act_v)
-                        next_obs_v, rew_v, done_v, info_v = self.env_valid.step(act_exec_v)
-                        rew_v = self.oracle_query_cost(rew_v, act_v)
-                        if past_act_v is not None:
-                            # get the index of elements where past_act and act are different
-                            switching_idx_v = np.where(past_act_v != act_v)[0]
-                            rew_v = self.switching_query_cost(rew_v, switching_idx_v)
-                        past_act_v = act_v
-                    else:
-                        next_obs_v, rew_v, done_v, info_v = self.env_valid.step(act_v)
-                    self.storage_valid.store(obs_v, act_v,
-                                             rew_v, done_v, info_v,
-                                             log_prob_act_v, value_v)
+                    next_obs_v, rew_v, done_v, info_v = self.env_valid.step(act_v)
+                    self.storage_valid.store(obs_v, act_v, rew_v, done_v, info_v, log_prob_act_v, value_v)
                     obs_v = next_obs_v
                 _, _, last_val_v = self.predict(obs_v)
                 self.storage_valid.store_last(obs_v, last_val_v)
@@ -229,26 +190,6 @@ class PPO:
         self.env.close()
         if self.env_valid is not None:
             self.env_valid.close()
-
-    def query_agents(self, obs, act):
-        weak_act, _, _ = self.pi_w.predict(obs)
-        oracle_act, _, _ = self.pi_o.predict(obs)
-        act_exec = np.where(act == 0, weak_act, oracle_act)
-        return act_exec
-
-    def oracle_query_cost(self, rew, act):
-        # multiply the reward with the oracle cost if the action is from the oracle, and if the reward is above zero.
-        # rew is a tensor of shape (n_envs, ), so the cost should be multiplied by all the rewards in the batch.
-        # Apply oracle cost to the rewards where action is from oracle
-        adjusted_rew = np.where(act == 1, rew - self.oracle_cost_per_action, rew)
-        return adjusted_rew
-
-    def switching_query_cost(self, rew, switching_idx):
-        # multiply the reward with the switching cost if the action is different from the previous action
-        # rew is a tensor of shape (n_envs, ), so the cost should be multiplied by all the rewards in the batch.
-        # Apply switching cost to the rewards where action is different from the previous action
-        rew[switching_idx] -= self.switching_cost_per_action
-        return rew
 
 
 class PPOFrozen:
@@ -410,3 +351,10 @@ def orthogonal_init(module, gain=nn.init.calculate_gain('relu')):
         nn.init.orthogonal_(module.weight.data, gain)
         nn.init.constant_(module.bias.data, 0)
     return module
+
+
+def adjust_lr(optimizer, init_lr, timesteps, max_timesteps):
+    lr = init_lr * (1 - (timesteps / max_timesteps))
+    for param_group in optimizer.param_groups:
+        param_group['lr'] = lr
+    return optimizer

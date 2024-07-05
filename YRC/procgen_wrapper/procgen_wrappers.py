@@ -2,7 +2,6 @@ import contextlib
 import os
 from abc import ABC, abstractmethod
 
-import torch
 import gym
 import numpy as np
 from gym import spaces
@@ -375,3 +374,49 @@ class ScaledFloatFrame(VecEnvWrapper):
     def reset(self):
         obs = self.venv.reset()
         return obs / 255.0
+
+
+class HelpEnvWrapper(VecEnvWrapper):
+    def __init__(self, venv, weak_policy, strong_policy, strong_query_cost, switching_agent_cost, reward_max, timeout):
+        super().__init__(venv)
+        self.action_space = gym.spaces.Discrete(2)
+        self.weak_policy = weak_policy
+        self.strong_policy = strong_policy
+        self.strong_query_cost_per_action = (reward_max / timeout) * strong_query_cost
+        self.switching_agent_cost_per_action = (reward_max / timeout) * switching_agent_cost
+        self.actions = None
+        self.prev_actions = None
+
+    def step_async(self, actions):
+        obs = self.venv.reset()  # Get current observation
+        weak_act, _, _ = self.weak_policy.predict(obs)
+        oracle_act, _, _ = self.strong_policy.predict(obs)
+        new_actions = np.where(actions == 0, weak_act, oracle_act)
+        self.actions = actions
+        self.venv.step_async(new_actions)
+
+    def step_wait(self):
+        obs, reward, done, info = self.venv.step_wait()
+        reward = self.strong_query(reward)
+        reward = self.switching_agent(reward, done)
+        return obs, reward, done, info
+
+    def reset(self):
+        return self.venv.reset()
+
+    def strong_query(self, rew):
+        # multiply the reward with the oracle cost if the action is from the oracle, and if the reward is above zero.
+        # rew is a tensor of shape (n_envs, ), so the cost should be multiplied by all the rewards in the batch.
+        # Apply oracle cost to the rewards where action is from oracle
+        adjusted_rew = np.where(self.actions == 1, rew - self.strong_query_cost_per_action, rew)
+        return adjusted_rew
+
+    def switching_agent(self, rew, done):
+        # multiply the reward with the switching cost if the action is different from the previous action
+        # rew is a tensor of shape (n_envs, ), so the cost should be multiplied by all the rewards in the batch.
+        # Apply switching cost to the rewards where action is different from the previous action
+        if self.prev_actions is not None:
+            switching_idx = np.where((self.actions != self.prev_actions) & (~done))
+            rew[switching_idx] -= self.switching_agent_cost_per_action
+        self.prev_actions = self.actions
+        return rew

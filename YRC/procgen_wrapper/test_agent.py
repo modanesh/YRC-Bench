@@ -4,9 +4,7 @@ import random
 import numpy as np
 import torch
 
-from models import CategoricalPolicy, ImpalaModel, PPOFrozen
-from procgen import ProcgenEnv
-from procgen_wrappers import VecExtractDictObs, TransposeFrame, ScaledFloatFrame
+import utils
 from utils import set_global_seeds
 
 
@@ -26,46 +24,8 @@ def get_args():
     parser.add_argument('--num_threads', type=int, default=8)
     parser.add_argument('--n_trials', type=int, default=1000)
     parser.add_argument('--n_steps', type=int, default=256)
+    parser.add_argument('--num_levels', type=int, default=100000)
     return parser.parse_args()
-
-
-def model_setup(env, configs):
-    observation_shape = env.observation_space.shape
-    in_channels = observation_shape[0]
-    action_space = env.action_space
-    model = ImpalaModel(in_channels=in_channels)
-    action_size = action_space.n
-    policy = CategoricalPolicy(model, action_size)
-    policy.to(configs.device)
-    policy.eval()
-    agent = PPOFrozen(policy, configs.device)
-    agent = load_model(agent, configs.model_file)
-    return agent
-
-
-def create_env(args):
-    print('::[LOGGING]::INITIALIZING ENVIRONMENTS...')
-    env = ProcgenEnv(num_envs=args.n_steps,
-                     env_name=args.env_name,
-                     num_levels=100000,
-                     start_level=args.start_level,
-                     distribution_mode=args.distribution_mode,
-                     num_threads=args.num_threads,
-                     random_percent=args.random_percent,
-                     step_penalty=args.step_penalty,
-                     key_penalty=args.key_penalty,
-                     rand_region=args.rand_region)
-    env = VecExtractDictObs(env, "rgb")
-    env = TransposeFrame(env)
-    env = ScaledFloatFrame(env)
-    return env
-
-
-def load_model(agent, model_file):
-    print("Loading agent from %s" % model_file)
-    checkpoint = torch.load(model_file)
-    agent.policy.load_state_dict(checkpoint["model_state_dict"])
-    return agent
 
 
 def test(env, agent, n_trials):
@@ -92,6 +52,9 @@ if __name__ == '__main__':
     args.start_level = random.randint(0, 9999)
     set_global_seeds(args.seed)
     args.device = torch.device(args.device)
-    environment = create_env(args)
-    actor = model_setup(environment, args)
+    environment = utils.create_env(args.n_steps, args.env_name, args.start_level, args.num_levels, args.distribution_mode, args.num_threads,
+                                   args.random_percent, args.step_penalty, args.key_penalty, args.rand_region, normalize_rew=False)
+    obs_size = environment.observation_space.shape[0]
+    action_size = environment.action_space.n
+    actor = utils.load_policy(obs_size, action_size, args.model_file, args.device)
     test(environment, actor, args.n_trials)

@@ -1,7 +1,5 @@
 import argparse
-
-import setup_training_steps
-from utils import Storage
+import utils
 
 
 def get_args():
@@ -30,16 +28,17 @@ def get_args():
 
 if __name__ == '__main__':
     args = get_args()
-    args, hyperparameters = setup_training_steps.hyperparam_setup(args)
-    args, logger = setup_training_steps.logger_setup(args, hyperparameters)
+    args, hyperparameters = utils.hyperparam_setup(args)
+    args, logger = utils.logger_setup(args)
 
-    env = setup_training_steps.create_env(args, hyperparameters)
-    env_valid = setup_training_steps.create_env(args, is_valid=True)
+    env = utils.create_env(args.n_steps, args.env_name, args.start_level, args.num_levels, args.distribution_mode, args.num_threads,
+                           args.random_percent, args.step_penalty, args.key_penalty, args.rand_region, args.normalize_rew)
+    env_valid = utils.create_env(args.n_steps, args.val_env_name, args.start_level_val, 0, args.distribution_mode, args.num_threads,
+                                 args.random_percent, args.step_penalty, args.key_penalty, args.rand_region, args.normalize_rew)
 
-    model, policy = setup_training_steps.model_setup(env, args, trainable=True)
-    storage = Storage(env.observation_space.shape, args.n_steps, args.n_envs, args.device)
-    storage_valid = Storage(env.observation_space.shape, args.n_steps, args.n_envs, args.device)
-    agent = setup_training_steps.agent_setup(env, env_valid, policy, logger, storage, storage_valid, args.device, args.num_checkpoints, args.model_file,
-                                             hyperparameters)
+    model, policy = utils.define_policy(env, args.device)
+    storage = utils.Storage(env.observation_space.shape, args.n_steps, args.n_envs, args.device)
+    storage_valid = utils.Storage(env.observation_space.shape, args.n_steps, args.n_envs, args.device)
+    agent = utils.algorithm_setup(env, env_valid, policy, logger, storage, storage_valid, args.device, args.num_checkpoints, args.model_file, hyperparameters)
 
     agent.train(args.num_timesteps)
