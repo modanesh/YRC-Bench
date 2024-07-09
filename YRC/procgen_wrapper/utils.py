@@ -32,42 +32,6 @@ def hyperparam_setup(args):
     return args, hyperparameters
 
 
-def logger_setup(args, hyperparameters):
-    print('::[LOGGING]::INITIALIZING LOGGER...')
-    uuid_stamp = str(uuid.uuid4())[:8]
-    run_name = f"PPO-procgen-{args.env_name}-{args.param_name}-{uuid_stamp}"
-    logdir = os.path.join('logs', 'train', args.env_name)
-    if not (os.path.exists(logdir)):
-        os.mkdir(logdir)
-    logdir_folders = [os.path.join(logdir, d) for d in os.listdir(logdir)]
-    if args.model_file == "auto":  # try to figure out which file to load
-        logdirs_with_model = [d for d in logdir_folders if any(['model' in filename for filename in os.listdir(d)])]
-        if len(logdirs_with_model) > 1:
-            raise ValueError("Received args.model_file = 'auto', but there are multiple experiments"
-                             f" with saved models under experiment_name {args.exp_name}.")
-        elif len(logdirs_with_model) == 0:
-            raise ValueError("Received args.model_file = 'auto', but there are"
-                             f" no saved models under experiment_name {args.exp_name}.")
-        model_dir = logdirs_with_model[0]
-        args.model_file = os.path.join(model_dir, get_latest_model(model_dir))
-        logdir = model_dir  # reuse logdir
-    else:
-        logdir = os.path.join(logdir, run_name)
-    if not (os.path.exists(logdir)):
-        os.mkdir(logdir)
-
-    print(f'Logging to {logdir}')
-    cfg = vars(args)
-    cfg.update(hyperparameters)
-
-    wb_resume = "allow" if args.model_file is None else "must"
-    wandb.init(config=cfg, resume=wb_resume, project="YRC", name=run_name, dir=os.getcwd().split("YRC")[0])
-    logger = Logger(args.n_envs, logdir)
-    for key, value in cfg.items():
-        print(f"{key} : {value}")
-    return args, logger
-
-
 def create_env(n_steps, env_name, start_level, num_levels, distribution_mode, num_threads, random_percent, step_penalty, key_penalty, rand_region,
                normalize_rew, weak_policy=None, strong_policy=None, get_configs=False, strong_query_cost=0.0, switching_agent_cost=0.0, reward_max=1.0,
                timeout=1000):
