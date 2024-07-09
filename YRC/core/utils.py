@@ -1,12 +1,14 @@
 import csv
 import inspect
 import os
+import random
 import time
 import uuid
 from collections import deque
 
 import numpy as np
 import pandas as pd
+import torch
 import wandb
 
 
@@ -36,20 +38,19 @@ class Logger(object):
 
         time_metrics = ["timesteps", "wall_time", "num_episodes"]  # only collected once
         episode_metrics = ["max_episode_rewards", "mean_episode_rewards", "min_episode_rewards",
-                           "max_episode_len", "mean_episode_len", "min_episode_len",
-                           "mean_timeouts"]  # collected for both train and val envs
+                           "max_episode_len", "mean_episode_len", "min_episode_len"]  # collected for both train and val envs
         self.log = pd.DataFrame(columns=time_metrics + episode_metrics + \
                                         ["val_" + m for m in episode_metrics])
 
         self.timesteps = 0
         self.num_episodes = 0
 
-    def feed(self, rew_batch, done_batch, rew_batch_v=None, done_batch_v=None):
+    def feed_procgen(self, rew_batch, done_batch, rew_batch_v=None, done_batch_v=None):
         steps = rew_batch.shape[0]
         rew_batch = rew_batch.T
         done_batch = done_batch.T
 
-        valid = rew_batch_v is not None and done_batch_v is not None
+        valid = rew_batch_v is not None and done_batch_v is not None and rew_batch_v.shape[0] > 0
         if valid:
             rew_batch_v = rew_batch_v.T
             done_batch_v = done_batch_v.T
@@ -61,7 +62,6 @@ class Logger(object):
                     self.episode_rewards_v[i].append(rew_batch_v[i][j])
 
                 if done_batch[i][j]:
-                    self.episode_timeout_buffer.append(1 if j == steps - 1 else 0)
                     self.episode_len_buffer.append(len(self.episode_rewards[i]))
                     self.episode_reward_buffer.append(np.sum(self.episode_rewards[i]))
                     self.episode_rewards[i] = []
@@ -73,6 +73,24 @@ class Logger(object):
                     self.episode_rewards_v[i] = []
 
         self.timesteps += (self.n_envs * steps)
+
+    def feed_cliport(self, rew_batch, done_batch, rew_batch_v=None, done_batch_v=None):
+        valid = rew_batch_v is not None and done_batch_v is not None and rew_batch_v.shape[0] > 0
+        # get the length of each episode, ends when done_batch is 1
+        eps_lengths = np.where(done_batch == 1)[0] + 1
+
+        self.episode_rewards = np.split(rew_batch, eps_lengths[:-1], axis=0)
+        self.episode_len_buffer = np.insert(np.diff(eps_lengths), 0, eps_lengths[0])
+        self.episode_reward_buffer = np.array([np.sum(rew) for rew in self.episode_rewards])
+        self.num_episodes += len(self.episode_len_buffer)
+        self.episode_rewards = []
+
+        if valid:
+            eps_lengths_v = np.where(done_batch_v == 1)[0] + 1
+            self.episode_rewards_v = np.split(rew_batch_v, eps_lengths_v[:-1], axis=0)
+            self.episode_len_buffer_v = np.insert(np.diff(eps_lengths_v), 0, eps_lengths_v[0])
+            self.episode_reward_buffer_v = np.array([np.sum(rew) for rew in self.episode_rewards_v])
+            self.episode_rewards_v = []
 
     def dump(self):
         wall_time = time.time() - self.start_time
@@ -98,7 +116,6 @@ class Logger(object):
         episode_statistics['Len/max_episodes'] = np.max(self.episode_len_buffer, initial=0)
         episode_statistics['Len/mean_episodes'] = np.mean(self.episode_len_buffer)
         episode_statistics['Len/min_episodes'] = np.min(self.episode_len_buffer, initial=0)
-        episode_statistics['Len/mean_timeout'] = np.mean(self.episode_timeout_buffer)
 
         # valid
         episode_statistics['[Valid] Rewards/max_episodes'] = np.max(self.episode_reward_buffer_v, initial=0)
@@ -107,14 +124,14 @@ class Logger(object):
         episode_statistics['[Valid] Len/max_episodes'] = np.max(self.episode_len_buffer_v, initial=0)
         episode_statistics['[Valid] Len/mean_episodes'] = np.mean(self.episode_len_buffer_v)
         episode_statistics['[Valid] Len/min_episodes'] = np.min(self.episode_len_buffer_v, initial=0)
-        episode_statistics['[Valid] Len/mean_timeout'] = np.mean(self.episode_timeout_buffer_v)
         return episode_statistics
 
 
 def logger_setup(cfgs):
     uuid_stamp = str(uuid.uuid4())[:8]
-    run_name = f"PPO-procgen-help-{cfgs.env_name}-type{cfgs.help_policy_type}-{uuid_stamp}"
-    logdir = os.path.join('logs', 'train', cfgs.env_name)
+    env_name = cfgs.env_name if cfgs.benchmark == 'procgen' else cfgs.task
+    run_name = f"PPO-{cfgs.benchmark}-help-{env_name}-type{cfgs.help_policy_type}-{uuid_stamp}"
+    logdir = os.path.join('logs', env_name)
     if not (os.path.exists(logdir)):
         os.makedirs(logdir)
     logdir = os.path.join(logdir, run_name)
@@ -148,3 +165,12 @@ def to_dict(cls):
             attributes[name] = _convert(value)
 
     return attributes
+
+
+def set_global_seeds(seed, torch_deterministic=True):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = torch_deterministic
+    torch.backends.cudnn.benchmark = not torch_deterministic
