@@ -40,7 +40,7 @@ class ProcgenCfg(BaseConfig):
 
     class policy:
         n_steps = 128
-        n_envs = 8
+        n_envs = 128
         epoch = 3
         mini_batch_per_epoch = 8
         mini_batch_size = 32 * 8
@@ -52,5 +52,5 @@ class ProcgenCfg(BaseConfig):
         value_coef = 0.5
         entropy_coef = 0.01
         normalize_adv = True
-        normalize_rew = True
+        normalize_rew = False
         use_gae = True
