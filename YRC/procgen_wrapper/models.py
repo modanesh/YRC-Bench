@@ -168,7 +168,7 @@ class PPO:
                 self.storage_valid.store_last(obs_v, last_val_v)
                 self.storage_valid.compute_estimates(self.gamma, self.lmbda, self.use_gae, self.normalize_adv)
 
-            # Optimize policy & valueq
+            # Optimize policy & values
             summary = self.optimize()
             # Log the training-procedure
             self.t += self.n_steps * self.n_envs
@@ -177,7 +177,7 @@ class PPO:
                 rew_batch_v, done_batch_v = self.storage_valid.fetch_log_data()
             else:
                 rew_batch_v = done_batch_v = None
-            self.logger.feed(rew_batch, done_batch, rew_batch_v, done_batch_v)
+            self.logger.feed_procgen(rew_batch, done_batch, rew_batch_v, done_batch_v)
             self.logger.dump()
             self.optimizer = adjust_lr(self.optimizer, self.learning_rate, self.t, num_timesteps)
             # Save the model
@@ -208,13 +208,13 @@ class PPOFrozen:
         return act.cpu().numpy(), log_prob_act.cpu().numpy(), value.cpu().numpy()
 
 
-class CategoricalPolicy(nn.Module):
+class CategoricalPolicyT1(nn.Module):
     def __init__(self, embedder, action_size):
         """
         embedder: (torch.Tensor) model to extract the embedding for observation
         action_size: number of the categorical actions
         """
-        super(CategoricalPolicy, self).__init__()
+        super(CategoricalPolicyT1, self).__init__()
         self.embedder = embedder
         # small scale weight-initialization in policy enhances the stability
         self.fc_policy = orthogonal_init(nn.Linear(self.embedder.output_dim, action_size), gain=0.01)

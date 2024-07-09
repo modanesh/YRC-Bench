@@ -13,7 +13,7 @@ import yaml
 from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
 
 from procgen import ProcgenEnv
-from .models import CategoricalPolicy, CategoricalPolicyT2, CategoricalPolicyT3, ImpalaModel, PPO, PPOFrozen
+from .models import CategoricalPolicyT1, CategoricalPolicyT2, CategoricalPolicyT3, ImpalaModel, PPO, PPOFrozen
 from .procgen_wrappers import VecExtractDictObs, TransposeFrame, ScaledFloatFrame, VecNormalize, HelpEnvWrapper
 
 
@@ -113,7 +113,7 @@ def define_help_policy(env, weak_agent, help_policy_type, device):
     hidden_size = weak_agent.policy.embedder.output_dim
     softmax_size = weak_agent.policy.fc_policy.out_features
     if help_policy_type == "T1":
-        policy = CategoricalPolicy(model, action_size)
+        policy = CategoricalPolicyT1(model, action_size)
     elif help_policy_type == "T2":
         policy = CategoricalPolicyT2(model, action_size, hidden_size, softmax_size)
     elif help_policy_type == "T3":
@@ -126,14 +126,14 @@ def define_help_policy(env, weak_agent, help_policy_type, device):
 
 def define_policy(env, device):
     model, action_size = model_setup(env)
-    policy = CategoricalPolicy(model, action_size)
+    policy = CategoricalPolicyT1(model, action_size)
     policy.to(device)
     return model, policy
 
 
 def load_policy(obs_size, action_size, model_file, device):
     model = ImpalaModel(in_channels=obs_size)
-    policy = CategoricalPolicy(model, action_size)
+    policy = CategoricalPolicyT1(model, action_size)
     policy.to(device)
     policy.eval()
     agent = PPOFrozen(policy, device)
@@ -164,7 +164,7 @@ def algorithm_setup(env, env_valid, policy, logger, storage, storage_valid, devi
     return agent
 
 
-class Storage:
+class ReplayBuffer:
     def __init__(self, obs_shape, num_steps, num_envs, device):
         print('::[LOGGING]::INITIALIZING STORAGE...')
         self.obs_shape = obs_shape

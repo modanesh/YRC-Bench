@@ -389,9 +389,12 @@ class HelpEnvWrapper(VecEnvWrapper):
 
     def step_async(self, actions):
         obs = self.venv.reset()  # Get current observation
-        weak_act, _, _ = self.weak_policy.predict(obs)
-        oracle_act, _, _ = self.strong_policy.predict(obs)
-        new_actions = np.where(actions == 0, weak_act, oracle_act)
+        zero_mask = actions == 0
+        new_actions = np.empty_like(actions)
+        if np.any(zero_mask):
+            new_actions[zero_mask], _, _ = self.weak_policy.predict(obs[zero_mask])
+        if np.any(~zero_mask):
+            new_actions[~zero_mask], _, _ = self.strong_policy.predict(obs[~zero_mask])
         self.actions = actions
         self.venv.step_async(new_actions)
 
