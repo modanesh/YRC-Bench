@@ -1,8 +1,6 @@
 import os
 import random
 
-import yaml
-
 from YRC.core.utils import set_global_seeds
 
 

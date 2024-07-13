@@ -13,3 +13,4 @@ Added environments and benchmarks:
 - cliport: getting seed as config parameter
 - MAJOR: code refactoring and cleaning
 - MAJOR - cliport: adding T1 and T2 types for help policy
+- merging configs of cliport and procgen
