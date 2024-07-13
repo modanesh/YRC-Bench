@@ -254,14 +254,14 @@ class PPO:
         save_every = num_timesteps // self.num_checkpoints
         checkpoint_cnt = 0
         if self.env_valid is not None:
-            self.env_valid.seed(self.seed + self.n_train_episodes + 1)  # TODO: get seed as an argument
+            self.env_valid.seed(self.seed + self.n_train_episodes + 1)
 
         while self.t < num_timesteps:
             train_steps = 0
             self.policy.eval()
             for train_run in range(self.n_train_episodes):
                 total_reward = 0
-                self.env.seed(self.seed + train_run)  # TODO: get seed as an argument
+                self.env.seed(self.seed + train_run)
                 obs = self.env.reset()
                 info = self.env.info
                 print(f"episode goal: {info['lang_goal']}")
