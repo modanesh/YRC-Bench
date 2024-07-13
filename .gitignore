@@ -6,7 +6,7 @@ tmp*
 wandb/
 __pycache__/
 *.pth
-
+.DS_Store
 
 # Created by .ignore support plugin (hsz.mobi)
 ### Python template
