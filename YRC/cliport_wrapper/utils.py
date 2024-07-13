@@ -151,10 +151,12 @@ def load_ckpts(results_path, model_task):
     return ckpt
 
 
-def environment_setup(assets_root, weak_policy, reward_max, timeout, strong_query_cost, switching_agent_cost, disp, shared_memory, task):
+def environment_setup(assets_root, weak_policy, strong_query_cost, switching_agent_cost, disp, shared_memory, task):
     tsk = tasks.names[task]()
-    env = HelpEnvWrapper(assets_root, weak_policy, None, reward_max, timeout, strong_query_cost, switching_agent_cost, disp=disp,
-                         shared_memory=shared_memory, hz=480)
+    _, _, _, _, _, _, _, reward_max = tsk.goals[0]
+    timeout = tsk.max_steps
+    env = HelpEnvWrapper(assets_root, weak_policy, None, reward_max, timeout, strong_query_cost,
+                         switching_agent_cost, disp=disp, shared_memory=shared_memory, hz=480)
     env.set_task(tsk)
     strong_policy = tsk.oracle(env)
     env.set_strong_policy(strong_policy)

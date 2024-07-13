@@ -47,7 +47,6 @@ class CliportCfg(BaseConfig):
     dataset_images = True
     dataset_cache = True
     batch_size = 16
-    seed = 10
     switching_cost = 0.2
     strong_query_cost = 0.8
 

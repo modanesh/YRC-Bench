@@ -14,9 +14,9 @@ class Environment:
             env_val = self.procgen_create_env(weak_agent, strong_agent, max_rew, timeout, self.exp_cfg.val_env_name, self.exp_cfg.start_level_val)
             return env, env_val
         elif self.exp_cfg.benchmark == 'cliport':
-            max_rew, timeout = 1, 1000  # TODO: get from paper or code
-            environment, task = cliport_utils.environment_setup(self.exp_cfg.assets_root, weak_agent, max_rew, timeout,
-                                                                self.exp_cfg.strong_query_cost, self.exp_cfg.switching_cost, self.exp_cfg.disp,
+            environment, task = cliport_utils.environment_setup(self.exp_cfg.assets_root, weak_agent,
+                                                                self.exp_cfg.strong_query_cost,
+                                                                self.exp_cfg.switching_cost, self.exp_cfg.disp,
                                                                 self.exp_cfg.shared_memory, self.exp_cfg.task)
             return environment, task
 

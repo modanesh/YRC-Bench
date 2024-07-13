@@ -25,7 +25,10 @@ def get_args():
     parser.add_argument('--benchmark', type=str, choices=['procgen', 'cliport'], required=True)
     parser.add_argument('--env_name', type=str, required=True)
     parser.add_argument('--task', type=str)
+    parser.add_argument('--model_task', type=str)
     parser.add_argument('--param_name', type=str)
+    parser.add_argument('--switching_cost', type=float, required=True)
+    parser.add_argument('--strong_query_cost', type=float, required=True)
     args = parser.parse_args()
     verify_args(args)
     return args
@@ -36,13 +39,17 @@ def verify_args(args):
     if args.weak_model_file is None:
         raise ValueError("Weak model file not provided.")
     # procgen checks
-    if args.benchmark == 'procgen' and args.strong_model_file is None:
-        raise ValueError("Strong model file not provided for procgen.")
-    if args.benchmark == 'procgen' and args.param_name is None:
-        raise ValueError("Param name not provided for procgen.")
+    if args.benchmark == 'procgen':
+        if args.strong_model_file is None:
+            raise ValueError("Strong model file not provided for procgen.")
+        if args.param_name is None:
+            raise ValueError("Param name not provided for procgen.")
     # cliport checks
-    if args.benchmark == 'cliport' and args.task is None:
-        raise ValueError("Task not provided for cliport.")
+    if args.benchmark == 'cliport':
+        if args.task is None:
+            raise ValueError("Task not provided for cliport.")
+        if args.model_task is None:
+            raise ValueError("Model task not provided for cliport.")
 
 
 class Logger(object):
