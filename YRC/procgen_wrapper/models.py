@@ -1,20 +1,19 @@
 import numpy as np
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
-from torch.distributions.categorical import Categorical
+
+from YRC.core.models import adjust_lr
 
 
 class PPO:
     def __init__(self,
                  env,
+                 env_valid,
                  policy,
                  logger,
                  storage,
                  device,
                  n_checkpoints,
-                 env_valid=None,
                  storage_valid=None,
                  pi_w=None,
                  pi_o=None,
@@ -78,9 +77,9 @@ class PPO:
         if self.help_policy_type == "T1":
             dist, value = self.policy(obs)
         elif self.help_policy_type in ["T2", "T3"]:
-            pi_w_hidden, pi_w_softmax = self.pi_w.policy.get_inner_values(obs)
+            pi_w_hidden = self.pi_w.policy.extract_features(obs)
             if self.help_policy_type == "T2":
-                dist, value = self.policy(obs, pi_w_hidden, pi_w_softmax)
+                dist, value = self.policy(obs, pi_w_hidden)
             elif self.help_policy_type == "T3":
                 dist, value = self.policy(pi_w_hidden)
         else:
@@ -111,7 +110,8 @@ class PPO:
                 pi_loss = -torch.min(surr1, surr2).mean()
 
                 # Clipped Bellman-Error
-                clipped_value_batch = old_value_batch + (value_batch - old_value_batch).clamp(-self.eps_clip, self.eps_clip)
+                clipped_value_batch = old_value_batch + (value_batch - old_value_batch).clamp(-self.eps_clip,
+                                                                                              self.eps_clip)
                 v_surr1 = (value_batch - return_batch).pow(2)
                 v_surr2 = (clipped_value_batch - return_batch).pow(2)
                 value_loss = 0.5 * torch.max(v_surr1, v_surr2).mean()
@@ -206,155 +206,3 @@ class PPOFrozen:
             log_prob_act = dist.log_prob(act)
 
         return act.cpu().numpy(), log_prob_act.cpu().numpy(), value.cpu().numpy()
-
-
-class CategoricalPolicyT1(nn.Module):
-    def __init__(self, embedder, action_size):
-        """
-        embedder: (torch.Tensor) model to extract the embedding for observation
-        action_size: number of the categorical actions
-        """
-        super(CategoricalPolicyT1, self).__init__()
-        self.embedder = embedder
-        # small scale weight-initialization in policy enhances the stability
-        self.fc_policy = orthogonal_init(nn.Linear(self.embedder.output_dim, action_size), gain=0.01)
-        self.fc_value = orthogonal_init(nn.Linear(self.embedder.output_dim, 1), gain=1.0)
-
-    def forward(self, x):
-        hidden = self.embedder(x)
-        logits = self.fc_policy(hidden)
-        log_probs = F.log_softmax(logits, dim=1)
-        p = Categorical(logits=log_probs)
-        v = self.fc_value(hidden).reshape(-1)
-        return p, v
-
-    def get_inner_values(self, x):
-        hidden = self.embedder(x)
-        logits = self.fc_policy(hidden)
-        action_probabilities = F.softmax(logits, dim=1)
-        return hidden, action_probabilities
-
-
-class CategoricalPolicyT2(nn.Module):
-    def __init__(self, embedder, action_size, additional_hidden_dim, additional_softmax_dim):
-        """
-        embedder: (torch.Tensor) model to extract the embedding for observation
-        action_size: number of the categorical actions
-        """
-        super(CategoricalPolicyT2, self).__init__()
-        self.embedder = embedder
-        # Compute total input dimension for fc_policy considering additional tensors
-        total_input_dim = self.embedder.output_dim + additional_hidden_dim + additional_softmax_dim
-        # small scale weight-initialization in policy enhances the stability
-        self.fc_policy = orthogonal_init(nn.Linear(total_input_dim, action_size), gain=0.01)
-        self.fc_value = orthogonal_init(nn.Linear(total_input_dim, 1), gain=1.0)
-
-    def forward(self, x, pi_w_hidden, pi_w_softmax):
-        hidden = self.embedder(x)
-        hidden = torch.cat([hidden, pi_w_hidden], dim=1)
-        hidden = torch.cat([hidden, pi_w_softmax], dim=1)
-        logits = self.fc_policy(hidden)
-        log_probs = F.log_softmax(logits, dim=1)
-        p = Categorical(logits=log_probs)
-        v = self.fc_value(hidden).reshape(-1)
-        return p, v
-
-
-class CategoricalPolicyT3(nn.Module):
-    def __init__(self, action_size, weak_agent_hidden_dim):
-        """
-        action_size: number of the categorical actions
-        """
-        super(CategoricalPolicyT3, self).__init__()
-        # small scale weight-initialization in policy enhances the stability
-        self.fc_policy = orthogonal_init(nn.Linear(weak_agent_hidden_dim, action_size), gain=0.01)
-        self.fc_value = orthogonal_init(nn.Linear(weak_agent_hidden_dim, 1), gain=1.0)
-
-    def forward(self, pi_w_hidden):
-        hidden = pi_w_hidden
-        logits = self.fc_policy(hidden)
-        log_probs = F.log_softmax(logits, dim=1)
-        p = Categorical(logits=log_probs)
-        v = self.fc_value(hidden).reshape(-1)
-        return p, v
-
-
-class ResidualBlock(nn.Module):
-    def __init__(self,
-                 in_channels):
-        super(ResidualBlock, self).__init__()
-        self.conv1 = nn.Conv2d(in_channels=in_channels, out_channels=in_channels, kernel_size=3, stride=1, padding=1)
-        self.conv2 = nn.Conv2d(in_channels=in_channels, out_channels=in_channels, kernel_size=3, stride=1, padding=1)
-
-    def forward(self, x):
-        out = nn.ReLU()(x)
-        out = self.conv1(out)
-        out = nn.ReLU()(out)
-        out = self.conv2(out)
-        return out + x
-
-
-class ImpalaBlock(nn.Module):
-    def __init__(self, in_channels, out_channels):
-        super(ImpalaBlock, self).__init__()
-        self.conv = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=3, stride=1, padding=1)
-        self.res1 = ResidualBlock(out_channels)
-        self.res2 = ResidualBlock(out_channels)
-
-    def forward(self, x):
-        x = self.conv(x)
-        x = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)(x)
-        x = self.res1(x)
-        x = self.res2(x)
-        return x
-
-
-class ImpalaModel(nn.Module):
-    def __init__(self,
-                 in_channels,
-                 **kwargs):
-        super(ImpalaModel, self).__init__()
-        scale = 1
-        self.block1 = ImpalaBlock(in_channels=in_channels, out_channels=16 * scale)
-        self.block2 = ImpalaBlock(in_channels=16 * scale, out_channels=32 * scale)
-        self.block3 = ImpalaBlock(in_channels=32 * scale, out_channels=32 * scale)
-        self.fc = nn.Linear(in_features=32 * scale * 8 * 8, out_features=256)
-
-        self.output_dim = 256
-        self.apply(xavier_uniform_init)
-
-    def forward(self, x):
-        x = self.block1(x)
-        x = self.block2(x)
-        x = self.block3(x)
-        x = nn.ReLU()(x)
-        x = Flatten()(x)
-        x = self.fc(x)
-        x = nn.ReLU()(x)
-        return x
-
-
-class Flatten(nn.Module):
-    def forward(self, x):
-        return torch.flatten(x, start_dim=1)
-
-
-def xavier_uniform_init(module, gain=1.0):
-    if isinstance(module, nn.Linear) or isinstance(module, nn.Conv2d):
-        nn.init.xavier_uniform_(module.weight.data, gain)
-        nn.init.constant_(module.bias.data, 0)
-    return module
-
-
-def orthogonal_init(module, gain=nn.init.calculate_gain('relu')):
-    if isinstance(module, nn.Linear) or isinstance(module, nn.Conv2d):
-        nn.init.orthogonal_(module.weight.data, gain)
-        nn.init.constant_(module.bias.data, 0)
-    return module
-
-
-def adjust_lr(optimizer, init_lr, timesteps, max_timesteps):
-    lr = init_lr * (1 - (timesteps / max_timesteps))
-    for param_group in optimizer.param_groups:
-        param_group['lr'] = lr
-    return optimizer

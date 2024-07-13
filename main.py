@@ -2,7 +2,6 @@ from YRC.core import Environment, Policy
 from YRC.core import env_registry
 from YRC.core.utils import logger_setup, get_args
 
-
 if __name__ == '__main__':
     args = get_args()
     env_registry.set_cfgs(name=args.benchmark)

@@ -1,104 +1,15 @@
-from typing import Dict
-
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from torch.distributions.categorical import Categorical
 import numpy as np
+import torch
 import torch.optim as optim
+
+from YRC.core.models import adjust_lr
 from cliport.utils import utils
-
-
-class CategoricalPolicyT3(nn.Module):
-    def __init__(self, action_size, weak_agent_hidden_dim):
-        """
-        action_size: number of the categorical actions
-        """
-        super(CategoricalPolicyT3, self).__init__()
-        # small scale weight-initialization in policy enhances the stability
-        self.fc_policy = orthogonal_init(nn.Linear(weak_agent_hidden_dim, action_size), gain=0.01)
-        self.fc_value = orthogonal_init(nn.Linear(weak_agent_hidden_dim, 1), gain=1.0)
-
-    def forward(self, pi_w_hidden):
-        hidden = pi_w_hidden
-        logits = self.fc_policy(hidden)
-        log_probs = F.log_softmax(logits, dim=1)
-        p = Categorical(logits=log_probs)
-        v = self.fc_value(hidden).reshape(-1)
-        return p, v
-
-
-class ResidualBlock(nn.Module):
-    def __init__(self, in_features):
-        super(ResidualBlock, self).__init__()
-        self.fc1 = nn.Linear(in_features, in_features)
-        self.fc2 = nn.Linear(in_features, in_features)
-
-    def forward(self, x):
-        out = F.relu(x)
-        out = self.fc1(out)
-        out = F.relu(out)
-        out = self.fc2(out)
-        return out + x
-
-
-class ImpalaBlock(nn.Module):
-    def __init__(self, in_features, out_features):
-        super(ImpalaBlock, self).__init__()
-        self.fc = nn.Linear(in_features, out_features)
-        self.res1 = ResidualBlock(out_features)
-        self.res2 = ResidualBlock(out_features)
-
-    def forward(self, x):
-        x = self.fc(x)
-        x = self.res1(x)
-        x = self.res2(x)
-        return x
-
-
-class ImpalaModel(nn.Module):
-    def __init__(self, input_dim, scale=128):
-        super(ImpalaModel, self).__init__()
-        self.block1 = ImpalaBlock(input_dim, 16 * scale)
-        self.block2 = ImpalaBlock(16 * scale, 32 * scale)
-        self.block3 = ImpalaBlock(32 * scale, 32 * scale)
-        self.fc = nn.Linear(32 * scale, 256)
-
-        self.output_dim = 256
-        self.apply(xavier_uniform_init)
-
-    def forward(self, x):
-        x = self.block1(x)
-        x = self.block2(x)
-        x = self.block3(x)
-        x = F.relu(x)
-        x = self.fc(x)
-        x = F.relu(x)
-        return x
-
-
-def orthogonal_init(module, gain=nn.init.calculate_gain('relu')):
-    if isinstance(module, nn.Linear) or isinstance(module, nn.Conv2d):
-        nn.init.orthogonal_(module.weight.data, gain)
-        nn.init.constant_(module.bias.data, 0)
-    return module
-
-
-class Flatten(nn.Module):
-    def forward(self, x):
-        return torch.flatten(x, start_dim=1)
-
-
-def xavier_uniform_init(module, gain=1.0):
-    if isinstance(module, nn.Linear) or isinstance(module, nn.Conv2d):
-        nn.init.xavier_uniform_(module.weight.data, gain)
-        nn.init.constant_(module.bias.data, 0)
-    return module
 
 
 class PPO:
     def __init__(self,
                  env,
+                 tsk,
                  policy,
                  logger,
                  storage,
@@ -126,7 +37,6 @@ class PPO:
                  use_gae=True,
                  gae_lambda=0.95,
                  n_train_episodes=2,
-                 tsk=None,
                  seed=0,
                  **kwargs):
 
@@ -171,33 +81,16 @@ class PPO:
             log_prob_act = dist.log_prob(act)
         return act.cpu().numpy(), log_prob_act.cpu().numpy(), value.cpu().numpy()
 
-    def get_inner_values(self, obs, info):
-        with torch.no_grad():
-            if isinstance(obs, Dict):
-                img = [utils.get_image(obs)]
-                info = [info]
-            else:
-                img = obs
-            pick_features, place_features = self.pi_w.extract_features(img, info)
-            pick_features_stacked = torch.stack(pick_features)
-            place_features_stacked = torch.stack(place_features)
-            features = torch.cat([pick_features_stacked, place_features_stacked], dim=1).to(device=self.device)
-            return features
-
     def get_policy_output(self, obs, info):
-        # TODO: complete this function
-        # if self.help_policy_type == "T1":
-        #     dist, value = self.policy(obs)
-        # elif self.help_policy_type in ["T2", "T3"]:
-        #     pi_w_hidden, pi_w_softmax = self.pi_w.policy.get_inner_values(obs)
-        #     if self.help_policy_type == "T2":
-        #         dist, value = self.policy(obs, pi_w_hidden, pi_w_softmax)
-        #     elif self.help_policy_type == "T3":
-        #         dist, value = self.policy(pi_w_hidden)
-        # else:
-        #     raise ValueError("Invalid help policy type.")
-        pi_w_hidden = self.get_inner_values(obs, info)
-        dist, value = self.policy(pi_w_hidden)
+        if self.help_policy_type == "T1":
+            dist, value = self.policy(obs)
+        elif self.help_policy_type in ["T2", "T3"]:
+            pi_w_pick_hidden, pi_w_place_hidden = self.pi_w.extract_features(obs, info)
+            pi_w_hidden = torch.cat([pi_w_pick_hidden, pi_w_place_hidden], dim=1)
+            if self.help_policy_type == "T2":
+                dist, value = self.policy(obs, pi_w_hidden)
+            elif self.help_policy_type == "T3":
+                dist, value = self.policy(pi_w_hidden)
         return dist, value
 
     def optimize(self, n_steps):
@@ -224,7 +117,8 @@ class PPO:
                 pi_loss = -torch.min(surr1, surr2).mean()
 
                 # Clipped Bellman-Error
-                clipped_value_batch = old_value_batch + (value_batch - old_value_batch).clamp(-self.eps_clip, self.eps_clip)
+                clipped_value_batch = old_value_batch + (value_batch - old_value_batch).clamp(-self.eps_clip,
+                                                                                              self.eps_clip)
                 v_surr1 = (value_batch - return_batch).pow(2)
                 v_surr2 = (clipped_value_batch - return_batch).pow(2)
                 value_loss = 0.5 * torch.max(v_surr1, v_surr2).mean()
@@ -277,10 +171,12 @@ class PPO:
                         total_reward += rew
                         train_steps += 1
                     if done:
-                        print(f"episode total_reward={total_reward:.3f}, episode length (of max length)={i/self.tsk.max_steps:.3f}")
+                        print(
+                            f"episode total_reward={total_reward:.3f}, episode length (of max length)={i / self.tsk.max_steps:.3f}")
                         break
                     if not done and i == self.tsk.max_steps - 1:
-                        print(f"episode total_reward={total_reward:.3f}, episode length (of max length)={i/self.tsk.max_steps:.3f}")
+                        print(
+                            f"episode total_reward={total_reward:.3f}, episode length (of max length)={i / self.tsk.max_steps:.3f}")
                         self.storage._dones[i] = True  # set done=True for the last transition
 
             print(f"iteration={self.t}, collected data={train_steps}, total data collected so far={self.storage._size}")
@@ -308,10 +204,3 @@ class PPO:
         self.env.close()
         if self.env_valid is not None:
             self.env_valid.close()
-
-
-def adjust_lr(optimizer, init_lr, timesteps, max_timesteps):
-    lr = init_lr * (1 - (timesteps / max_timesteps))
-    for param_group in optimizer.param_groups:
-        param_group['lr'] = lr
-    return optimizer

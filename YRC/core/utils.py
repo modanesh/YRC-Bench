@@ -1,3 +1,4 @@
+import argparse
 import csv
 import inspect
 import os
@@ -10,7 +11,10 @@ import numpy as np
 import pandas as pd
 import torch
 import wandb
-import argparse
+
+from YRC.cliport_wrapper.models import PPO as cliport_PPO
+from YRC.procgen_wrapper.models import PPO as procgen_PPO
+from YRC.procgen_wrapper.utils import ProcgenEnv
 
 
 def get_args():
@@ -78,7 +82,8 @@ class Logger(object):
 
         time_metrics = ["timesteps", "wall_time", "num_episodes"]  # only collected once
         episode_metrics = ["max_episode_rewards", "mean_episode_rewards", "min_episode_rewards",
-                           "max_episode_len", "mean_episode_len", "min_episode_len"]  # collected for both train and val envs
+                           "max_episode_len", "mean_episode_len",
+                           "min_episode_len"]  # collected for both train and val envs
         self.log = pd.DataFrame(columns=time_metrics + episode_metrics + \
                                         ["val_" + m for m in episode_metrics])
 
@@ -214,3 +219,18 @@ def set_global_seeds(seed, torch_deterministic=True):
     torch.cuda.manual_seed_all(seed)
     torch.backends.cudnn.deterministic = torch_deterministic
     torch.backends.cudnn.benchmark = not torch_deterministic
+
+
+def algorithm_setup(env, additional_var, policy, logger, storage, storage_valid, device, num_checkpoints,
+                    hyperparameters, pi_w=None, pi_o=None, help_policy_type=None):
+    print('::[LOGGING]::INTIALIZING AGENT...')
+    ppo_agents = {'procgen': procgen_PPO, 'cliport': cliport_PPO}
+    agent_type = 'procgen' if isinstance(additional_var, ProcgenEnv) else 'cliport'
+    agent = ppo_agents[agent_type](env, additional_var, policy, logger, storage, device,
+                                   num_checkpoints,
+                                   storage_valid=storage_valid,
+                                   pi_w=pi_w,
+                                   pi_o=pi_o,
+                                   help_policy_type=help_policy_type,
+                                   **hyperparameters)
+    return agent

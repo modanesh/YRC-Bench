@@ -1,14 +1,15 @@
 import json
 import os
-import torch
+
 import numpy as np
-from cliport.environments.environment import HelpEnvWrapper, Environment
-from cliport import tasks, agents
-import torch.optim as optim
-from .models import CategoricalPolicyT3, ImpalaModel, PPO
-from YRC.core.utils import to_dict
-from cliport.utils import utils
+import torch
 from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
+
+from YRC.core.models import CategoricalPolicyT1, CategoricalPolicyT2, CategoricalPolicyT3, ImpalaModel
+from YRC.core.utils import to_dict
+from cliport import tasks, agents
+from cliport.environments.environment import HelpEnvWrapper
+from cliport.utils import utils
 
 
 class ReplayBuffer:
@@ -127,8 +128,6 @@ class ReplayBuffer:
         return rew_batch, done_batch
 
 
-
-
 def load_ckpts(results_path, model_task):
     result_jsons = [c for c in os.listdir(results_path) if "results-val" in c]
     if 'multi' in model_task:
@@ -173,45 +172,19 @@ def load_weak_policy(cfgs):
     return pi_w
 
 
-def define_help_policy(env, weak_agent, in_feature_shape, device):
+def define_help_policy(env, weak_agent, help_policy_type, device):
     obs = env.reset()
     img = [utils.get_image(obs)]
     info = [env.info]
     pick_features, place_features = weak_agent.extract_features(img, info)
     hidden_size = pick_features[0].shape[0] + place_features[0].shape[0]
-    # model = model_setup(hidden_size)
+    model = ImpalaModel(img[0].shape[-1])
     action_size = 2
-
-    # hidden_size = weak_agent.policy.embedder.output_dim
-    # softmax_size = weak_agent.policy.fc_policy.out_features
-    # if help_policy_type == "T1":
-    #     policy = CategoricalPolicy(model, action_size)
-    # elif help_policy_type == "T2":
-    #     policy = CategoricalPolicyT2(model, action_size, hidden_size, softmax_size)
-    # elif help_policy_type == "T3":
-    #     policy = CategoricalPolicyT3(action_size, hidden_size)
-    # else:
-    #     raise ValueError("Invalid help policy type.")
-    policy = CategoricalPolicyT3(action_size, hidden_size)  # TODO: implement other types of help policies. Currently only type 3 is implemented
+    if help_policy_type == "T1":
+        policy = CategoricalPolicyT1(model, action_size)
+    elif help_policy_type == "T2":
+        policy = CategoricalPolicyT2(model, action_size, hidden_size)
+    elif help_policy_type == "T3":
+        policy = CategoricalPolicyT3(action_size, hidden_size)
     policy.to(device)
-    # return model, policy
     return None, policy
-
-
-def model_setup(in_feature_shape):
-    model = ImpalaModel(in_feature_shape)
-    return model
-
-
-def algorithm_setup(env, tsk, policy, logger, storage, storage_valid, device, num_checkpoints, hyperparameters,
-                    pi_w=None, pi_o=None, help_policy_type=None):
-    print('::[LOGGING]::INTIALIZING AGENT...')
-    agent = PPO(env, policy, logger, storage, device,
-                num_checkpoints,
-                tsk=tsk,
-                storage_valid=storage_valid,
-                pi_w=pi_w,
-                pi_o=pi_o,
-                help_policy_type=help_policy_type,
-                **hyperparameters)
-    return agent
