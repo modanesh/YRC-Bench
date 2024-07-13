@@ -10,6 +10,39 @@ import numpy as np
 import pandas as pd
 import torch
 import wandb
+import argparse
+
+
+def get_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--weak_model_file', type=str)
+    parser.add_argument('--strong_model_file', type=str)
+    parser.add_argument('--help_policy_type', type=str, choices=['T1', 'T2', 'T3'], required=True,
+                        help='Type of the helper policy. '
+                             'T1: vanilla PPO (input is obs), '
+                             'T2: PPO with inputs concatenated by the weak agent features (conv + mlp), '
+                             'T3: PPO with inputs from the weak agent (mlp).')
+    parser.add_argument('--benchmark', type=str, choices=['procgen', 'cliport'], required=True)
+    parser.add_argument('--env_name', type=str, required=True)
+    parser.add_argument('--task', type=str)
+    parser.add_argument('--param_name', type=str)
+    args = parser.parse_args()
+    verify_args(args)
+    return args
+
+
+def verify_args(args):
+    # general checks
+    if args.weak_model_file is None:
+        raise ValueError("Weak model file not provided.")
+    # procgen checks
+    if args.benchmark == 'procgen' and args.strong_model_file is None:
+        raise ValueError("Strong model file not provided for procgen.")
+    if args.benchmark == 'procgen' and args.param_name is None:
+        raise ValueError("Param name not provided for procgen.")
+    # cliport checks
+    if args.benchmark == 'cliport' and args.task is None:
+        raise ValueError("Task not provided for cliport.")
 
 
 class Logger(object):

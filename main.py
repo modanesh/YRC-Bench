@@ -1,18 +1,6 @@
 from YRC.core import Environment, Policy
 from YRC.core import env_registry
-from YRC.core.utils import logger_setup
-import argparse
-
-
-def get_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--weak_model_file', type=str)
-    parser.add_argument('--strong_model_file', type=str)
-    parser.add_argument('--help_policy_type', type=str, choices=['T1', 'T2', 'T3'], required=True,
-                        help='Type of the helper policy. T1: vanilla PPO, T2: PPO with inputs concatenated by the weak agent features (conv + mlp), '
-                             'T3: PPO with inputs from the weak agent (mlp).')
-    parser.add_argument('--benchmark', type=str, choices=['procgen', 'cliport'], required=True)
-    return parser.parse_args()
+from YRC.core.utils import logger_setup, get_args
 
 
 if __name__ == '__main__':
@@ -34,13 +22,9 @@ if __name__ == '__main__':
     policy_kwargs = {'obs_shape': obs_shape, 'action_size': action_size}
     weak_policy, strong_policy = policy.load_acting_policies(policy_kwargs)
 
-    # Set up environment and additional variables based on benchmark
-    if args.benchmark == 'procgen':
-        env, env_val = environment.make(weak_policy, strong_policy)
-        additional_var = env_val
-    elif args.benchmark == 'cliport':
-        env, task = environment.make(weak_policy, strong_policy)
-        additional_var = task
+    # Set up environment and additional variables based on benchmark. For procgen, the `additional_var` is the
+    # validation env, and for cliport, the `additional_var` is the task.
+    env, additional_var = environment.make(weak_policy, strong_policy)
 
     # set up help policy
     help_algorithm = policy.setup_help_policy(env, additional_var, weak_policy, strong_policy, logger, obs_shape)
