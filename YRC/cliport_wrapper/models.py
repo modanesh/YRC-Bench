@@ -127,6 +127,7 @@ class PPO:
                  gae_lambda=0.95,
                  n_train_episodes=2,
                  tsk=None,
+                 seed=0,
                  **kwargs):
 
         super().__init__()
@@ -161,6 +162,7 @@ class PPO:
         self.pi_o = pi_o
         self.help_policy_type = help_policy_type
         self.n_train_episodes = n_train_episodes
+        self.seed = seed
 
     def predict(self, obs, info):
         with torch.no_grad():
@@ -251,17 +253,15 @@ class PPO:
         print('::[LOGGING]::START TRAINING...')
         save_every = num_timesteps // self.num_checkpoints
         checkpoint_cnt = 0
-        obs = self.env.reset()
         if self.env_valid is not None:
-            self.env_valid.seed(11)  # TODO: get seed as an argument
-            obs_v = self.env_valid.reset()
+            self.env_valid.seed(self.seed + self.n_train_episodes + 1)  # TODO: get seed as an argument
 
         while self.t < num_timesteps:
             train_steps = 0
             self.policy.eval()
             for train_run in range(self.n_train_episodes):
                 total_reward = 0
-                self.env.seed(4 + train_run)  # TODO: get seed as an argument
+                self.env.seed(self.seed + train_run)  # TODO: get seed as an argument
                 obs = self.env.reset()
                 info = self.env.info
                 print(f"episode goal: {info['lang_goal']}")

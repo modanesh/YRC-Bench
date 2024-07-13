@@ -17,17 +17,18 @@ class Policy:
             return weak_agent, None
 
     def setup_help_policy(self, env, additional_var, weak_agent, strong_agent, writer, observation_shape):
-        # additional_var is "env_val" for procgen
-        # additional_var is "task" for cliport
+        # additional_var is "env_val" for procgen and "task" for cliport
         if self.exp_cfg.benchmark == 'procgen':
             storage = procgen_utils.ReplayBuffer(observation_shape, self.exp_cfg.policy.n_steps, self.exp_cfg.policy.n_envs, self.exp_cfg.device)
             storage_val = procgen_utils.ReplayBuffer(observation_shape, self.exp_cfg.policy.n_steps, self.exp_cfg.policy.n_envs, self.exp_cfg.device)
 
             _, help_policy = procgen_utils.define_help_policy(env, weak_agent, self.exp_cfg.help_policy_type, self.exp_cfg.device)
             policy_cfgs = to_dict(self.exp_cfg.policy)
-            help_algorithm = procgen_utils.algorithm_setup(env, additional_var, help_policy, writer, storage, storage_val, self.exp_cfg.device,
-                                                           self.exp_cfg.num_checkpoints, model_file=None, hyperparameters=policy_cfgs,
-                                                           pi_w=weak_agent, pi_o=strong_agent, help_policy_type=self.exp_cfg.help_policy_type)
+            help_algorithm = procgen_utils.algorithm_setup(env, additional_var, help_policy, writer, storage,
+                                                           storage_val, self.exp_cfg.device,
+                                                           self.exp_cfg.num_checkpoints, hyperparameters=policy_cfgs,
+                                                           pi_w=weak_agent, pi_o=strong_agent,
+                                                           help_policy_type=self.exp_cfg.help_policy_type)
         elif self.exp_cfg.benchmark == 'cliport':
             action_shape = 2
             storage = cliport_utils.ReplayBuffer(observation_shape, action_shape, self.exp_cfg.buffer_size, self.exp_cfg.policy.n_envs, device=self.exp_cfg.device)
@@ -35,8 +36,10 @@ class Policy:
 
             _, help_policy = cliport_utils.define_help_policy(env, weak_agent, observation_shape, self.exp_cfg.device)
             policy_cfgs = to_dict(self.exp_cfg.policy)
-            help_algorithm = cliport_utils.algorithm_setup(env, additional_var, help_policy, writer, storage, storage_val, self.exp_cfg.device,
-                                                           self.exp_cfg.num_checkpoints, model_file=None, hyperparameters=policy_cfgs,
-                                                           pi_w=weak_agent, pi_o=strong_agent, help_policy_type=self.exp_cfg.help_policy_type)
+            help_algorithm = cliport_utils.algorithm_setup(env, additional_var, help_policy, writer, storage,
+                                                           storage_val, self.exp_cfg.device,
+                                                           self.exp_cfg.num_checkpoints, hyperparameters=policy_cfgs,
+                                                           pi_w=weak_agent, pi_o=strong_agent,
+                                                           help_policy_type=self.exp_cfg.help_policy_type)
         return help_algorithm
 

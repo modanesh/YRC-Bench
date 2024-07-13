@@ -68,4 +68,5 @@ class CliportCfg(BaseConfig):
         use_gae = True
         gae_lambda = 0.95
         n_train_episodes = 2
+        seed = 0
 

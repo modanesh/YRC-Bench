@@ -203,8 +203,8 @@ def model_setup(in_feature_shape):
     return model
 
 
-def algorithm_setup(env, tsk, policy, logger, storage, storage_valid, device, num_checkpoints, model_file, hyperparameters, pi_w=None, pi_o=None,
-                    help_policy_type=None):
+def algorithm_setup(env, tsk, policy, logger, storage, storage_valid, device, num_checkpoints, hyperparameters,
+                    pi_w=None, pi_o=None, help_policy_type=None):
     print('::[LOGGING]::INTIALIZING AGENT...')
     agent = PPO(env, policy, logger, storage, device,
                 num_checkpoints,

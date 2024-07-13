@@ -112,8 +112,8 @@ def model_setup(env):
     return model, action_size
 
 
-def algorithm_setup(env, env_valid, policy, logger, storage, storage_valid, device, num_checkpoints, model_file, hyperparameters, pi_w=None, pi_o=None,
-                    help_policy_type=None):
+def algorithm_setup(env, env_valid, policy, logger, storage, storage_valid, device, num_checkpoints, hyperparameters,
+                    pi_w=None, pi_o=None, help_policy_type=None):
     print('::[LOGGING]::INTIALIZING AGENT...')
     agent = PPO(env, policy, logger, storage, device,
                 num_checkpoints,
@@ -123,8 +123,6 @@ def algorithm_setup(env, env_valid, policy, logger, storage, storage_valid, devi
                 pi_o=pi_o,
                 help_policy_type=help_policy_type,
                 **hyperparameters)
-    if model_file is not None:
-        agent = load_model(agent, model_file)
     return agent
 
 
