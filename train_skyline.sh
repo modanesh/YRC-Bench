@@ -1,9 +1,10 @@
+#!/bin/bash -x
 #SBATCH --nodes=1
 #SBATCH --mem=40gb
 #SBATCH --gres=gpu:1
 #SBATCH --wait-all-nodes=1
-#SBATCH --job-name=J1
-#SBATCH --output=experiments/slurm/%x.out
+#SBATCH --job-name=skyline
+#SBATCH --output=experiments/slurm/coinrun_T1_01.out
 #SBATCH --time=72:00:00
 #SBATCH --qos scavenger
 #SBATCH --partition scavenger

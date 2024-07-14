@@ -77,8 +77,8 @@ class ProcgenCfg(BaseConfig):
     val_env_name = None
     start_level = 0
     num_levels = 0
-    distribution_mode = 'easy'
-    param_name = 'easy_200'
+    distribution_mode = 'hard'
+    param_name = 'hard_500'
     device = 'cuda'
     num_timesteps = 25_000_000
     seed = 8888
