@@ -175,7 +175,7 @@ class Logger(object):
 def logger_setup(cfgs):
     uuid_stamp = str(uuid.uuid4())[:8]
     env_name = cfgs.env_name if cfgs.benchmark == 'procgen' else cfgs.task
-    run_name = f"PPO-{cfgs.benchmark}-help-{env_name}-type{cfgs.help_policy_type}-{uuid_stamp}"
+    run_name = f"PPO-{cfgs.benchmark}-help-{env_name}-type-{cfgs.help_policy_type}-query-cost-{cfgs.strong_query_cost}-{uuid_stamp}"
     logdir = os.path.join('logs', env_name)
     if not (os.path.exists(logdir)):
         os.makedirs(logdir)
