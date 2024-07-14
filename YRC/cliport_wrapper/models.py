@@ -3,7 +3,7 @@ import torch
 import torch.optim as optim
 
 from YRC.core.models import adjust_lr
-from cliport.utils import utils
+from cliport.cliport.utils import utils
 
 
 class PPO:
