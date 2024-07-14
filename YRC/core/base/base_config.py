@@ -24,3 +24,21 @@ class BaseConfig:
                 setattr(obj, key, i_var)
                 # recursively init members of the attribute
                 BaseConfig.init_member_classes(i_var)
+    
+    def as_string(self, specific_class=None):
+        result = []
+        self._str_helper(self, result, specific_class)
+        return "\n".join(result)
+
+    def _str_helper(self, obj, result, specific_class, prefix=""):
+        for key in dir(obj):
+            if key.startswith("__"):
+                continue
+            var = getattr(obj, key)
+            if inspect.isclass(var):
+                if specific_class and key != specific_class:
+                    continue
+                result.append(f"{prefix}{key}:")
+                self._str_helper(var, result, specific_class, prefix="  ")
+            else:
+                result.append(f"{prefix}{key} = {var}")

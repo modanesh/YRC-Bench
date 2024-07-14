@@ -30,8 +30,8 @@ class EnvRegistry():
             for k, v in self.cfgs.param_name.items():
                 self.cfgs.policy.__dict__[k] = v
 
-            self.cfgs.weak_model_file = os.path.join("YRC", "procgen_wrapper", "logs", self.cfgs.env_name, self.cfgs.weak_model_file)
-            self.cfgs.strong_model_file = os.path.join("YRC", "procgen_wrapper", "logs", self.cfgs.env_name, self.cfgs.strong_model_file)
+            # self.cfgs.weak_model_file = os.path.join("YRC", "procgen_wrapper", "logs", self.cfgs.env_name, self.cfgs.weak_model_file)
+            # self.cfgs.strong_model_file = os.path.join("YRC", "procgen_wrapper", "logs", self.cfgs.env_name, self.cfgs.strong_model_file)
         elif args.benchmark == 'cliport':
             self.cfgs.weak_model_file = args.weak_model_file
             self.cfgs.benchmark = args.benchmark

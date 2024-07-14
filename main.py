@@ -8,6 +8,8 @@ if __name__ == '__main__':
 
     # get configs
     exp_cfg = env_registry.setup_cfgs(args)
+    print("CONFIGS:::::")
+    print(exp_cfg.as_string("hard_500"))
     environment = Environment(exp_cfg)
     policy = Policy(exp_cfg)
 
@@ -30,6 +32,3 @@ if __name__ == '__main__':
 
     # train the help policy
     help_algorithm.train(exp_cfg.num_timesteps)
-
-    # train the OOD detector
-    
