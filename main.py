@@ -30,3 +30,6 @@ if __name__ == '__main__':
 
     # train the help policy
     help_algorithm.train(exp_cfg.num_timesteps)
+
+    # train the OOD detector
+    
