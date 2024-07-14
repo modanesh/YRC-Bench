@@ -7,9 +7,9 @@ from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
 
 from YRC.core.models import CategoricalPolicyT1, CategoricalPolicyT2, CategoricalPolicyT3, ImpalaModel
 from YRC.core.utils import to_dict
-from cliport.cliport import tasks, agents
-from cliport.cliport.environments.environment import HelpEnvWrapper
-from cliport.cliport.utils import utils
+from cliport import tasks, agents
+from cliport.environments.environment import HelpEnvWrapper
+from cliport.utils import utils
 
 
 class ReplayBuffer:

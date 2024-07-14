@@ -1,3 +1,8 @@
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "cliport")))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "procgenAISC")))
+
 from YRC.core import Environment, Policy
 from YRC.core import env_registry
 from YRC.core.utils import logger_setup, get_args
