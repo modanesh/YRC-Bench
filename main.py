@@ -23,10 +23,10 @@ if __name__ == '__main__':
 
     # Set up environment and additional variables based on benchmark. For procgen, the `additional_var` is the
     # validation env, and for cliport, the `additional_var` is the task.
-    env, additional_var = environment.make(weak_policy, strong_policy)
+    env, env_val, task = environment.make(weak_policy, strong_policy)
 
     # set up help policy
-    help_algorithm = policy.setup_help_policy(env, additional_var, weak_policy, strong_policy, logger, obs_shape)
+    help_algorithm = policy.setup_help_policy(env, env_val, task, weak_policy, strong_policy, logger, obs_shape)
 
     # train the help policy
     help_algorithm.train(exp_cfg.num_timesteps)

@@ -19,20 +19,21 @@ from YRC.procgen_wrapper.utils import ProcgenEnv
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--weak_model_file', type=str)
-    parser.add_argument('--strong_model_file', type=str)
+    parser.add_argument('--weak_model_file', type=str, help='Path to the weak model file.')
+    parser.add_argument('--strong_model_file', type=str, help='Path to the strong model file, required for procgen.')
     parser.add_argument('--help_policy_type', type=str, choices=['T1', 'T2', 'T3'], required=True,
                         help='Type of the helper policy. '
                              'T1: vanilla PPO (input is obs), '
                              'T2: PPO with inputs concatenated by the weak agent features (conv + mlp), '
                              'T3: PPO with inputs from the weak agent (mlp).')
-    parser.add_argument('--benchmark', type=str, choices=['procgen', 'cliport'], required=True)
-    parser.add_argument('--env_name', type=str, required=True)
-    parser.add_argument('--task', type=str)
-    parser.add_argument('--model_task', type=str)
-    parser.add_argument('--param_name', type=str)
-    parser.add_argument('--switching_cost', type=float, required=True)
-    parser.add_argument('--strong_query_cost', type=float, required=True)
+    parser.add_argument('--benchmark', type=str, choices=['procgen', 'cliport'], required=True, help='Benchmark type.')
+    parser.add_argument('--env_name', type=str, required=True, help='Environment name for training.')
+    parser.add_argument('--task', type=str, help='Task name, required for cliport')
+    parser.add_argument('--model_task', type=str, help='Model task name, required for cliport')
+    parser.add_argument('--param_name', type=str, help='Parameter name used to determine the additional '
+                                                                     'config for env, required for procgen.')
+    parser.add_argument('--switching_cost', type=float, required=True, help='Switching cost for the help policy.')
+    parser.add_argument('--strong_query_cost', type=float, required=True, help='Strong query cost for the help policy.')
     args = parser.parse_args()
     verify_args(args)
     return args
@@ -221,12 +222,12 @@ def set_global_seeds(seed, torch_deterministic=True):
     torch.backends.cudnn.benchmark = not torch_deterministic
 
 
-def algorithm_setup(env, additional_var, policy, logger, storage, storage_valid, device, num_checkpoints,
+def algorithm_setup(env, env_val, task, policy, logger, storage, storage_valid, device, num_checkpoints,
                     hyperparameters, pi_w=None, pi_o=None, help_policy_type=None):
     print('::[LOGGING]::INTIALIZING AGENT...')
     ppo_agents = {'procgen': procgen_PPO, 'cliport': cliport_PPO}
-    agent_type = 'procgen' if isinstance(additional_var, ProcgenEnv) else 'cliport'
-    agent = ppo_agents[agent_type](env, additional_var, policy, logger, storage, device,
+    agent_type = 'procgen' if isinstance(env, ProcgenEnv) else 'cliport'
+    agent = ppo_agents[agent_type](env, env_val, task, policy, logger, storage, device,
                                    num_checkpoints,
                                    storage_valid=storage_valid,
                                    pi_w=pi_w,

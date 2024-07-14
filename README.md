@@ -14,3 +14,4 @@ Added environments and benchmarks:
 - MAJOR: code refactoring and cleaning
 - MAJOR - cliport: adding T1 and T2 types for help policy
 - merging configs of cliport and procgen
+- cliport: adding validation for help policy

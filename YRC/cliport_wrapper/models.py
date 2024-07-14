@@ -9,13 +9,13 @@ from cliport.utils import utils
 class PPO:
     def __init__(self,
                  env,
-                 tsk,
+                 env_valid,
+                 task,
                  policy,
                  logger,
                  storage,
                  device,
                  n_checkpoints,
-                 env_valid=None,
                  storage_valid=None,
                  pi_w=None,
                  pi_o=None,
@@ -52,7 +52,7 @@ class PPO:
         self.t = 0
         self.n_steps = n_steps
         self.n_envs = n_envs
-        self.tsk = tsk
+        self.task = task
         self.epoch = epoch
         self.mini_batch_per_epoch = mini_batch_per_epoch
         self.mini_batch_size = mini_batch_size
@@ -147,8 +147,6 @@ class PPO:
         print('::[LOGGING]::START TRAINING...')
         save_every = num_timesteps // self.num_checkpoints
         checkpoint_cnt = 0
-        if self.env_valid is not None:
-            self.env_valid.seed(self.seed + self.n_train_episodes + 1)
 
         while self.t < num_timesteps:
             train_steps = 0
@@ -158,8 +156,8 @@ class PPO:
                 self.env.seed(self.seed + train_run)
                 obs = self.env.reset()
                 info = self.env.info
-                print(f"episode goal: {info['lang_goal']}")
-                for i in range(self.tsk.max_steps):
+                print(f"train episode goal: {info['lang_goal']}")
+                for i in range(self.task.max_steps):
                     with torch.no_grad():
                         act, log_prob_act, value = self.predict(obs, info)
                         next_obs, rew, done, info = self.env.step(act)
@@ -172,25 +170,39 @@ class PPO:
                         train_steps += 1
                     if done:
                         print(
-                            f"episode total_reward={total_reward:.3f}, episode length (of max length)={i / self.tsk.max_steps:.3f}")
+                            f"train episode total_reward={total_reward:.3f}, episode length (of max length)={i / self.task.max_steps:.3f}")
                         break
-                    if not done and i == self.tsk.max_steps - 1:
+                    if not done and i == self.task.max_steps - 1:
                         print(
-                            f"episode total_reward={total_reward:.3f}, episode length (of max length)={i / self.tsk.max_steps:.3f}")
+                            f"train episode total_reward={total_reward:.3f}, episode length (of max length)={i / self.task.max_steps:.3f}")
                         self.storage._dones[i] = True  # set done=True for the last transition
 
-            print(f"iteration={self.t}, collected data={train_steps}, total data collected so far={self.storage._size}")
-            self.storage.compute_estimates(self.gamma, self.lmbda, self.use_gae, normalize_adv=True)
+            print(f"train iteration={self.t}, collected data={train_steps}, total data collected so far={self.storage._size}")
+            self.storage.compute_estimates(self.gamma, self.lmbda, self.use_gae, self.normalize_adv)
+
+            # valid
+            for val_run in range(self.n_train_episodes):
+                self.env_valid.seed(self.seed + val_run + 1)
+                obs_v = self.env_valid.reset()
+                info_v = self.env_valid.info
+                print(f"valid episode goal: {info['lang_goal']}")
+                for i in range(self.task.max_steps):
+                    with torch.no_grad():
+                        act_v, log_prob_act_v, value_v = self.predict(obs_v, info_v)
+                        next_obs_v, rew_v, done_v, info_v = self.env_valid.step(act_v)
+                        print(f"valid info: {info['lang_goal']}")
+                        img_obs_v = utils.get_image(obs_v)
+                        img_next_obs_v = utils.get_image(next_obs_v)
+                        self.storage_valid.add_transition(img_obs_v, act_v, log_prob_act_v, rew_v, img_next_obs_v, done_v, value_v, info_v)
+                        obs_v = next_obs_v.copy()
+            self.storage_valid.compute_estimates(self.gamma, self.lmbda, self.use_gae, self.normalize_adv)
 
             # Optimize policy & values
             summary = self.optimize(train_steps)
             # Log the training-procedure
             self.t += train_steps
             rew_batch, done_batch = self.storage.fetch_log_data()
-            if self.storage_valid is not None:
-                rew_batch_v, done_batch_v = self.storage_valid.fetch_log_data()
-            else:
-                rew_batch_v = done_batch_v = None
+            rew_batch_v, done_batch_v = self.storage_valid.fetch_log_data()
             self.logger.feed_cliport(rew_batch, done_batch, rew_batch_v, done_batch_v)
             self.logger.dump()
             self.optimizer = adjust_lr(self.optimizer, self.learning_rate, self.t, num_timesteps)
@@ -202,5 +214,4 @@ class PPO:
                            self.logger.logdir + '/model_' + str(self.t) + '.pth')
                 checkpoint_cnt += 1
         self.env.close()
-        if self.env_valid is not None:
-            self.env_valid.close()
+        self.env_valid.close()

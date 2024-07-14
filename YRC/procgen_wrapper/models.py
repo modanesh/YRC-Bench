@@ -9,6 +9,7 @@ class PPO:
     def __init__(self,
                  env,
                  env_valid,
+                 task,
                  policy,
                  logger,
                  storage,
@@ -141,8 +142,7 @@ class PPO:
         save_every = num_timesteps // self.num_checkpoints
         checkpoint_cnt = 0
         obs = self.env.reset()
-        if self.env_valid is not None:
-            obs_v = self.env_valid.reset()
+        obs_v = self.env_valid.reset()
 
         while self.t < num_timesteps:
             self.policy.eval()
@@ -158,25 +158,21 @@ class PPO:
             self.storage.compute_estimates(self.gamma, self.lmbda, self.use_gae, self.normalize_adv)
 
             # valid
-            if self.env_valid is not None:
-                for _ in range(self.n_steps):
-                    act_v, log_prob_act_v, value_v = self.predict(obs_v)
-                    next_obs_v, rew_v, done_v, info_v = self.env_valid.step(act_v)
-                    self.storage_valid.store(obs_v, act_v, rew_v, done_v, info_v, log_prob_act_v, value_v)
-                    obs_v = next_obs_v
-                _, _, last_val_v = self.predict(obs_v)
-                self.storage_valid.store_last(obs_v, last_val_v)
-                self.storage_valid.compute_estimates(self.gamma, self.lmbda, self.use_gae, self.normalize_adv)
+            for _ in range(self.n_steps):
+                act_v, log_prob_act_v, value_v = self.predict(obs_v)
+                next_obs_v, rew_v, done_v, info_v = self.env_valid.step(act_v)
+                self.storage_valid.store(obs_v, act_v, rew_v, done_v, info_v, log_prob_act_v, value_v)
+                obs_v = next_obs_v
+            _, _, last_val_v = self.predict(obs_v)
+            self.storage_valid.store_last(obs_v, last_val_v)
+            self.storage_valid.compute_estimates(self.gamma, self.lmbda, self.use_gae, self.normalize_adv)
 
             # Optimize policy & values
             summary = self.optimize()
             # Log the training-procedure
             self.t += self.n_steps * self.n_envs
             rew_batch, done_batch = self.storage.fetch_log_data()
-            if self.storage_valid is not None:
-                rew_batch_v, done_batch_v = self.storage_valid.fetch_log_data()
-            else:
-                rew_batch_v = done_batch_v = None
+            rew_batch_v, done_batch_v = self.storage_valid.fetch_log_data()
             self.logger.feed_procgen(rew_batch, done_batch, rew_batch_v, done_batch_v)
             self.logger.dump()
             self.optimizer = adjust_lr(self.optimizer, self.learning_rate, self.t, num_timesteps)
@@ -188,8 +184,7 @@ class PPO:
                            self.logger.logdir + '/model_' + str(self.t) + '.pth')
                 checkpoint_cnt += 1
         self.env.close()
-        if self.env_valid is not None:
-            self.env_valid.close()
+        self.env_valid.close()
 
 
 class PPOFrozen:

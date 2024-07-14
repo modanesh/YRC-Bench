@@ -14,7 +14,7 @@ class Environment:
                                                  self.exp_cfg.env_name, self.exp_cfg.start_level)
             env_val = self.procgen_environment_setup(weak_agent, strong_agent, max_rew, timeout,
                                                      self.exp_cfg.val_env_name, self.exp_cfg.start_level_val)
-            return env, env_val
+            return env, env_val, None
         elif self.exp_cfg.benchmark == 'cliport':
             environment, task = cliport_utils.environment_setup(self.exp_cfg.assets_root, weak_agent,
                                                                 self.exp_cfg.strong_query_cost,
