@@ -15,6 +15,7 @@ conda activate ood
 wandb login 4a6017fc91542ffdb82ee3d6213e9cf0c11fd892
 
 export CUDA_LAUNCH_BLOCKING=1
+export CLIPORT_ROOT="/nas/ucb/tutrinh/yield_request_control/cliport/"
 cd /nas/ucb/tutrinh/yield_request_control
 export PYTHONPATH="$PYTHONPATH:$PWD"
 
