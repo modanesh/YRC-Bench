@@ -27,7 +27,16 @@ class EnvRegistry():
             set_global_seeds(self.cfgs.seed)
             if self.cfgs.start_level == self.cfgs.start_level_val:
                 raise ValueError("Seeds for training and validation envs are equal.")
-            for k, v in self.cfgs.param_name.items():
+
+            param_name = args.param_name
+            param_class = getattr(self.cfgs, param_name, None)
+            if param_class is None:
+                raise ValueError(f"No configuration class found for param_name: {param_name}")
+            if inspect.isclass(param_class):
+                param_instance = param_class()
+            else:
+                raise TypeError(f"{param_name} is not a class")
+            for k, v in vars(param_instance).items():
                 self.cfgs.policy.__dict__[k] = v
 
             # self.cfgs.weak_model_file = os.path.join("YRC", "procgen_wrapper", "logs", self.cfgs.env_name, self.cfgs.weak_model_file)
