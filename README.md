@@ -15,3 +15,4 @@ Added environments and benchmarks:
 - MAJOR - cliport: adding T1 and T2 types for help policy
 - merging configs of cliport and procgen
 - cliport: adding validation for help policy
+- merging utils of cliport and procgen
