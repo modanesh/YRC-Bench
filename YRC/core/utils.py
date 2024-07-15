@@ -19,7 +19,7 @@ from procgen import ProcgenEnv
 from cliport import tasks, agents
 from cliport.environments import environment
 from cliport.utils import utils as cliport_utils
-from models import cliportPPO, procgenPPO, CategoricalPolicyT1, CategoricalPolicyT2, CategoricalPolicyT3, ImpalaModel, PPOFrozen
+from models import cliportPPO, procgenPPO, CategoricalPolicy, ImpalaModel, PPOFrozen
 
 
 ########################################################################
@@ -233,15 +233,13 @@ def set_global_seeds(seed, torch_deterministic=True):
 
 
 def algorithm_setup(env, env_val, task, policy, logger, storage, storage_valid, device, num_checkpoints,
-                    hyperparameters, pi_w=None, pi_o=None, help_policy_type=None):
+                    hyperparameters, help_policy_type=None):
     print('::[LOGGING]::INTIALIZING AGENT...')
     ppo_agents = {'procgen': procgenPPO, 'cliport': cliportPPO}
     agent_type = 'procgen' if isinstance(env, ProcgenEnv) else 'cliport'
     agent = ppo_agents[agent_type](env, env_val, task, policy, logger, storage, device,
                                    num_checkpoints,
                                    storage_valid=storage_valid,
-                                   pi_w=pi_w,
-                                   pi_o=pi_o,
                                    help_policy_type=help_policy_type,
                                    **hyperparameters)
     return agent
@@ -530,12 +528,9 @@ class ProcgenReplayBuffer:
 
 
 def procgen_environment_setup(n_steps, env_name, start_level, num_levels, distribution_mode, num_threads,
-                              random_percent,
-                              step_penalty, key_penalty, rand_region,
-                              normalize_rew, weak_policy=None, strong_policy=None, get_configs=False,
-                              strong_query_cost=0.0,
-                              switching_agent_cost=0.0, reward_max=1.0,
-                              timeout=1000):
+                              random_percent, step_penalty, key_penalty, rand_region, normalize_rew, weak_policy=None,
+                              strong_policy=None, get_configs=False, strong_query_cost=0.0, switching_agent_cost=0.0,
+                              reward_max=1.0, timeout=1000, help_policy_type=None, device='cuda'):
     print('::[LOGGING]::INITIALIZING ENVIRONMENTS...')
     env = ProcgenEnv(num_envs=n_steps,
                      env_name=env_name,
@@ -555,8 +550,7 @@ def procgen_environment_setup(n_steps, env_name, start_level, num_levels, distri
     env = procgen_wrappers.ScaledFloatFrame(env)
     if strong_policy is not None and weak_policy is not None:
         env = procgen_wrappers.HelpEnvWrapper(env, weak_policy, strong_policy, strong_query_cost, switching_agent_cost,
-                                              reward_max,
-                                              timeout)
+                                              reward_max, timeout, help_policy_type, device)
     if get_configs:
         obs_shape = env.observation_space.shape
         action_size = env.action_space.n
@@ -576,7 +570,7 @@ def load_model(agent, model_file, frozen=False):
 
 def load_policy(obs_size, action_size, model_file, device):
     model = ImpalaModel(in_channels=obs_size)
-    policy = CategoricalPolicyT1(model, action_size)
+    policy = CategoricalPolicy(embedder=model, action_size=action_size)
     policy.to(device)
     policy.eval()
     agent = PPOFrozen(policy, device)
@@ -585,15 +579,18 @@ def load_policy(obs_size, action_size, model_file, device):
 
 
 def procgen_define_help_policy(env, weak_agent, help_policy_type, device):
-    in_channels = env.observation_space.shape[0]
-    model = ImpalaModel(in_channels=in_channels)
     action_size = 2
-    hidden_size = weak_agent.policy.embedder.output_dim
-    if help_policy_type == "T1":
-        policy = CategoricalPolicyT1(model, action_size)
-    elif help_policy_type == "T2":
-        policy = CategoricalPolicyT2(model, action_size, hidden_size)
-    elif help_policy_type == "T3":
-        policy = CategoricalPolicyT3(action_size, hidden_size)
+    model, _ = model_setup(env) if help_policy_type != "T3" else (None, None)
+    hidden_size = weak_agent.policy.embedder.output_dim if help_policy_type != "T1" else 0
+    softmax_size = weak_agent.policy.fc_policy.out_features if help_policy_type == "T2" else 0
+    policy = CategoricalPolicy(embedder=model, action_size=action_size, additional_hidden_dim=hidden_size, additional_softmax_dim=softmax_size)
     policy.to(device)
     return model, policy
+
+
+def model_setup(env):
+    in_channels = env.observation_space.shape[0]
+    model = ImpalaModel(in_channels=in_channels)
+    action_size = env.action_space.n
+    return model, action_size
+

@@ -16,7 +16,7 @@ class Policy:
             weak_agent = utils.load_weak_policy(self.exp_cfg)
             return weak_agent, None
 
-    def setup_help_policy(self, env, env_val, task, weak_agent, strong_agent, writer, observation_shape):
+    def setup_help_policy(self, env, env_val, task, weak_agent, writer, observation_shape):
         if self.exp_cfg.benchmark == 'procgen':
             storage = utils.ProcgenReplayBuffer(observation_shape, self.exp_cfg.policy.n_steps,
                                                 self.exp_cfg.policy.n_envs, self.exp_cfg.device)
@@ -38,6 +38,5 @@ class Policy:
         help_algorithm = utils.algorithm_setup(env, env_val, task, help_policy, writer, storage,
                                                storage_val, self.exp_cfg.device,
                                                self.exp_cfg.num_checkpoints, hyperparameters=policy_cfgs,
-                                               pi_w=weak_agent, pi_o=strong_agent,
                                                help_policy_type=self.exp_cfg.help_policy_type)
         return help_algorithm

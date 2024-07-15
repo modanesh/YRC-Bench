@@ -16,3 +16,4 @@ Added environments and benchmarks:
 - merging configs of cliport and procgen
 - cliport: adding validation for help policy
 - merging utils of cliport and procgen
+- MAJOR: cleaning code and refactoring

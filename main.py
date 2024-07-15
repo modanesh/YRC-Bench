@@ -26,7 +26,7 @@ if __name__ == '__main__':
     env, env_val, task = environment.make(weak_policy, strong_policy)
 
     # set up help policy
-    help_algorithm = policy.setup_help_policy(env, env_val, task, weak_policy, strong_policy, logger, obs_shape)
+    help_algorithm = policy.setup_help_policy(env, env_val, task, weak_policy, logger, obs_shape)
 
     # train the help policy
     help_algorithm.train(exp_cfg.num_timesteps)

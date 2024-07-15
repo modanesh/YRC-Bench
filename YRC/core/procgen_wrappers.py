@@ -1,7 +1,7 @@
 import contextlib
 import os
 from abc import ABC, abstractmethod
-
+import torch
 import gym
 import numpy as np
 from gym import spaces
@@ -377,7 +377,7 @@ class ScaledFloatFrame(VecEnvWrapper):
 
 
 class HelpEnvWrapper(VecEnvWrapper):
-    def __init__(self, venv, weak_policy, strong_policy, strong_query_cost, switching_agent_cost, reward_max, timeout):
+    def __init__(self, venv, weak_policy, strong_policy, strong_query_cost, switching_agent_cost, reward_max, timeout, obs_type, device):
         super().__init__(venv)
         self.action_space = gym.spaces.Discrete(2)
         self.weak_policy = weak_policy
@@ -386,6 +386,9 @@ class HelpEnvWrapper(VecEnvWrapper):
         self.switching_agent_cost_per_action = (reward_max / timeout) * switching_agent_cost
         self.actions = None
         self.prev_actions = None
+        assert obs_type in ["T1", "T2", "T3"], "obs_type should be one of ['T1', 'T2', 'T3']"
+        self.obs_type = obs_type
+        self.device = device
 
     def step_async(self, actions):
         obs = self.venv.reset()  # Get current observation
@@ -402,10 +405,21 @@ class HelpEnvWrapper(VecEnvWrapper):
         obs, reward, done, info = self.venv.step_wait()
         reward = self.strong_query(reward)
         reward = self.switching_agent(reward, done)
-        return obs, reward, done, info
+        obs_tensor = torch.FloatTensor(obs).to(device=self.device)
+        pi_w_hidden = self.get_weak_policy_features(obs_tensor)
+        return obs, reward, done, info, pi_w_hidden
 
     def reset(self):
-        return self.venv.reset()
+        obs = self.venv.reset()
+        obs_tensor = torch.FloatTensor(obs).to(device=self.device)
+        pi_w_hidden = self.get_weak_policy_features(obs_tensor)
+        return obs, pi_w_hidden
+
+    def get_weak_policy_features(self, obs):
+        pi_w_hidden = None
+        if self.obs_type in ["T2", "T3"]:
+            pi_w_hidden = self.weak_policy.policy.get_inner_values(obs)
+        return pi_w_hidden
 
     def strong_query(self, rew):
         # multiply the reward with the oracle cost if the action is from the oracle, and if the reward is above zero.

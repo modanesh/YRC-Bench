@@ -8,72 +8,43 @@ from torch.distributions.categorical import Categorical
 from cliport.utils import utils
 
 
-class CategoricalPolicyT1(nn.Module):
-    def __init__(self, embedder, action_size):
+class CategoricalPolicy(nn.Module):
+    def __init__(self, embedder=None, action_size=2, additional_hidden_dim=0):
         """
         embedder: (torch.Tensor) model to extract the embedding for observation
         action_size: number of the categorical actions
         """
-        super(CategoricalPolicyT1, self).__init__()
-        self.embedder = embedder
-        # small scale weight-initialization in policy enhances the stability
-        self.fc_policy = orthogonal_init(nn.Linear(self.embedder.output_dim, action_size), gain=0.01)
-        self.fc_value = orthogonal_init(nn.Linear(self.embedder.output_dim, 1), gain=1.0)
-
-    def forward(self, x):
-        hidden = self.embedder(x)
-        logits = self.fc_policy(hidden)
-        log_probs = F.log_softmax(logits, dim=1)
-        p = Categorical(logits=log_probs)
-        v = self.fc_value(hidden).reshape(-1)
-        return p, v
-
-    def extract_features(self, x):
-        hidden = self.embedder(x)
-        return hidden
-
-
-class CategoricalPolicyT2(nn.Module):
-    def __init__(self, embedder, action_size, additional_hidden_dim):
-        """
-        embedder: (torch.Tensor) model to extract the embedding for observation
-        action_size: number of the categorical actions
-        """
-        super(CategoricalPolicyT2, self).__init__()
-        self.embedder = embedder
-        # Compute total input dimension for fc_policy considering additional tensors
-        total_input_dim = self.embedder.output_dim + additional_hidden_dim
+        super(CategoricalPolicy, self).__init__()
+        if embedder is not None:
+            self.embedder = embedder
+            # Compute total input dimension for fc_policy considering additional tensors
+            total_input_dim = self.embedder.output_dim + additional_hidden_dim
+        else:
+            total_input_dim = additional_hidden_dim
         # small scale weight-initialization in policy enhances the stability
         self.fc_policy = orthogonal_init(nn.Linear(total_input_dim, action_size), gain=0.01)
         self.fc_value = orthogonal_init(nn.Linear(total_input_dim, 1), gain=1.0)
 
     def forward(self, x, pi_w_hidden):
+        if pi_w_hidden is None:
+            # T1
+            hidden = self.embedder(x)
+        elif pi_w_hidden is not None:
+            # T2
+            hidden = self.embedder(x)
+            hidden = torch.cat([hidden, pi_w_hidden], dim=1)
+        elif pi_w_hidden is not None:
+            # T3
+            hidden = pi_w_hidden
+        logits = self.fc_policy(hidden)
+        log_probs = F.log_softmax(logits, dim=1)
+        p = Categorical(logits=log_probs)
+        v = self.fc_value(hidden).reshape(-1)
+        return p, v
+
+    def get_inner_values(self, x):
         hidden = self.embedder(x)
-        hidden = torch.cat([hidden, pi_w_hidden], dim=1)
-        logits = self.fc_policy(hidden)
-        log_probs = F.log_softmax(logits, dim=1)
-        p = Categorical(logits=log_probs)
-        v = self.fc_value(hidden).reshape(-1)
-        return p, v
-
-
-class CategoricalPolicyT3(nn.Module):
-    def __init__(self, action_size, weak_agent_hidden_dim):
-        """
-        action_size: number of the categorical actions
-        """
-        super(CategoricalPolicyT3, self).__init__()
-        # small scale weight-initialization in policy enhances the stability
-        self.fc_policy = orthogonal_init(nn.Linear(weak_agent_hidden_dim, action_size), gain=0.01)
-        self.fc_value = orthogonal_init(nn.Linear(weak_agent_hidden_dim, 1), gain=1.0)
-
-    def forward(self, pi_w_hidden):
-        hidden = pi_w_hidden
-        logits = self.fc_policy(hidden)
-        log_probs = F.log_softmax(logits, dim=1)
-        p = Categorical(logits=log_probs)
-        v = self.fc_value(hidden).reshape(-1)
-        return p, v
+        return hidden
 
 
 class ResidualBlock(nn.Module):
@@ -176,15 +147,13 @@ class procgenPPO:
     def __init__(self,
                  env,
                  env_valid,
-                 task,
+                 task,  # not used, but to generalize the PPO input args
                  policy,
                  logger,
                  storage,
                  device,
                  n_checkpoints,
                  storage_valid=None,
-                 pi_w=None,
-                 pi_o=None,
                  help_policy_type=None,
                  n_steps=128,
                  n_envs=8,
@@ -229,29 +198,18 @@ class procgenPPO:
         self.normalize_adv = normalize_adv
         self.normalize_rew = normalize_rew
         self.use_gae = use_gae
-        self.pi_w = pi_w
-        self.pi_o = pi_o
         self.help_policy_type = help_policy_type
 
-    def predict(self, obs):
+    def predict(self, obs, pi_w_hidden):
         with torch.no_grad():
             obs_tensor = torch.FloatTensor(obs).to(device=self.device)
-            dist, value = self.get_policy_output(obs_tensor)
+            dist, value = self.get_policy_output(obs_tensor, pi_w_hidden)
             act = dist.sample()
             log_prob_act = dist.log_prob(act)
         return act.cpu().numpy(), log_prob_act.cpu().numpy(), value.cpu().numpy()
 
-    def get_policy_output(self, obs):
-        if self.help_policy_type == "T1":
-            dist, value = self.policy(obs)
-        elif self.help_policy_type in ["T2", "T3"]:
-            pi_w_hidden = self.pi_w.policy.extract_features(obs)
-            if self.help_policy_type == "T2":
-                dist, value = self.policy(obs, pi_w_hidden)
-            elif self.help_policy_type == "T3":
-                dist, value = self.policy(pi_w_hidden)
-        else:
-            raise ValueError("Invalid help policy type.")
+    def get_policy_output(self, obs, pi_w_hidden):
+        dist, value = self.policy(obs, pi_w_hidden)
         return dist, value
 
     def optimize(self):
@@ -267,8 +225,8 @@ class procgenPPO:
             generator = self.storage.fetch_train_generator(mini_batch_size=self.mini_batch_size)
             for sample in generator:
                 obs_batch, act_batch, done_batch, old_log_prob_act_batch, old_value_batch, return_batch, adv_batch = sample
-
-                dist_batch, value_batch = self.get_policy_output(obs_batch)
+                pi_w_hidden_batch = self.env.get_weak_policy_features(obs_batch)
+                dist_batch, value_batch = self.get_policy_output(obs_batch, pi_w_hidden_batch)
 
                 # Clipped Surrogate Objective
                 log_prob_act_batch = dist_batch.log_prob(act_batch)
@@ -278,8 +236,7 @@ class procgenPPO:
                 pi_loss = -torch.min(surr1, surr2).mean()
 
                 # Clipped Bellman-Error
-                clipped_value_batch = old_value_batch + (value_batch - old_value_batch).clamp(-self.eps_clip,
-                                                                                              self.eps_clip)
+                clipped_value_batch = old_value_batch + (value_batch - old_value_batch).clamp(-self.eps_clip, self.eps_clip)
                 v_surr1 = (value_batch - return_batch).pow(2)
                 v_surr2 = (clipped_value_batch - return_batch).pow(2)
                 value_loss = 0.5 * torch.max(v_surr1, v_surr2).mean()
@@ -308,29 +265,29 @@ class procgenPPO:
         print('::[LOGGING]::START TRAINING...')
         save_every = num_timesteps // self.num_checkpoints
         checkpoint_cnt = 0
-        obs = self.env.reset()
-        obs_v = self.env_valid.reset()
+        obs, pi_w_hidden = self.env.reset()
+        obs_v, pi_w_hidden_v = self.env_valid.reset()
 
         while self.t < num_timesteps:
             self.policy.eval()
             for _ in range(self.n_steps):
-                act, log_prob_act, value = self.predict(obs)
-                next_obs, rew, done, info = self.env.step(act)
+                act, log_prob_act, value = self.predict(obs, pi_w_hidden)
+                next_obs, rew, done, info, pi_w_hidden = self.env.step(act)
                 self.storage.store(obs, act, rew, done, info, log_prob_act, value)
                 obs = next_obs
             value_batch = self.storage.value_batch[:self.n_steps]
-            _, _, last_val = self.predict(obs)
+            _, _, last_val = self.predict(obs, pi_w_hidden)
             self.storage.store_last(obs, last_val)
             # Compute advantage estimates
             self.storage.compute_estimates(self.gamma, self.lmbda, self.use_gae, self.normalize_adv)
 
             # valid
             for _ in range(self.n_steps):
-                act_v, log_prob_act_v, value_v = self.predict(obs_v)
-                next_obs_v, rew_v, done_v, info_v = self.env_valid.step(act_v)
+                act_v, log_prob_act_v, value_v = self.predict(obs_v, pi_w_hidden_v)
+                next_obs_v, rew_v, done_v, info_v, pi_w_hidden_v = self.env_valid.step(act_v)
                 self.storage_valid.store(obs_v, act_v, rew_v, done_v, info_v, log_prob_act_v, value_v)
                 obs_v = next_obs_v
-            _, _, last_val_v = self.predict(obs_v)
+            _, _, last_val_v = self.predict(obs_v, pi_w_hidden_v)
             self.storage_valid.store_last(obs_v, last_val_v)
             self.storage_valid.compute_estimates(self.gamma, self.lmbda, self.use_gae, self.normalize_adv)
 
@@ -365,8 +322,6 @@ class cliportPPO:
                  device,
                  n_checkpoints,
                  storage_valid=None,
-                 pi_w=None,
-                 pi_o=None,
                  help_policy_type=None,
                  n_steps=128,
                  n_envs=8,
@@ -416,29 +371,19 @@ class cliportPPO:
         self.normalize_adv = normalize_adv
         self.normalize_rew = normalize_rew
         self.use_gae = use_gae
-        self.pi_w = pi_w
-        self.pi_o = pi_o
         self.help_policy_type = help_policy_type
         self.n_train_episodes = n_train_episodes
         self.seed = seed
 
-    def predict(self, obs, info):
+    def predict(self, obs, pi_w_hidden):
         with torch.no_grad():
-            dist, value = self.get_policy_output(obs, info)
+            dist, value = self.get_policy_output(obs, pi_w_hidden)
             act = dist.sample()
             log_prob_act = dist.log_prob(act)
         return act.cpu().numpy(), log_prob_act.cpu().numpy(), value.cpu().numpy()
 
-    def get_policy_output(self, obs, info):
-        if self.help_policy_type == "T1":
-            dist, value = self.policy(obs)
-        elif self.help_policy_type in ["T2", "T3"]:
-            pi_w_pick_hidden, pi_w_place_hidden = self.pi_w.extract_features(obs, info)
-            pi_w_hidden = torch.cat([pi_w_pick_hidden, pi_w_place_hidden], dim=1)
-            if self.help_policy_type == "T2":
-                dist, value = self.policy(obs, pi_w_hidden)
-            elif self.help_policy_type == "T3":
-                dist, value = self.policy(pi_w_hidden)
+    def get_policy_output(self, obs, pi_w_hidden):
+        dist, value = self.policy(obs, pi_w_hidden)
         return dist, value
 
     def optimize(self, n_steps):
@@ -454,8 +399,8 @@ class cliportPPO:
             generator = self.storage.fetch_train_generator(mini_batch_size=self.mini_batch_size)
             for sample in generator:
                 obs_batch, act_batch, done_batch, old_log_prob_act_batch, old_value_batch, return_batch, adv_batch, info_batch = sample
-
-                dist_batch, value_batch = self.get_policy_output(obs_batch, info_batch)
+                pi_w_hidden_batch = self.env.get_weak_policy_features(obs_batch, info_batch)
+                dist_batch, value_batch = self.get_policy_output(obs_batch, pi_w_hidden_batch)
 
                 # Clipped Surrogate Objective
                 log_prob_act_batch = dist_batch.log_prob(act_batch)
@@ -465,8 +410,7 @@ class cliportPPO:
                 pi_loss = -torch.min(surr1, surr2).mean()
 
                 # Clipped Bellman-Error
-                clipped_value_batch = old_value_batch + (value_batch - old_value_batch).clamp(-self.eps_clip,
-                                                                                              self.eps_clip)
+                clipped_value_batch = old_value_batch + (value_batch - old_value_batch).clamp(-self.eps_clip, self.eps_clip)
                 v_surr1 = (value_batch - return_batch).pow(2)
                 v_surr2 = (clipped_value_batch - return_batch).pow(2)
                 value_loss = 0.5 * torch.max(v_surr1, v_surr2).mean()
@@ -502,13 +446,13 @@ class cliportPPO:
             for train_run in range(self.n_train_episodes):
                 total_reward = 0
                 self.env.seed(self.seed + train_run)
-                obs = self.env.reset()
+                obs, pi_w_hidden = self.env.reset()
                 info = self.env.info
                 print(f"train episode goal: {info['lang_goal']}")
                 for i in range(self.task.max_steps):
                     with torch.no_grad():
-                        act, log_prob_act, value = self.predict(obs, info)
-                        next_obs, rew, done, info = self.env.step(act)
+                        act, log_prob_act, value = self.predict(obs, pi_w_hidden)
+                        next_obs, rew, done, info, pi_w_hidden = self.env.step(act)
                         print(f"info: {info['lang_goal']}")
                         img_obs = utils.get_image(obs)
                         img_next_obs = utils.get_image(next_obs)
@@ -532,13 +476,13 @@ class cliportPPO:
             # valid
             for val_run in range(self.n_train_episodes):
                 self.env_valid.seed(self.seed + val_run + 1)
-                obs_v = self.env_valid.reset()
+                obs_v, pi_w_hidden_v = self.env_valid.reset()
                 info_v = self.env_valid.info
                 print(f"valid episode goal: {info['lang_goal']}")
                 for i in range(self.task.max_steps):
                     with torch.no_grad():
-                        act_v, log_prob_act_v, value_v = self.predict(obs_v, info_v)
-                        next_obs_v, rew_v, done_v, info_v = self.env_valid.step(act_v)
+                        act_v, log_prob_act_v, value_v = self.predict(obs_v, pi_w_hidden_v)
+                        next_obs_v, rew_v, done_v, info_v, pi_w_hidden_v = self.env_valid.step(act_v)
                         print(f"valid info: {info['lang_goal']}")
                         img_obs_v = utils.get_image(obs_v)
                         img_next_obs_v = utils.get_image(next_obs_v)
