@@ -4,7 +4,7 @@
 #SBATCH --gres=gpu:1
 #SBATCH --wait-all-nodes=1
 #SBATCH --job-name=skyline
-#SBATCH --output=experiments/slurm/coinrun_T1_01.out
+#SBATCH --output=experiments/slurm/%j.out
 #SBATCH --time=72:00:00
 #SBATCH --qos scavenger
 #SBATCH --partition scavenger

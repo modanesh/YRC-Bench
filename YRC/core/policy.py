@@ -29,7 +29,7 @@ class Policy:
             _, help_policy = procgen_utils.define_help_policy(env, weak_agent, self.exp_cfg.help_policy_type,
                                                               self.exp_cfg.device)
             policy_cfgs = to_dict(self.exp_cfg.policy)
-            help_algorithm = algorithm_setup(env, additional_var, help_policy, writer, storage,
+            help_algorithm = algorithm_setup(env, True, additional_var, help_policy, writer, storage,
                                              storage_val, self.exp_cfg.device,
                                              self.exp_cfg.num_checkpoints, hyperparameters=policy_cfgs,
                                              pi_w=weak_agent, pi_o=strong_agent,
@@ -44,7 +44,7 @@ class Policy:
             _, help_policy = cliport_utils.define_help_policy(env, weak_agent, self.exp_cfg.help_policy_type,
                                                               self.exp_cfg.device)
             policy_cfgs = to_dict(self.exp_cfg.policy)
-            help_algorithm = algorithm_setup(env, additional_var, help_policy, writer, storage,
+            help_algorithm = algorithm_setup(env, False, additional_var, help_policy, writer, storage,
                                              storage_val, self.exp_cfg.device,
                                              self.exp_cfg.num_checkpoints, hyperparameters=policy_cfgs,
                                              pi_w=weak_agent, pi_o=strong_agent,

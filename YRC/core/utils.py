@@ -221,11 +221,11 @@ def set_global_seeds(seed, torch_deterministic=True):
     torch.backends.cudnn.benchmark = not torch_deterministic
 
 
-def algorithm_setup(env, additional_var, policy, logger, storage, storage_valid, device, num_checkpoints,
+def algorithm_setup(env, is_procgen, additional_var, policy, logger, storage, storage_valid, device, num_checkpoints,
                     hyperparameters, pi_w=None, pi_o=None, help_policy_type=None):
     print('::[LOGGING]::INTIALIZING AGENT...')
     ppo_agents = {'procgen': procgen_PPO, 'cliport': cliport_PPO}
-    agent_type = 'procgen' if isinstance(additional_var, ProcgenEnv) else 'cliport'
+    agent_type = 'procgen' if is_procgen else 'cliport'
     agent = ppo_agents[agent_type](env, additional_var, policy, logger, storage, device,
                                    num_checkpoints,
                                    storage_valid=storage_valid,

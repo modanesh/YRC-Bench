@@ -96,8 +96,40 @@ class ProcgenCfg(BaseConfig):
 
     class reward_range:
         class coinrun:
-            easy = dict(min=5.0, max=10.0, timeout=1000.0)
-            hard = dict(min=5.0, max=10.0, timeout=1000.0)
+            easy = dict(min=0, max=10.0, timeout=256.0)
+            hard = dict(min=0, max=10.0, timeout=256.0)
+
+        class coinrun_aisc:
+            easy = dict(min=0, max=10.0, timeout=256.0)
+            hard = dict(min=0, max=10.0, timeout=256.0)
+
+        class maze_aisc:
+            easy = dict(min=0, max=10.0, timeout=256.0)
+            hard = dict(min=0, max=10.0, timeout=256.0)
+
+        class maze:
+            easy = dict(min=0, max=10.0, timeout=256.0)
+            hard = dict(min=0, max=10.0, timeout=256.0)
+
+        class maze_redline_yellowgem:
+            easy = dict(min=0, max=10.0, timeout=256.0)
+            hard = dict(min=0, max=10.0, timeout=256.0)
+        
+        class maze_yellowstar_redgem:
+            easy = dict(min=0, max=10.0, timeout=256.0)
+            hard = dict(min=0, max=10.0, timeout=256.0)
+
+        class heist_aisc_many_chests:
+            # max(env_chests) = ((9 - 5)/2 + 1 + 1) * 2 = 8
+            easy = dict(min=0, max=8.0, timeout=256.0)
+            # max(env_chests) = ((13 - 5)/2 + 1 + 1) * 2 = 12
+            hard = dict(min=0, max=12.0, timeout=256.0)
+
+        class heist_aisc_many_keys:
+            # max(env_chests) = (9 - 5)/2 + 1 + 1 = 4
+            easy = dict(min=0, max=4.0, timeout=256.0)
+            # max(env_chests) = (13 - 5)/2 + 1 + 1 = 6
+            hard = dict(min=0, max=6.0, timeout=256.0)
 
         class starpilot:
             easy = dict(min=1.5, max=35.0, timeout=1000.0)

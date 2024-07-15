@@ -7,23 +7,27 @@ class BaseConfig:
         self.init_member_classes(self)
 
     @staticmethod
-    def init_member_classes(obj):
+    def init_member_classes(obj, skip_classes = ["hard_500"]):
+        if skip_classes is None:
+            skip_classes = []
         # iterate over all attributes names
         for key in dir(obj):
             # disregard builtin attributes
             # if key.startswith("__"):
-            if key == "__class__":
+            if key.startswith("__") or key == "__class__":
                 continue
             # get the corresponding attribute object
             var = getattr(obj, key)
             # check if it the attribute is a class
-            if inspect.isclass(var):
+            if inspect.isclass(var) and key not in skip_classes:
                 # instantate the class
                 i_var = var()
                 # set the attribute to the instance instead of the type
                 setattr(obj, key, i_var)
                 # recursively init members of the attribute
-                BaseConfig.init_member_classes(i_var)
+                BaseConfig.init_member_classes(i_var, skip_classes)
+            elif isinstance(var, BaseConfig):
+                BaseConfig.init_member_classes(var, skip_classes)
     
     def as_string(self, specific_class=None):
         result = []
