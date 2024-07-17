@@ -98,6 +98,10 @@ class ProcgenCfg(BaseConfig):
             easy = dict(min=5.0, max=10.0, timeout=1000.0)
             hard = dict(min=5.0, max=10.0, timeout=1000.0)
 
+        class coinrun_aisc:
+            easy = dict(min=5.0, max=10.0, timeout=1000.0)
+            hard = dict(min=5.0, max=10.0, timeout=1000.0)
+
         class starpilot:
             easy = dict(min=1.5, max=35.0, timeout=1000.0)
             hard = dict(min=2.5, max=64.0, timeout=1000.0)
