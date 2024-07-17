@@ -5,6 +5,7 @@ antlr4-python3-runtime==4.8
 cachetools==5.3.3
 certifi==2024.2.2
 cffi==1.16.0
+chardet==3.0.4
 charset-normalizer==3.3.2
 click==8.1.7
 cloudpickle==1.6.0
@@ -94,6 +95,7 @@ requests-oauthlib==2.0.0
 rsa==4.9
 sacremoses==0.1.1
 scikit-image==0.17.2
+scikit-learn==0.20.0
 scipy==1.4.1
 sentry-sdk==2.1.1
 shortuuid==1.0.13
@@ -115,6 +117,7 @@ transforms3d==0.3.1
 triton==2.2.0
 typing-extensions==4.11.0
 u-msgpack-python==2.8.0
+ujson==1.35
 urllib3==2.2.1
 wandb==0.10.15
 watchdog==0.10.4
