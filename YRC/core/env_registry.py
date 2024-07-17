@@ -31,9 +31,9 @@ class EnvRegistry():
             policy_attrs = self.cfgs.load_subclass_attributes(args.param_name)
             for attr, value in policy_attrs.items():
                 setattr(self.cfgs.policy, attr, value)
-            
-            self.cfgs.weak_model_file = os.path.join("YRC", "checkpoints", "procgen", self.cfgs.env_name, self.cfgs.weak_model_file)
-            self.cfgs.strong_model_file = os.path.join("YRC", "checkpoints", "procgen", self.cfgs.env_name, self.cfgs.strong_model_file)
+            env_name = self.cfgs.env_name[:-5] if self.cfgs.env_name.endswith('_aisc') else self.cfgs.env_name
+            self.cfgs.weak_model_file = os.path.join("YRC", "checkpoints", "procgen", env_name, self.cfgs.weak_model_file)
+            self.cfgs.strong_model_file = os.path.join("YRC", "checkpoints", "procgen", env_name, self.cfgs.strong_model_file)
             self.cfgs.switching_cost = args.switching_cost
             self.cfgs.strong_query_cost = args.strong_query_cost
             self.cfgs.distribution_mode = args.distribution_mode
