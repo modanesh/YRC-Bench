@@ -21,7 +21,7 @@ class EnvRegistry():
             self.cfgs.strong_model_file = args.strong_model_file
             self.cfgs.benchmark = args.benchmark
             self.cfgs.help_policy_type = args.help_policy_type
-
+            self.cfgs.env_name = args.env_name
             self.cfgs.val_env_name = self.cfgs.val_env_name if self.cfgs.val_env_name else self.cfgs.env_name
             self.cfgs.start_level_val = random.randint(0, 9999)
             set_global_seeds(self.cfgs.seed)
@@ -34,7 +34,8 @@ class EnvRegistry():
             
             self.cfgs.weak_model_file = os.path.join("YRC", "checkpoints", "procgen", self.cfgs.env_name, self.cfgs.weak_model_file)
             self.cfgs.strong_model_file = os.path.join("YRC", "checkpoints", "procgen", self.cfgs.env_name, self.cfgs.strong_model_file)
-
+            self.cfgs.switching_cost = args.switching_cost
+            self.cfgs.strong_query_cost = args.strong_query_cost
             self.cfgs.distribution_mode = args.distribution_mode
         elif args.benchmark == 'cliport':
             self.cfgs.weak_model_file = args.weak_model_file
