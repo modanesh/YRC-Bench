@@ -14,12 +14,14 @@ import torch
 import wandb
 from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
 
-import procgen_wrappers
+from . import procgen_wrappers
+
 from procgen import ProcgenEnv
 from cliport import tasks, agents
 from cliport.environments import environment
 from cliport.utils import utils as cliport_utils
-from models import cliportPPO, procgenPPO, CategoricalPolicy, ImpalaModel, PPOFrozen
+
+from .models import cliportPPO, procgenPPO, CategoricalPolicy, ImpalaModel, PPOFrozen
 
 
 ########################################################################
@@ -41,7 +43,7 @@ def get_args():
     parser.add_argument('--task', type=str, help='Task name, required for cliport')
     parser.add_argument('--model_task', type=str, help='Model task name, required for cliport')
     parser.add_argument('--param_name', type=str, help='Parameter name used to determine the additional '
-                                                       'config for env, required for procgen.')
+                                                       'config for env, required for procgen, e.g. easy-200')
     parser.add_argument('--switching_cost', type=float, required=True, help='Switching cost for the help policy.')
     parser.add_argument('--strong_query_cost', type=float, required=True, help='Strong query cost for the help policy.')
     args = parser.parse_args()
@@ -236,7 +238,7 @@ def algorithm_setup(env, env_val, task, policy, logger, storage, storage_valid, 
                     hyperparameters, help_policy_type=None):
     print('::[LOGGING]::INTIALIZING AGENT...')
     ppo_agents = {'procgen': procgenPPO, 'cliport': cliportPPO}
-    agent_type = 'procgen' if isinstance(env, ProcgenEnv) else 'cliport'
+    agent_type = 'procgen' if isinstance(env, procgen_wrappers.HelpEnvWrapper) else 'cliport'
     agent = ppo_agents[agent_type](env, env_val, task, policy, logger, storage, device,
                                    num_checkpoints,
                                    storage_valid=storage_valid,
@@ -582,8 +584,7 @@ def procgen_define_help_policy(env, weak_agent, help_policy_type, device):
     action_size = 2
     model, _ = model_setup(env) if help_policy_type != "T3" else (None, None)
     hidden_size = weak_agent.policy.embedder.output_dim if help_policy_type != "T1" else 0
-    softmax_size = weak_agent.policy.fc_policy.out_features if help_policy_type == "T2" else 0
-    policy = CategoricalPolicy(embedder=model, action_size=action_size, additional_hidden_dim=hidden_size, additional_softmax_dim=softmax_size)
+    policy = CategoricalPolicy(embedder=model, action_size=action_size, additional_hidden_dim=hidden_size)
     policy.to(device)
     return model, policy
 

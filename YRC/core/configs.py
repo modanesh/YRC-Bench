@@ -78,7 +78,6 @@ class ProcgenCfg(BaseConfig):
     start_level = 0
     num_levels = 0
     distribution_mode = 'easy'
-    param_name = 'easy_200'
     device = 'cuda'
     num_timesteps = 25_000_000
     seed = 0
@@ -106,6 +105,25 @@ class ProcgenCfg(BaseConfig):
         class chaser:
             easy = dict(min=0.5, max=14.2, timeout=1000.0)
             hard = dict(min=0.5, max=13.0, timeout=1000.0)
+
+    class policy:
+        algo = None
+        n_envs = None
+        n_steps = None
+        epoch = None
+        mini_batch_per_epoch = None
+        mini_batch_size = None
+        gamma = None
+        lmbda = None
+        learning_rate = None
+        grad_clip_norm = None
+        eps_clip = None
+        value_coef = None
+        entropy_coef = None
+        normalize_adv = None
+        normalize_rew = None
+        use_gae = None
+        architecture = None
 
     class debug:
         algo = 'ppo'
@@ -315,3 +333,11 @@ class ProcgenCfg(BaseConfig):
         normalize_rew = False
         use_gae = True
         architecture = 'impala'
+
+    @classmethod
+    def load_subclass_attributes(cls, subclass_name):
+        subclass = getattr(cls, subclass_name, None)
+        if subclass is None:
+            raise ValueError(f"No subclass with name {subclass_name}")
+
+        return {k: v for k, v in subclass.__dict__.items() if not k.startswith('__') and not callable(v)}

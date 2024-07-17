@@ -1,4 +1,4 @@
-import utils
+from . import utils
 
 
 class Policy:
@@ -23,8 +23,7 @@ class Policy:
             storage_val = utils.ProcgenReplayBuffer(observation_shape, self.exp_cfg.policy.n_steps,
                                                     self.exp_cfg.policy.n_envs, self.exp_cfg.device)
 
-            _, help_policy = utils.procgen_define_help_policy(env, weak_agent, self.exp_cfg.help_policy_type,
-                                                              self.exp_cfg.device)
+            _, help_policy = utils.procgen_define_help_policy(env, weak_agent, self.exp_cfg.help_policy_type, self.exp_cfg.device)
         elif self.exp_cfg.benchmark == 'cliport':
             action_shape = 2
             storage = utils.CliportReplayBuffer(observation_shape, action_shape, self.exp_cfg.buffer_size,
@@ -32,11 +31,8 @@ class Policy:
             storage_val = utils.CliportReplayBuffer(observation_shape, action_shape, self.exp_cfg.buffer_size,
                                                     self.exp_cfg.policy.n_envs, device=self.exp_cfg.device)
 
-            _, help_policy = utils.cliport_define_help_policy(env, weak_agent, self.exp_cfg.help_policy_type,
-                                                              self.exp_cfg.device)
+            _, help_policy = utils.cliport_define_help_policy(env, weak_agent, self.exp_cfg.help_policy_type, self.exp_cfg.device)
         policy_cfgs = utils.to_dict(self.exp_cfg.policy)
-        help_algorithm = utils.algorithm_setup(env, env_val, task, help_policy, writer, storage,
-                                               storage_val, self.exp_cfg.device,
-                                               self.exp_cfg.num_checkpoints, hyperparameters=policy_cfgs,
-                                               help_policy_type=self.exp_cfg.help_policy_type)
+        help_algorithm = utils.algorithm_setup(env, env_val, task, help_policy, writer, storage, storage_val, self.exp_cfg.device,
+                                               self.exp_cfg.num_checkpoints, hyperparameters=policy_cfgs, help_policy_type=self.exp_cfg.help_policy_type)
         return help_algorithm

@@ -15,8 +15,8 @@ class CategoricalPolicy(nn.Module):
         action_size: number of the categorical actions
         """
         super(CategoricalPolicy, self).__init__()
-        if embedder is not None:
-            self.embedder = embedder
+        self.embedder = embedder
+        if self.embedder is not None:
             # Compute total input dimension for fc_policy considering additional tensors
             total_input_dim = self.embedder.output_dim + additional_hidden_dim
         else:
@@ -29,11 +29,11 @@ class CategoricalPolicy(nn.Module):
         if pi_w_hidden is None:
             # T1
             hidden = self.embedder(x)
-        elif pi_w_hidden is not None:
+        elif pi_w_hidden is not None and self.embedder is not None:
             # T2
             hidden = self.embedder(x)
             hidden = torch.cat([hidden, pi_w_hidden], dim=1)
-        elif pi_w_hidden is not None:
+        elif pi_w_hidden is not None and self.embedder is None:
             # T3
             hidden = pi_w_hidden
         logits = self.fc_policy(hidden)
@@ -136,7 +136,7 @@ class PPOFrozen:
     def predict(self, obs):
         with torch.no_grad():
             obs = torch.FloatTensor(obs).to(device=self.device)
-            dist, value = self.policy(obs)
+            dist, value = self.policy(obs, pi_w_hidden=None)
             act = dist.sample()
             log_prob_act = dist.log_prob(act)
 

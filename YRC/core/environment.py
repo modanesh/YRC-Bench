@@ -1,4 +1,4 @@
-from utils import cliport_environment_setup, procgen_environment_setup
+from .utils import cliport_environment_setup, procgen_environment_setup
 
 
 class Environment:
@@ -7,8 +7,7 @@ class Environment:
 
     def make(self, weak_agent, strong_agent):
         if self.exp_cfg.benchmark == 'procgen':
-            reward_range = getattr(getattr(self.exp_cfg.reward_range, self.exp_cfg.env_name),
-                                   self.exp_cfg.distribution_mode)
+            reward_range = getattr(getattr(self.exp_cfg.reward_range, self.exp_cfg.env_name), self.exp_cfg.distribution_mode)
             max_rew, timeout = reward_range['max'], reward_range['timeout']
             env = procgen_environment_setup(self.exp_cfg.policy.n_steps,
                                             self.exp_cfg.env_name,

@@ -27,11 +27,13 @@ class EnvRegistry():
             set_global_seeds(self.cfgs.seed)
             if self.cfgs.start_level == self.cfgs.start_level_val:
                 raise ValueError("Seeds for training and validation envs are equal.")
-            for k, v in self.cfgs.param_name.items():
-                self.cfgs.policy.__dict__[k] = v
-
-            self.cfgs.weak_model_file = os.path.join("YRC", "procgen_wrapper", "logs", self.cfgs.env_name, self.cfgs.weak_model_file)
-            self.cfgs.strong_model_file = os.path.join("YRC", "procgen_wrapper", "logs", self.cfgs.env_name, self.cfgs.strong_model_file)
+            
+            policy_attrs = self.cfgs.load_subclass_attributes(args.param_name)
+            for attr, value in policy_attrs.items():
+                setattr(self.cfgs.policy, attr, value)
+            
+            self.cfgs.weak_model_file = os.path.join("YRC", "checkpoints", self.cfgs.env_name, self.cfgs.weak_model_file)
+            self.cfgs.strong_model_file = os.path.join("YRC", "checkpoints", self.cfgs.env_name, self.cfgs.strong_model_file)
         elif args.benchmark == 'cliport':
             self.cfgs.weak_model_file = args.weak_model_file
             self.cfgs.benchmark = args.benchmark
