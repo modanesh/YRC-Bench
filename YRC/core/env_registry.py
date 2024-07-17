@@ -34,6 +34,8 @@ class EnvRegistry():
             
             self.cfgs.weak_model_file = os.path.join("YRC", "checkpoints", "procgen", self.cfgs.env_name, self.cfgs.weak_model_file)
             self.cfgs.strong_model_file = os.path.join("YRC", "checkpoints", "procgen", self.cfgs.env_name, self.cfgs.strong_model_file)
+
+            self.cfgs.distribution_mode = args.distribution_mode
         elif args.benchmark == 'cliport':
             self.cfgs.weak_model_file = args.weak_model_file
             self.cfgs.benchmark = args.benchmark

@@ -44,6 +44,7 @@ def get_args():
                                                        'config for env, required for procgen, e.g. easy-200')
     parser.add_argument('--switching_cost', type=float, required=True, help='Switching cost for the help policy.')
     parser.add_argument('--strong_query_cost', type=float, required=True, help='Strong query cost for the help policy.')
+    parser.add_argument('--distribution_mode', type=str, default='easy', help='Distribution mode for procgen.')
     args = parser.parse_args()
     verify_args(args)
     return args
