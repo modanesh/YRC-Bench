@@ -53,11 +53,13 @@ class Environment:
                                             )
             return env, env_val, None
         elif self.exp_cfg.benchmark == 'cliport':
-            environment, task = cliport_environment_setup(self.exp_cfg.assets_root, weak_agent,
-                                                          self.exp_cfg.strong_query_cost,
-                                                          self.exp_cfg.switching_cost, self.exp_cfg.disp,
-                                                          self.exp_cfg.shared_memory, self.exp_cfg.task)
-            return environment, task
+            env, task = cliport_environment_setup(self.exp_cfg.assets_root, weak_agent,
+                                                  self.exp_cfg.strong_query_cost,
+                                                  self.exp_cfg.switching_cost, self.exp_cfg.disp,
+                                                  self.exp_cfg.shared_memory, self.exp_cfg.task,
+                                                  self.exp_cfg.help_policy_type, self.exp_cfg.device
+                                                  )
+            return env, None, task
 
     def get_env_configs(self):
         if self.exp_cfg.benchmark == 'procgen':
@@ -75,6 +77,6 @@ class Environment:
                                              get_configs=True
                                              )
         elif self.exp_cfg.benchmark == 'cliport':
-            observation_shape = (320, 160, 6)
+            observation_shape = (6, 320, 160)
             action_size = 2
             return observation_shape, action_size

@@ -79,13 +79,17 @@ class ImpalaBlock(nn.Module):
 class ImpalaModel(nn.Module):
     def __init__(self,
                  in_channels,
+                 benchmark,
                  **kwargs):
         super(ImpalaModel, self).__init__()
         scale = 1
         self.block1 = ImpalaBlock(in_channels=in_channels, out_channels=16 * scale)
         self.block2 = ImpalaBlock(in_channels=16 * scale, out_channels=32 * scale)
         self.block3 = ImpalaBlock(in_channels=32 * scale, out_channels=32 * scale)
-        self.fc = nn.Linear(in_features=32 * scale * 8 * 8, out_features=256)
+        if benchmark == 'procgen':
+            self.fc = nn.Linear(in_features=32 * scale * 8 * 8, out_features=256)
+        elif benchmark == 'cliport':
+            self.fc = nn.Linear(in_features=32 * scale * 20 * 40, out_features=256)
 
         self.output_dim = 256
         self.apply(xavier_uniform_init)
@@ -383,6 +387,11 @@ class cliportPPO:
         return act.cpu().numpy(), log_prob_act.cpu().numpy(), value.cpu().numpy()
 
     def get_policy_output(self, obs, pi_w_hidden):
+        if self.help_policy_type in ["T1", "T2"] and not isinstance(obs, torch.Tensor):
+                obs = utils.get_image(obs)
+                obs = torch.FloatTensor(obs).to(device=self.device)
+                obs = obs.permute(2, 0, 1)
+                obs = obs.unsqueeze(0)
         dist, value = self.policy(obs, pi_w_hidden)
         return dist, value
 
@@ -399,7 +408,7 @@ class cliportPPO:
             generator = self.storage.fetch_train_generator(mini_batch_size=self.mini_batch_size)
             for sample in generator:
                 obs_batch, act_batch, done_batch, old_log_prob_act_batch, old_value_batch, return_batch, adv_batch, info_batch = sample
-                pi_w_hidden_batch = self.env.get_weak_policy_features(obs_batch, info_batch)
+                pi_w_hidden_batch = self.env.get_weak_policy_features(obs_batch.permute(0, 2, 3, 1), info_batch)
                 dist_batch, value_batch = self.get_policy_output(obs_batch, pi_w_hidden_batch)
 
                 # Clipped Surrogate Objective
@@ -454,8 +463,8 @@ class cliportPPO:
                         act, log_prob_act, value = self.predict(obs, pi_w_hidden)
                         next_obs, rew, done, info, pi_w_hidden = self.env.step(act)
                         print(f"info: {info['lang_goal']}")
-                        img_obs = utils.get_image(obs)
-                        img_next_obs = utils.get_image(next_obs)
+                        img_obs = utils.get_image(obs).transpose(2,0,1)
+                        img_next_obs = utils.get_image(next_obs).transpose(2,0,1)
                         self.storage.add_transition(img_obs, act, log_prob_act, rew, img_next_obs, done, value, info)
                         obs = next_obs.copy()
                         total_reward += rew
@@ -469,35 +478,15 @@ class cliportPPO:
                             f"train episode total_reward={total_reward:.3f}, episode length (of max length)={i / self.task.max_steps:.3f}")
                         self.storage._dones[i] = True  # set done=True for the last transition
 
-            print(
-                f"train iteration={self.t}, collected data={train_steps}, total data collected so far={self.storage._size}")
+            print(f"train iteration={self.t}, collected data={train_steps}, total data collected so far={self.storage._size}")
             self.storage.compute_estimates(self.gamma, self.lmbda, self.use_gae, self.normalize_adv)
-
-            # valid
-            for val_run in range(self.n_train_episodes):
-                self.env_valid.seed(self.seed + val_run + 1)
-                obs_v, pi_w_hidden_v = self.env_valid.reset()
-                info_v = self.env_valid.info
-                print(f"valid episode goal: {info['lang_goal']}")
-                for i in range(self.task.max_steps):
-                    with torch.no_grad():
-                        act_v, log_prob_act_v, value_v = self.predict(obs_v, pi_w_hidden_v)
-                        next_obs_v, rew_v, done_v, info_v, pi_w_hidden_v = self.env_valid.step(act_v)
-                        print(f"valid info: {info['lang_goal']}")
-                        img_obs_v = utils.get_image(obs_v)
-                        img_next_obs_v = utils.get_image(next_obs_v)
-                        self.storage_valid.add_transition(img_obs_v, act_v, log_prob_act_v, rew_v, img_next_obs_v,
-                                                          done_v, value_v, info_v)
-                        obs_v = next_obs_v.copy()
-            self.storage_valid.compute_estimates(self.gamma, self.lmbda, self.use_gae, self.normalize_adv)
 
             # Optimize policy & values
             summary = self.optimize(train_steps)
             # Log the training-procedure
             self.t += train_steps
             rew_batch, done_batch = self.storage.fetch_log_data()
-            rew_batch_v, done_batch_v = self.storage_valid.fetch_log_data()
-            self.logger.feed_cliport(rew_batch, done_batch, rew_batch_v, done_batch_v)
+            self.logger.feed_cliport(rew_batch, done_batch, None, None)
             self.logger.dump()
             self.optimizer = adjust_lr(self.optimizer, self.learning_rate, self.t, num_timesteps)
             # Save the model

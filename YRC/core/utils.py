@@ -40,8 +40,6 @@ def get_args():
                              'T3: PPO with inputs from the weak agent (mlp).')
     parser.add_argument('--benchmark', type=str, choices=['procgen', 'cliport'], required=True, help='Benchmark type.')
     parser.add_argument('--env_name', type=str, required=True, help='Environment name for training.')
-    parser.add_argument('--task', type=str, help='Task name, required for cliport')
-    parser.add_argument('--model_task', type=str, help='Model task name, required for cliport')
     parser.add_argument('--param_name', type=str, help='Parameter name used to determine the additional '
                                                        'config for env, required for procgen, e.g. easy-200')
     parser.add_argument('--switching_cost', type=float, required=True, help='Switching cost for the help policy.')
@@ -61,16 +59,10 @@ def verify_args(args):
             raise ValueError("Strong model file not provided for procgen.")
         if args.param_name is None:
             raise ValueError("Param name not provided for procgen.")
-    # cliport checks
-    if args.benchmark == 'cliport':
-        if args.task is None:
-            raise ValueError("Task not provided for cliport.")
-        if args.model_task is None:
-            raise ValueError("Model task not provided for cliport.")
 
 
 class Logger(object):
-    def __init__(self, n_envs, logdir):
+    def __init__(self, n_envs, logdir, benchmark):
         self.start_time = time.time()
         self.n_envs = n_envs
         self.logdir = logdir
@@ -97,9 +89,11 @@ class Logger(object):
         episode_metrics = ["max_episode_rewards", "mean_episode_rewards", "min_episode_rewards",
                            "max_episode_len", "mean_episode_len",
                            "min_episode_len"]  # collected for both train and val envs
-        self.log = pd.DataFrame(columns=time_metrics + episode_metrics + \
-                                        ["val_" + m for m in episode_metrics])
-
+        self.benchmark = benchmark
+        if self.benchmark == 'procgen':
+            self.log = pd.DataFrame(columns=time_metrics + episode_metrics + ["val_" + m for m in episode_metrics])
+        elif self.benchmark == 'cliport':
+            self.log = pd.DataFrame(columns=time_metrics + episode_metrics)
         self.timesteps = 0
         self.num_episodes = 0
 
@@ -133,7 +127,6 @@ class Logger(object):
         self.timesteps += (self.n_envs * steps)
 
     def feed_cliport(self, rew_batch, done_batch, rew_batch_v=None, done_batch_v=None):
-        valid = rew_batch_v is not None and done_batch_v is not None and rew_batch_v.shape[0] > 0
         # get the length of each episode, ends when done_batch is 1
         eps_lengths = np.where(done_batch == 1)[0] + 1
 
@@ -143,12 +136,6 @@ class Logger(object):
         self.num_episodes += len(self.episode_len_buffer)
         self.episode_rewards = []
 
-        if valid:
-            eps_lengths_v = np.where(done_batch_v == 1)[0] + 1
-            self.episode_rewards_v = np.split(rew_batch_v, eps_lengths_v[:-1], axis=0)
-            self.episode_len_buffer_v = np.insert(np.diff(eps_lengths_v), 0, eps_lengths_v[0])
-            self.episode_reward_buffer_v = np.array([np.sum(rew) for rew in self.episode_rewards_v])
-            self.episode_rewards_v = []
 
     def dump(self):
         wall_time = time.time() - self.start_time
@@ -175,13 +162,13 @@ class Logger(object):
         episode_statistics['Len/mean_episodes'] = np.mean(self.episode_len_buffer)
         episode_statistics['Len/min_episodes'] = np.min(self.episode_len_buffer, initial=0)
 
-        # valid
-        episode_statistics['[Valid] Rewards/max_episodes'] = np.max(self.episode_reward_buffer_v, initial=0)
-        episode_statistics['[Valid] Rewards/mean_episodes'] = np.mean(self.episode_reward_buffer_v)
-        episode_statistics['[Valid] Rewards/min_episodes'] = np.min(self.episode_reward_buffer_v, initial=0)
-        episode_statistics['[Valid] Len/max_episodes'] = np.max(self.episode_len_buffer_v, initial=0)
-        episode_statistics['[Valid] Len/mean_episodes'] = np.mean(self.episode_len_buffer_v)
-        episode_statistics['[Valid] Len/min_episodes'] = np.min(self.episode_len_buffer_v, initial=0)
+        if self.benchmark == 'procgen':
+            episode_statistics['[Valid] Rewards/max_episodes'] = np.max(self.episode_reward_buffer_v, initial=0)
+            episode_statistics['[Valid] Rewards/mean_episodes'] = np.mean(self.episode_reward_buffer_v)
+            episode_statistics['[Valid] Rewards/min_episodes'] = np.min(self.episode_reward_buffer_v, initial=0)
+            episode_statistics['[Valid] Len/max_episodes'] = np.max(self.episode_len_buffer_v, initial=0)
+            episode_statistics['[Valid] Len/mean_episodes'] = np.mean(self.episode_len_buffer_v)
+            episode_statistics['[Valid] Len/min_episodes'] = np.min(self.episode_len_buffer_v, initial=0)
         return episode_statistics
 
 
@@ -198,7 +185,7 @@ def logger_setup(cfgs):
     print(f'Logging to {logdir}')
     vars_cfgs = to_dict(cfgs)
     wandb.init(config=vars_cfgs, resume="allow", project="YRC", name=run_name)
-    writer = Logger(cfgs.policy.n_envs, logdir)
+    writer = Logger(cfgs.policy.n_envs, logdir, cfgs.benchmark)
     return writer
 
 
@@ -385,14 +372,18 @@ def load_ckpts(results_path, model_task):
     return ckpt
 
 
-def cliport_environment_setup(assets_root, weak_policy, strong_query_cost, switching_agent_cost, disp, shared_memory,
-                              task):
+def cliport_environment_setup(assets_root, weak_policy, strong_query_cost, switching_agent_cost, disp, shared_memory, task,
+                              help_policy_type=None, device='cuda'):
     tsk = tasks.names[task]()
-    _, _, _, _, _, _, _, reward_max = tsk.goals[0]
     timeout = tsk.max_steps
-    env = environment.HelpEnvWrapper(assets_root, weak_policy, None, reward_max, timeout, strong_query_cost,
-                                     switching_agent_cost, disp=disp, shared_memory=shared_memory, hz=480)
+    env = environment.HelpEnvWrapper(assets_root, weak_policy, None, timeout, strong_query_cost, switching_agent_cost, help_policy_type,
+                                     device, tsk, disp=disp, shared_memory=shared_memory, hz=480)
     env.set_task(tsk)
+    _ = env.reset(need_features=False)
+    reward_max = 0
+    for goal in env.task.goals:
+        reward_max += goal[-1]
+    env.set_costs(reward_max)
     strong_policy = tsk.oracle(env)
     env.set_strong_policy(strong_policy)
     return env, tsk
@@ -409,19 +400,14 @@ def load_weak_policy(cfgs):
 
 
 def cliport_define_help_policy(env, weak_agent, help_policy_type, device):
-    obs = env.reset()
+    obs, _ = env.reset(need_features=False)
     img = [cliport_utils.get_image(obs)]
     info = [env.info]
     pick_features, place_features = weak_agent.extract_features(img, info)
-    hidden_size = pick_features[0].shape[0] + place_features[0].shape[0]
-    model = ImpalaModel(img[0].shape[-1])
+    hidden_size = pick_features[0].shape[0] + place_features[0].shape[0] if help_policy_type != "T1" else 0
+    model = ImpalaModel(img[0].shape[-1], benchmark='cliport') if help_policy_type != "T3" else None
     action_size = 2
-    if help_policy_type == "T1":
-        policy = CategoricalPolicyT1(model, action_size)
-    elif help_policy_type == "T2":
-        policy = CategoricalPolicyT2(model, action_size, hidden_size)
-    elif help_policy_type == "T3":
-        policy = CategoricalPolicyT3(action_size, hidden_size)
+    policy = CategoricalPolicy(embedder=model, action_size=action_size, additional_hidden_dim=hidden_size)
     policy.to(device)
     return None, policy
 
@@ -571,7 +557,7 @@ def load_model(agent, model_file, frozen=False):
 
 
 def load_policy(obs_size, action_size, model_file, device):
-    model = ImpalaModel(in_channels=obs_size)
+    model = ImpalaModel(in_channels=obs_size, benchmark='procgen')
     policy = CategoricalPolicy(embedder=model, action_size=action_size)
     policy.to(device)
     policy.eval()
@@ -591,7 +577,7 @@ def procgen_define_help_policy(env, weak_agent, help_policy_type, device):
 
 def model_setup(env):
     in_channels = env.observation_space.shape[0]
-    model = ImpalaModel(in_channels=in_channels)
+    model = ImpalaModel(in_channels=in_channels, benchmark='procgen')
     action_size = env.action_space.n
     return model, action_size
 

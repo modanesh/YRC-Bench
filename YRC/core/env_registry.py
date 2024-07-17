@@ -32,8 +32,8 @@ class EnvRegistry():
             for attr, value in policy_attrs.items():
                 setattr(self.cfgs.policy, attr, value)
             
-            self.cfgs.weak_model_file = os.path.join("YRC", "checkpoints", self.cfgs.env_name, self.cfgs.weak_model_file)
-            self.cfgs.strong_model_file = os.path.join("YRC", "checkpoints", self.cfgs.env_name, self.cfgs.strong_model_file)
+            self.cfgs.weak_model_file = os.path.join("YRC", "checkpoints", "procgen", self.cfgs.env_name, self.cfgs.weak_model_file)
+            self.cfgs.strong_model_file = os.path.join("YRC", "checkpoints", "procgen", self.cfgs.env_name, self.cfgs.strong_model_file)
         elif args.benchmark == 'cliport':
             self.cfgs.weak_model_file = args.weak_model_file
             self.cfgs.benchmark = args.benchmark
