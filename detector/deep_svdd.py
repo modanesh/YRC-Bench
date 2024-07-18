@@ -79,7 +79,6 @@ class DeepSVDD:
         self.ae_optimizer_name = optimizer_name
         self.AETrainer = AETrainer(optimizer_name, lr = lr, num_epochs = num_epochs, lr_milestones = lr_milestones, batch_size = batch_size, weight_decay = weight_decay, device = device, num_jobs_dataloader = num_jobs_dataloader)
         self.ae_net = self.AETrainer.train(dataset, self.ae_net)
-        # torch.save({"ae_net_dict": self.ae_net.state_dict()})  # FIXME: add file
         # self.AETrainer.test(dataset, self.ae_net)
         self.init_network_weights()
     
@@ -93,31 +92,39 @@ class DeepSVDD:
         net_dict.update(ae_net_dict)  # overwrite/update weights
         self.net.load_state_dict(net_dict)
     
-    def save_model_to_export(self, export_model, save_ae = True):
+    def save_model(self, network_save_path = None, ae_save_path = None):
         """
-        Saves Deep-SVDD model to `export_model`
+        Saves actual network and autoencoder
         """
-        torch.save({"radius": self.radius, "center": self.center, "net_dict": self.net.state_dict(), "ae_net_dict": self.ae_net.state_dict() if save_ae else None}, export_model)
+        if network_save_path:
+            torch.save({
+                "radius": self.radius,
+                "center": self.center,
+                "net_dict": self.net.state_dict()
+            }, network_save_path)
+        if ae_save_path:
+            torch.save({
+                "ae_net_dict": self.ae_net.state_dict()
+            }, ae_save_path)
     
-    def load_model(self, model_path, load_ae = False):
+    def load_model(self, network_save_path = None, ae_save_path = None):
         """
         Loads Deep-SVDD model
         """
-        model_info = torch.load(model_path)
-        self.radius = model_info["radius"]
-        self.center = model_info["center"]
-        self.net.load_state_dict(model_info["net_dict"])
-        if load_ae:
-            if model_info["ae_net_dict"] is not None:
-                if self.ae_net is None:
-                    self.ae_net = AutoEncoder()
-                self.ae_net.load_state_dict(model_info["ae_net_dict"])
-            else:
-                print("Saved model does not have saved AE")
+        if network_save_path:
+            model_info = torch.load(network_save_path)
+            self.radius = model_info["radius"]
+            self.center = model_info["center"]
+            self.net.load_state_dict(model_info["net_dict"])
+        if ae_save_path:
+            model_info = torch.load(ae_save_path)
+            if self.ae_net is None:
+                self.ae_net = AutoEncoder()
+            self.ae_net.load_state_dict(model_info["ae_net_dict"])
     
-    def save_results(self, json_out_file):
+    def save_results(self, out_file):
         """
         Saves results to JSON file
         """
-        with open(json_out_file, "w") as f:
+        with open(out_file, "w") as f:
             json.dump(self.results, f)

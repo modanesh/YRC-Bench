@@ -35,6 +35,7 @@ if __name__ == "__main__":
     parser.add_argument("--weight_decay", type = float, default = 1e-6)
 
     parser.add_argument("--pretrain", action = "store_true", default = True)
+    parser.add_argument("--ae_model_file", type = str, default = None)
     parser.add_argument("--ae_optimizer", type = str, default = "adam")
     parser.add_argument("--ae_lr", type = float, default = 0.001)
     parser.add_argument("--ae_num_epochs", type = int, default = 100)
@@ -90,8 +91,13 @@ if __name__ == "__main__":
     logger.setLevel(logging.INFO)
     file_handler = logging.FileHandler(os.path.join(logdir, "log.txt"))
     file_handler.setLevel(logging.INFO)
-    file_handler.setFormatter(logging.Formatter("%(asctime)s: %(message)s"))
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    formatter = logging.Formatter("%(asctime)s : %(message)s")
+    file_handler.setFormatter(formatter)
+    console_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
+    logger.addHandler(console_handler)
     print(f"Logging to {logdir}")
 
     ### Running things ###
@@ -105,16 +111,28 @@ if __name__ == "__main__":
         deep_svdd = DeepSVDD(args.objective, args.nu)
         deep_svdd.set_network(args.exp_name)
         if args.model_file is not None:
-            deep_svdd.load_model(args.model_file, load_ae = True)
-            logger.info(f"Loaded model from {args.model_file}")
+            deep_svdd.load_model(network_save_path = args.model_file)
+            logger.info(f"Loaded main network from {args.model_file}")
         logger.info("Done!")
 
         train_dataset = CustomDataset(args.data_dir)
 
         if args.pretrain:
-            logger.info("Pretraining with the following hyperparameters")
-            logger.info(f"Optimizer: {args.ae_optimizer}\nLearning rate: {args.ae_lr}\nNum epochs: {args.ae_num_epochs}\nBatch size: {args.ae_batch_size}\nWeight decay: {args.ae_weight_decay}")
-            deep_svdd.pretrain(train_dataset, optimizer_name = args.ae_optimizer, lr = args.ae_lr, num_epochs = args.ae_num_epochs, batch_size = args.ae_batch_size, weight_decay = args.ae_weight_decay, device = device)
+            if args.ae_model_file is None:
+                logger.info("Pretraining with the following hyperparameters")
+                logger.info(f"\nOptimizer: {args.ae_optimizer}\nLearning rate: {args.ae_lr}\nNum epochs: {args.ae_num_epochs}\nBatch size: {args.ae_batch_size}\nWeight decay: {args.ae_weight_decay}")
+                deep_svdd.pretrain(train_dataset, optimizer_name = args.ae_optimizer, lr = args.ae_lr, num_epochs = args.ae_num_epochs, batch_size = args.ae_batch_size, weight_decay = args.ae_weight_decay, device = device)
+                deep_svdd.save_model(ae_save_path = os.path.join(logdir, "autoencoder.tar"))
+                logger.info(f"Saved autoencoder tar to", os.path.join(logdir, "autoencoder.tar"))
+            else:
+                deep_svdd.load_model(ae_save_path = args.ae_model_file)
+                logger.info(f"Loaded autoencoder from {args.ae_model_file}")
+        
         deep_svdd.train(train_dataset, optimizer_name = args.optimizer, lr = args.lr, num_epochs = args.num_epochs, batch_size = args.batch_size, weight_decay = args.weight_decay, device = device)
+        deep_svdd.save_model(network_save_path = os.path.join(logdir, "network.tar"))
+        logger.info(f"Saved main network tar to", os.path.join(logdir, "network.tar"))
+    elif args.test:
+        test_dataset = CustomDataset(args.data_dir)
+        deep_svdd.test(test_dataset, device = device)
         deep_svdd.save_results(os.path.join(logdir, "results.json"))
-        deep_svdd.save_model(os.path.join(logdir, "model.tar"))
+        logger.info(f"Saved results to", os.path.join(logdir, "results.json"))
