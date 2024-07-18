@@ -2,6 +2,7 @@ import json
 import torch
 from detector.models import Network, AutoEncoder
 from detector.trainers import DeepSVDDTrainer, AETrainer
+import numpy as np
 
 
 class DeepSVDD:
@@ -39,7 +40,8 @@ class DeepSVDD:
             "train_time": None,
             "test_time": None,
             "test_auc": None,
-            "test_scores": None
+            "test_scores": None,
+            "test_score_percentiels": None
         }
     
     def set_network(self, net_name):
@@ -70,6 +72,8 @@ class DeepSVDD:
         self.results["test_time"] = self.trainer.test_time
         self.results["test_auc"] = self.trainer.test_auc
         self.results["test_scores"] = self.trainer.test_scores
+        percentiles = [1] + list(range(5, 96, 5)) + [99]
+        self.results["test_score_percentiles"] = [np.percentile(self.trainer.test_scores, p) for p in percentiles]
     
     def pretrain(self, dataset, optimizer_name = "adam", lr = 0.001, num_epochs = 100, lr_milestones = (), batch_size = 128, weight_decay = 1e-6, device = "cuda", num_jobs_dataloader = 0):
         """
@@ -113,7 +117,9 @@ class DeepSVDD:
         if network_save_path:
             model_info = torch.load(network_save_path)
             self.radius = model_info["radius"]
+            print("radius:", self.radius)
             self.center = model_info["center"]
+            print("center:", self.center)
             self.net.load_state_dict(model_info["net_dict"])
         if ae_save_path:
             model_info = torch.load(ae_save_path)

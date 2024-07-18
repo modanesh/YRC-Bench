@@ -122,7 +122,7 @@ class DeepSVDDTrainer(BaseTrainer):
         with torch.no_grad():
             for data in test_loader:
                 inputs, labels, idx = data
-                inputs = inputs.to(device)
+                inputs = inputs.float().permute(0, 2, 1, 3).to(self.device)
                 outputs = model(inputs)
                 dist = torch.sum((outputs - self.center)**2, dim = 1)
                 if self.objective == "soft-boundary":
@@ -135,9 +135,12 @@ class DeepSVDDTrainer(BaseTrainer):
         self.test_time = time.time() - start_time
         logger.info("Testing time: %.3f" % self.test_time)
         
-        self.test_scores = idx_label_score
         _, labels, scores = zip(*idx_label_score)
-        self.test_auc = roc_auc_score(np.array(labels), np.array(scores))
+        self.test_scores = scores
+        try:
+            self.test_auc = roc_auc_score(np.array(labels), np.array(scores))
+        except ValueError:  # only one class => cannot calculate AUC
+            self.test_auc = -1
         logger.info("Test set AUC: {:.2f}%".format(100. * self.test_auc))
         logger.info("Finished inference!!!!!")
     
