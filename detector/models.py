@@ -37,7 +37,7 @@ class Network(BaseModel):
         x = self.pool(F.leaky_relu(self.bn2d2(x)))
         x = self.conv3(x)
         x = self.pool(F.leaky_relu(self.bn2d3(x)))
-        x = x.view(x.size(0), -1)
+        x = x.reshape(x.size(0), -1)
         x = self.fc1(x)
         return x
 
