@@ -1,7 +1,7 @@
 import json
 import torch
-from models import Network, AutoEncoder
-from trainers import DeepSVDDTrainer, AETrainer
+from detector.models import Network, AutoEncoder
+from detector.trainers import DeepSVDDTrainer, AETrainer
 
 
 class DeepSVDD:
@@ -78,8 +78,9 @@ class DeepSVDD:
         self.ae_net = AutoEncoder()
         self.ae_optimizer_name = optimizer_name
         self.AETrainer = AETrainer(optimizer_name, lr = lr, num_epochs = num_epochs, lr_milestones = lr_milestones, batch_size = batch_size, weight_decay = weight_decay, device = device, num_jobs_dataloader = num_jobs_dataloader)
-        self.ae_net = self.AETrainer.train(train_data, self.ae_net)
-        self.AETrainer.test(dataset, self.ae_net)
+        self.ae_net = self.AETrainer.train(dataset, self.ae_net)
+        # torch.save({"ae_net_dict": self.ae_net.state_dict()})  # FIXME: add file
+        # self.AETrainer.test(dataset, self.ae_net)
         self.init_network_weights()
     
     def init_network_weights(self):

@@ -4,7 +4,7 @@ import numpy as np
 import logging
 import time
 from sklearn.metrics import roc_auc_score
-from dataset import get_dataloader
+from detector.dataset import get_dataloader
 import wandb
 
 
@@ -76,7 +76,6 @@ class DeepSVDDTrainer(BaseTrainer):
         start_time = time.time()
         model.train()
         for epoch in range(self.num_epochs):
-            scheduler.step()
             if epoch in self.lr_milestones:
                 logger.info("  LR scheduler: new learning rate is %g" % float(scheduler.get_lr()[0]))
                 if self.use_wandb:
@@ -86,7 +85,7 @@ class DeepSVDDTrainer(BaseTrainer):
             epoch_start = time.time()
             for data in train_loader:
                 inputs, _, _ = data
-                inputs = inputs.to(self.device)
+                inputs = inputs.float().permute(0, 2, 1, 3).to(self.device)
                 optimizer.zero_grad()
                 outputs = model(inputs)
                 dist = torch.sum((outputs - self.center)**2, dim = 1)
@@ -102,6 +101,7 @@ class DeepSVDDTrainer(BaseTrainer):
                 epoch_loss += loss.item()
                 num_batches += 1
             epoch_train_time = time.time() - epoch_start
+            scheduler.step()
             logger.info("  Epoch {}/{}\t Time: {:.3f}\t Loss: {:.8f}" .format(epoch + 1, self.num_epochs, epoch_train_time, epoch_loss / num_batches))
             if self.use_wandb:
                 wandb.log({"epoch": epoch + 1, "train_time": epoch_train_time, "avg_loss": epoch_loss / num_batches})
@@ -189,7 +189,6 @@ class AETrainer(BaseTrainer):
         start_time = time.time()
         model.train()
         for epoch in range(self.num_epochs):
-            scheduler.step()
             if epoch in self.lr_milestones:
                 logger.info("  LR scheduler: new learning rate is %g" % float(scheduler.get_lr()[0]))
                 if self.use_wandb:
@@ -199,7 +198,7 @@ class AETrainer(BaseTrainer):
             epoch_start = time.time()
             for data in train_loader:
                 inputs, _, _ = data
-                inputs = inputs.to(self.device)
+                inputs = inputs.float().permute(0, 2, 1, 3).to(self.device)
                 optimizer.zero_grad()
                 outputs = model(inputs)
                 scores = torch.sum((outputs - inputs)**2, dim = tuple(range(1, outputs.dim())))
@@ -209,6 +208,7 @@ class AETrainer(BaseTrainer):
                 epoch_loss += loss.item()
                 num_batches += 1
             epoch_train_time = time.time() - epoch_start
+            scheduler.step()
             logger.info("  Epoch {}/{}\t Time: {:.3f}\t Loss: {:.8f}" .format(epoch + 1, self.num_epochs, epoch_train_time, epoch_loss / num_batches))
             if self.use_wandb:
                 wandb.log({"epoch": epoch + 1, "train_time": epoch_train_time, "avg_loss": epoch_loss / num_batches})
@@ -220,7 +220,7 @@ class AETrainer(BaseTrainer):
     def test(self, dataset, model):
         logger = logging.getLogger()
         model = model.to(self.device)
-        _, test_loader = dataset.loaders(batch_size = self.batch_size, num_workers = self.num_jobs_dataloader)
+        test_loader = get_dataloader(dataset, batch_size = self.batch_size, num_workers = self.num_jobs_dataloader)
         
         logger.info("Starting autoencoder inference...")
         test_loss = 0.0

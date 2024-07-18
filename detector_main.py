@@ -1,5 +1,9 @@
 import argparse
+import logging
 import torch
+import random
+import numpy as np
+import os
 import time
 try:
     import wandb
@@ -18,7 +22,7 @@ if __name__ == "__main__":
 
     parser.add_argument("--env_name", type = str, required = True)
     parser.add_argument("--data_dir", type = str, required = True)
-    parser.add_argument("--save_dir", type = str)  # only for preprocessing
+    parser.add_argument("--format", type = str, default = "np", choices = ["h5", "np"])  # only for preprocessing
     parser.add_argument("--exp_name", type = str, default = "training")
     parser.add_argument("--objective", type = str, default = "one-class", choices = ["one-class", "soft-boundary"])
     parser.add_argument("--nu", type = float, default = 0.1)
@@ -71,8 +75,10 @@ if __name__ == "__main__":
         folder_name = "train_detector"
     else:
         folder_name = "test_detector"
-    logdir = os.path.join(os.getcwd(), folder_name, args.env_name)
-    run_name = time.strftime("%Y-%m-%d__%H-%M-%S") + f"__seed_{args.seed}"
+    logdir = os.path.join(os.getcwd(), "logs", folder_name, args.env_name)
+    run_name = time.strftime("%Y-%m-%d__%H-%M-%S")
+    if not args.preprocess:
+        run_name += f"__seed_{args.seed}"
     logdir = os.path.join(logdir, run_name)
     if not os.path.exists(logdir):
         os.makedirs(logdir)
@@ -91,8 +97,9 @@ if __name__ == "__main__":
     ### Running things ###
     if args.preprocess:
         logger.info("Starting to preprocess images")
-        preprocess_and_save_images(args.data_dir, args.save_dir)
-        logger.info("Done preprocessing")
+        start = time.time()
+        preprocess_and_save_images(args.data_dir, logdir, args.format)
+        logger.info("Done preprocessing, took {(time.time() - start) / 60} minutes")
     elif args.train:
         logger.info("Creating DeepSVDD model(s)...")
         deep_svdd = DeepSVDD(args.objective, args.nu)
