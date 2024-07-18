@@ -22,13 +22,13 @@ class Network(BaseModel):
         super().__init__()
         self.last_layer_dim = 64  # 32 vs 128
         self.pool = nn.MaxPool2d(2, 2)
-        self.conv1 = nn.Conv2d(3, 16, 5, bias = False, padding = 2)  # in: 1 vs 3, out: 8 vs 32
+        self.conv1 = nn.Conv2d(3, 16, 5, bias = False, padding = 2)  # out: 8 vs 32
         self.bn2d1 = nn.BatchNorm2d(16, eps = 1e-04, affine = False)  # num features: 8 vs 32
         self.conv2 = nn.Conv2d(16, 32, 5, bias  =False, padding = 2)
         self.bn2d2 = nn.BatchNorm2d(32, eps = 1e-04, affine = False)
         self.conv3 = nn.Conv2d(32, 64, 5, bias = False, padding = 2)
         self.bn2d3 = nn.BatchNorm2d(64, eps = 1e-04, affine = False)
-        self.fc1 = nn.Linear(64 * 4 * 4, self.last_layer_dim, bias = False)
+        self.fc1 = nn.Linear(64 * 8 * 8, self.last_layer_dim, bias = False)
     
     def forward(self, x):
         x = self.conv1(x)

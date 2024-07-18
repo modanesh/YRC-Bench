@@ -148,7 +148,7 @@ class DeepSVDDTrainer(BaseTrainer):
         with torch.no_grad():
             for data in train_loader:
                 inputs, _, _ = data
-                inputs = inputs.to(self.device)
+                inputs = inputs.float().permute(0, 2, 1, 3).to(self.device)
                 outputs = model(inputs)
                 num_samples += outputs.shape[0]
                 center += torch.sum(outputs, dim = 0)

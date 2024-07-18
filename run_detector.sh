@@ -22,6 +22,7 @@ export PYTHONPATH="$PYTHONPATH:$PWD"
 python3 detector_main.py \
 	--train \
 	--pretrain \
+	--ae_model_file /nas/ucb/tutrinh/yield_request_control/logs/train_detector/coinrun/2024-07-18__01-49-42__seed_8888/autoencoder.tar \
 	--env_name coinrun \
 	--data_dir /nas/ucb/tutrinh/yield_request_control/logs/preprocess_detector/coinrun/2024-07-17__20-30-39/ \
 	--device cuda \

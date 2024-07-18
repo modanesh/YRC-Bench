@@ -80,7 +80,6 @@ class DeepSVDD:
         self.AETrainer = AETrainer(optimizer_name, lr = lr, num_epochs = num_epochs, lr_milestones = lr_milestones, batch_size = batch_size, weight_decay = weight_decay, device = device, num_jobs_dataloader = num_jobs_dataloader)
         self.ae_net = self.AETrainer.train(dataset, self.ae_net)
         # self.AETrainer.test(dataset, self.ae_net)
-        self.init_network_weights()
     
     def init_network_weights(self):
         """
