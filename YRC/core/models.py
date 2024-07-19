@@ -470,13 +470,11 @@ class cliportPPO:
                         total_reward += rew
                         train_steps += 1
                     if done:
-                        print(
-                            f"train episode total_reward={total_reward:.3f}, episode length (of max length)={i / self.task.max_steps:.3f}")
+                        print(f"train episode total_reward={total_reward:.3f}, episode length (of max length)={i / self.task.max_steps:.3f}")
                         break
                     if not done and i == self.task.max_steps - 1:
-                        print(
-                            f"train episode total_reward={total_reward:.3f}, episode length (of max length)={i / self.task.max_steps:.3f}")
-                        self.storage._dones[i] = True  # set done=True for the last transition
+                        print(f"train episode total_reward={total_reward:.3f}, episode length (of max length)={i / self.task.max_steps:.3f}")
+                        self.storage._dones[self.storage._pointer - 1] = True  # set done=True for the last transition
 
             print(f"train iteration={self.t}, collected data={train_steps}, total data collected so far={self.storage._size}")
             self.storage.compute_estimates(self.gamma, self.lmbda, self.use_gae, self.normalize_adv)

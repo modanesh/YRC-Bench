@@ -137,7 +137,6 @@ class Logger(object):
         self.num_episodes += len(self.episode_len_buffer)
         self.episode_rewards = []
 
-
     def dump(self):
         wall_time = time.time() - self.start_time
         episode_statistics = self._get_episode_statistics()
