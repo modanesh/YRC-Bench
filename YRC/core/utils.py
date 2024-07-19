@@ -39,12 +39,13 @@ def get_args():
                              'T2: PPO with inputs concatenated by the weak agent features (conv + mlp), '
                              'T3: PPO with inputs from the weak agent (mlp).')
     parser.add_argument('--benchmark', type=str, choices=['procgen', 'cliport'], required=True, help='Benchmark type.')
-    parser.add_argument('--env_name', type=str, required=True, help='Environment name for training.')
+    parser.add_argument('--env_name', type=str, help='Environment name for training for procgen.')
     parser.add_argument('--param_name', type=str, help='Parameter name used to determine the additional '
                                                        'config for env, required for procgen, e.g. easy-200')
     parser.add_argument('--switching_cost', type=float, required=True, help='Switching cost for the help policy.')
     parser.add_argument('--strong_query_cost', type=float, required=True, help='Strong query cost for the help policy.')
     parser.add_argument('--distribution_mode', type=str, default='easy', help='Distribution mode for procgen.')
+    parser.add_argument('--task', type=str, help='Task name for cliport.')
     args = parser.parse_args()
     verify_args(args)
     return args
@@ -60,6 +61,12 @@ def verify_args(args):
             raise ValueError("Strong model file not provided for procgen.")
         if args.param_name is None:
             raise ValueError("Param name not provided for procgen.")
+        if args.env_name is None:
+            raise ValueError("Env name not provided for procgen.")
+    # cliport checks
+    if args.benchmark == 'cliport':
+        if args.task is None:
+            raise ValueError("Task name not provided for cliport.")
 
 
 class Logger(object):
@@ -350,28 +357,6 @@ class CliportReplayBuffer:
         return rew_batch, done_batch
 
 
-def load_ckpts(results_path, model_task):
-    result_jsons = [c for c in os.listdir(results_path) if "results-val" in c]
-    if 'multi' in model_task:
-        result_jsons = [r for r in result_jsons if "multi" in r]
-    else:
-        result_jsons = [r for r in result_jsons if "multi" not in r]
-
-    if len(result_jsons) > 0:
-        result_json = result_jsons[0]
-        with open(os.path.join(results_path, result_json), 'r') as f:
-            eval_res = json.load(f)
-        best_success = -1.0
-        for ckpt, res in eval_res.items():
-            if res['mean_reward'] > best_success:
-                best_checkpoint = ckpt
-                best_success = res['mean_reward']
-        ckpt = best_checkpoint
-    else:
-        raise ValueError(f"No best val ckpt found!")
-    return ckpt
-
-
 def cliport_environment_setup(assets_root, weak_policy, strong_query_cost, switching_agent_cost, disp, shared_memory, task,
                               help_policy_type=None, device='cuda'):
     tsk = tasks.names[task]()
@@ -390,11 +375,9 @@ def cliport_environment_setup(assets_root, weak_policy, strong_query_cost, switc
 
 
 def load_weak_policy(cfgs):
-    ckpt = load_ckpts(cfgs.results_path, cfgs.model_task)
-    model_file = os.path.join(cfgs.model_path, ckpt)
-    name = f'{cfgs.task}-{cfgs.agent}-n{cfgs.n_demos}'
+    name = f'{cfgs.task}-{cfgs.agent}-n{cfgs.weak_n_demos}'
     pi_w = agents.names[cfgs.agent](name, to_dict(cfgs))
-    pi_w.load(model_file)
+    pi_w.load(cfgs.weak_model_file)
     pi_w.eval()
     return pi_w
 

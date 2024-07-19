@@ -38,11 +38,10 @@ class EnvRegistry():
             self.cfgs.strong_query_cost = args.strong_query_cost
             self.cfgs.distribution_mode = args.distribution_mode
         elif args.benchmark == 'cliport':
-            self.cfgs.weak_model_file = args.weak_model_file
+            self.cfgs.task = args.task
             self.cfgs.benchmark = args.benchmark
             self.cfgs.help_policy_type = args.help_policy_type
-            self.cfgs.model_path = f"{self.cfgs.results_path}/{self.cfgs.model_task}-{self.cfgs.agent}-n{self.cfgs.n_demos}-train/checkpoints"
-            self.cfgs.results_path = f"{self.cfgs.results_path}/{self.cfgs.task}-{self.cfgs.agent}-n{self.cfgs.n_demos}-train/checkpoints"
+            self.cfgs.weak_model_file = os.path.join("YRC", "checkpoints", "cliport", args.weak_model_file)
         return self.cfgs
 
 
