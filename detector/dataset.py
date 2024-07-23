@@ -35,17 +35,26 @@ def preprocess_and_save_images(input_dir, output_dir, frmt):
                 img_normalized = (img_tensor - img_tensor.min()) / (img_tensor.max() - img_tensor.min())
                 torch.save(img_normalized, os.path.join(output_dir, f"{key}.pt"))
     elif frmt == "np":
-        run_files = os.listdir(input_dir)  # observations for each run are stored in separate npz files
-        for run in run_files:
-            if run.endswith(".npz"):
-                observations = np.load(os.path.join(input_dir, run))["arr_0"]
-                if not isinstance(observations[0], float):
-                    observations = observations[0]
-                run_idx = re.search(r"(\d+)", run).group(1)
-                for obs_idx, obs in enumerate(observations):
-                    img_tensor = transform(obs)
-                    img_normalized = (img_tensor - img_tensor.min()) / (img_tensor.max() - img_tensor.min())
-                    torch.save(img_normalized, os.path.join(output_dir, f"run_{run_idx}_obs_{obs_idx}.pt"))
+        # observations for each run are all stored individually
+        obs_files = os.listdir(input_dir)
+        for obs_file in obs_files:
+            if obs_file.endswith(".npz"):
+                obs = np.load(os.path.join(input_dir, run))["arr_0"]
+                obs_name = os.splitext(obs_file)[0]
+                img_tensor = transform(obs)
+                img_normalized = (img_tensor - img_tensor.min()) / (img_tensor.max() - img_tensor.min())
+                torch.save(img_normalized, os.path.join(output_dir, f"{obs_name}.pt"))
+
+        # observations for each run are stored in a group
+        # run_files = os.listdir(input_dir)
+        # for run in run_files:
+        #     if run.endswith(".npz"):
+        #         observations = np.load(os.path.join(input_dir, run))["arr_0"]
+        #         run_idx = re.search(r"(\d+)", run).group(1)
+        #         for obs_idx, obs in enumerate(observations):
+        #             img_tensor = transform(obs)
+        #             img_normalized = (img_tensor - img_tensor.min()) / (img_tensor.max() - img_tensor.min())
+        #             torch.save(img_normalized, os.path.join(output_dir, f"run_{run_idx}_obs_{obs_idx}.pt"))
     elif frmt == "png":
         image_files = [f for f in os.listdir(input_dir) if f.endswith(".png")]  # observations are stored completely individually
         for image_file in image_files:
