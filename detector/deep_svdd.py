@@ -51,13 +51,13 @@ class DeepSVDD:
         self.net_name = net_name
         self.net = Network()
     
-    def train(self, dataset, optimizer_name = "adam", lr = 0.001, num_epochs = 50, lr_milestones = (), batch_size = 128, weight_decay = 1e-6, device = "cuda", num_jobs_dataloader = 0):
+    def train(self, train_dataset, valid_dataset, optimizer_name = "adam", lr = 0.001, num_epochs = 50, lr_milestones = (), batch_size = 128, weight_decay = 1e-6, device = "cuda", num_jobs_dataloader = 0):
         """
         Trains Deep-SVDD model
         """
         self.optimizer_name = optimizer_name
         self.trainer = DeepSVDDTrainer(self.objective, self.radius, self.center, self.nu, self.optimizer_name, lr = lr, num_epochs = num_epochs, lr_milestones = lr_milestones, batch_size = batch_size, weight_decay = weight_decay, device = device, num_jobs_dataloader = num_jobs_dataloader)
-        self.net = self.trainer.train(dataset, self.net)
+        self.net = self.trainer.train(train_dataset, valid_dataset, self.net)
         self.radius = float(self.trainer.radius.cpu().data.numpy())
         self.center = self.trainer.center.cpu().data.numpy().tolist()
         self.results["train_time"] = self.trainer.train_time
@@ -75,14 +75,14 @@ class DeepSVDD:
         percentiles = [1] + list(range(5, 96, 5)) + [99]
         self.results["test_score_percentiles"] = [np.percentile(self.trainer.test_scores, p) for p in percentiles]
     
-    def pretrain(self, dataset, optimizer_name = "adam", lr = 0.001, num_epochs = 100, lr_milestones = (), batch_size = 128, weight_decay = 1e-6, device = "cuda", num_jobs_dataloader = 0):
+    def pretrain(self, train_dataset, valid_dataset, optimizer_name = "adam", lr = 0.001, num_epochs = 100, lr_milestones = (), batch_size = 128, weight_decay = 1e-6, device = "cuda", num_jobs_dataloader = 0):
         """
         Pretrains the weights for the Deep-SVDD model via an autoencoder
         """
         self.ae_net = AutoEncoder()
         self.ae_optimizer_name = optimizer_name
         self.AETrainer = AETrainer(optimizer_name, lr = lr, num_epochs = num_epochs, lr_milestones = lr_milestones, batch_size = batch_size, weight_decay = weight_decay, device = device, num_jobs_dataloader = num_jobs_dataloader)
-        self.ae_net = self.AETrainer.train(dataset, self.ae_net)
+        self.ae_net = self.AETrainer.train(train_dataset, valid_dataset, self.ae_net)
         # self.AETrainer.test(dataset, self.ae_net)
     
     def init_network_weights(self):

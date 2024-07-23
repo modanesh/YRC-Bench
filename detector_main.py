@@ -9,7 +9,7 @@ try:
     import wandb
 except ImportError:
     pass
-from detector.dataset import CustomDataset, preprocess_and_save_images
+from detector.dataset import CustomDataset, preprocess_and_save_images, get_datasets
 from detector.deep_svdd import DeepSVDD
 
 
@@ -115,12 +115,12 @@ if __name__ == "__main__":
         logger.info("Done!")
 
         if args.train:
-            train_dataset = CustomDataset(args.data_dir)
+            train_dataset, valid_dataset = get_datasets(args.data_dir, True)
             if args.pretrain:
                 if args.ae_model_file is None:
                     logger.info("Pretraining with the following hyperparameters")
                     logger.info(f"\nOptimizer: {args.ae_optimizer}\nLearning rate: {args.ae_lr}\nNum epochs: {args.ae_num_epochs}\nBatch size: {args.ae_batch_size}\nWeight decay: {args.ae_weight_decay}")
-                    deep_svdd.pretrain(train_dataset, optimizer_name = args.ae_optimizer, lr = args.ae_lr, num_epochs = args.ae_num_epochs, batch_size = args.ae_batch_size, weight_decay = args.ae_weight_decay, device = device)
+                    deep_svdd.pretrain(train_dataset, valid_dataset, optimizer_name = args.ae_optimizer, lr = args.ae_lr, num_epochs = args.ae_num_epochs, batch_size = args.ae_batch_size, weight_decay = args.ae_weight_decay, device = device)
                     deep_svdd.save_model(ae_save_path = os.path.join(logdir, "autoencoder.tar"))
                     logger.info(f"Saved autoencoder tar to {os.path.join(logdir, 'autoencoder.tar')}")
                 else:
@@ -128,12 +128,11 @@ if __name__ == "__main__":
                     logger.info(f"Loaded autoencoder from {args.ae_model_file}")
         
             deep_svdd.init_network_weights()  # copy encoder to network
-            deep_svdd.train(train_dataset, optimizer_name = args.optimizer, lr = args.lr, num_epochs = args.num_epochs, batch_size = args.batch_size, weight_decay = args.weight_decay, device = device)
+            deep_svdd.train(train_dataset, valid_dataset, optimizer_name = args.optimizer, lr = args.lr, num_epochs = args.num_epochs, batch_size = args.batch_size, weight_decay = args.weight_decay, device = device)
             deep_svdd.save_model(network_save_path = os.path.join(logdir, "network.tar"))
             logger.info(f"Saved main network tar to {os.path.join(logdir, 'network.tar')}")
         elif args.test:
-            test_dataset = CustomDataset(args.data_dir)
+            test_dataset, _ = get_datasets(args.data_dir, False)
             deep_svdd.test(test_dataset, device = device)
             deep_svdd.save_results(os.path.join(logdir, "results.json"))
             logger.info(f"Saved results to {os.path.join(logdir, 'results.json')}")
-

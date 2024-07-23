@@ -60,10 +60,11 @@ class DeepSVDDTrainer(BaseTrainer):
         self.test_auc = None
         self.test_scores = None
 
-    def train(self, dataset, model):
+    def train(self, train_dataset, valid_dataset, model):
         logger = logging.getLogger()
         model = model.to(self.device)
-        train_loader = get_dataloader(dataset, batch_size = self.batch_size, num_workers = self.num_jobs_dataloader)
+        train_loader = get_dataloader(train_dataset, batch_size = self.batch_size, num_workers = self.num_jobs_dataloader)
+        valid_loader = get_dataloader(valid_dataset, batch_size = self.batch_size, num_workers = self.num_jobs_dataloader)
         optimizer = optim.Adam(model.parameters(), lr = self.lr, weight_decay = self.weight_decay, amsgrad = self.optimizer_name == "amsgrad")
         scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones = self.lr_milestones, gamma = 0.1)
         
@@ -74,8 +75,11 @@ class DeepSVDDTrainer(BaseTrainer):
         
         logger.info("Starting to train Deep-SVDD...")
         start_time = time.time()
-        model.train()
+        best_loss = np.inf
+        patience = 10
+        patience_counter = 0
         for epoch in range(self.num_epochs):
+            model.train()
             if epoch in self.lr_milestones:
                 logger.info("  LR scheduler: new learning rate is %g" % float(scheduler.get_lr()[0]))
                 if self.use_wandb:
@@ -105,9 +109,41 @@ class DeepSVDDTrainer(BaseTrainer):
             logger.info("  Epoch {}/{}\t Time: {:.3f}\t Loss: {:.8f}" .format(epoch + 1, self.num_epochs, epoch_train_time, epoch_loss / num_batches))
             if self.use_wandb:
                 wandb.log({"epoch": epoch + 1, "train_time": epoch_train_time, "avg_loss": epoch_loss / num_batches})
+            
+            model.eval()
+            val_loss = 0.0
+            num_val_batches = 0
+            with torch.no_grad():
+                for data in valid_loader:
+                    inputs, _, _ = data
+                    inputs = inputs.float().permute(0, 2, 1, 3).to(self.device)
+                    outputs = model(inputs)
+                    dist = torch.sum((outputs - self.center)**2, dim = 1)
+                    if self.objective == "soft-boundary":
+                        scores = dist - self.radius**2
+                        loss = self.radius**2 + (1 / self.nu) * torch.mean(torch.max(torch.zeros_like(scores), scores))
+                    else:
+                        loss = torch.mean(dist)
+                    val_loss += loss.item()
+                    num_val_batches += 1
+            avg_val_loss = val_loss / num_val_batches
+            logger.info("  Validation Loss: {:.8f}".format(avg_val_loss))
+            if self.use_wandb:
+                wandb.log({"epoch": epoch + 1, "val_loss": avg_val_loss})
+            if avg_val_loss < best_loss:
+                best_loss = avg_val_loss
+                patience_counter = 0
+                best_model_state = model.state_dict()
+            else:
+                patience_counter += 1
+            if patience_counter >= patience:
+                logger.info("Early stopping triggered after epoch {}".format(epoch + 1))
+                break
+
         self.train_time = time.time() - start_time
         logger.info("Training time: %.3f" % self.train_time)
         logger.info("Finished training Deep-SVDD!!!!!")
+        model.load_state_dict(best_model_state)
         return model
     
     def test(self, dataset, model):
@@ -181,17 +217,21 @@ class AETrainer(BaseTrainer):
     ):
         super().__init__(optimizer_name, lr, num_epochs, lr_milestones, batch_size, weight_decay, device, num_jobs_dataloader, use_wandb = use_wandb)
     
-    def train(self, dataset, model):
+    def train(self, train_dataset, valid_dataset, model):
         logger = logging.getLogger()
         model = model.to(self.device)
-        train_loader = get_dataloader(dataset, batch_size = self.batch_size, num_workers = self.num_jobs_dataloader)
+        train_loader = get_dataloader(train_dataset, batch_size = self.batch_size, num_workers = self.num_jobs_dataloader)
+        valid_loader = get_dataloader(valid_dataset, batch_size = self.batch_size, num_workers = self.num_jobs_dataloader)
         optimizer = optim.Adam(model.parameters(), lr = self.lr, weight_decay = self.weight_decay, amsgrad = self.optimizer_name == "amsgrad")
         scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones = self.lr_milestones, gamma = 0.1)
 
         logger.info("Starting to train autoencoder...")
         start_time = time.time()
-        model.train()
+        best_loss = np.inf
+        patience = 10
+        patience_counter = 0
         for epoch in range(self.num_epochs):
+            model.train()
             if epoch in self.lr_milestones:
                 logger.info("  LR scheduler: new learning rate is %g" % float(scheduler.get_lr()[0]))
                 if self.use_wandb:
@@ -215,9 +255,37 @@ class AETrainer(BaseTrainer):
             logger.info("  Epoch {}/{}\t Time: {:.3f}\t Loss: {:.8f}" .format(epoch + 1, self.num_epochs, epoch_train_time, epoch_loss / num_batches))
             if self.use_wandb:
                 wandb.log({"epoch": epoch + 1, "train_time": epoch_train_time, "avg_loss": epoch_loss / num_batches})
+            
+            model.eval()
+            val_loss = 0.0
+            num_val_batches = 0
+            with torch.no_grad():
+                for data in valid_loader:
+                    inputs, _, _ = data
+                    inputs = inputs.float().permute(0, 2, 1, 3).to(self.device)
+                    outputs = model(inputs)
+                    scores = torch.sum((outputs - inputs)**2, dim = tuple(range(1, outputs.dim())))
+                    loss = torch.mean(scores)
+                    val_loss += loss.item()
+                    num_val_batches += 1
+            avg_val_loss = val_loss / num_val_batches
+            logger.info("  Validation Loss: {:.8f}" .format(avg_val_loss))
+            if self.use_wandb:
+                wandb.log({"epoch": epoch + 1, "avg_val_loss": avg_val_loss})
+            if avg_val_loss < best_loss:
+                best_loss = avg_val_loss
+                patience_counter = 0
+                best_model_state = model.state_dict()
+            else:
+                patience_counter += 1
+            if patience_counter >= patience:
+                logger.info("Early stopping triggered after epoch {}".format(epoch + 1))
+                break
+
         self.train_time = time.time() - start_time
         logger.info("Pretraining time: %.3f" % self.train_time)
         logger.info("Finished pretraining!!!!!")
+        model.load_state_dict(best_model_state)
         return model
     
     def test(self, dataset, model):

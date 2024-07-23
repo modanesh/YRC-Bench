@@ -1,11 +1,11 @@
 import os
 import torch
-from PIL import Image
 import h5py
 import numpy as np
 import re
 import torchvision.transforms as transforms
 from torch.utils.data import Dataset, DataLoader
+import random
 
 
 def global_contrast_normalization(image, scale = "l1"):
@@ -42,15 +42,15 @@ def preprocess_and_save_images(input_dir, output_dir, frmt):
                 for obs_idx, obs in enumerate(observations):
                     img_tensor = transform(obs)
                     img_normalized = (img_tensor - img_tensor.min()) / (img_tensor.max() - img_tensor.min())
-                    torch.save(img_normalized, os.path.join(output_dir, f"run_{run_idx}_obs_{obs_idx}.pt")) 
+                    torch.save(img_normalized, os.path.join(output_dir, f"run_{run_idx}_obs_{obs_idx}.pt"))
 
 
 class CustomDataset(Dataset):
-    def __init__(self, data_dir, transform = None, target_transform = None):
+    def __init__(self, data_files, transform = None, target_transform = None):
         self.data_dir = data_dir
         self.transform = transform
         self.target_transform = target_transform
-        self.image_files = [os.path.join(data_dir, filename) for filename in os.listdir(data_dir) if filename.endswith(".pt")]  # load already preprocessed files
+        self.image_files = data_files
         print("Loaded", len(self.image_files), "images")
     
     def __len__(self):
@@ -65,6 +65,19 @@ class CustomDataset(Dataset):
         if self.target_transform:
             label = self.target_transform(label)
         return image, label, idx
+
+
+def get_datasets(data_dir, training, transform = None, target_transform = None):
+    image_files = [os.path.join(data_dir, filename) for filename in os.listdir(data_dir) if filename.endswith(".pt")]  # load already preprocessed files
+    if training:
+        random.shuffle(image_files)
+        split_idx = len(image_files) // 20 * 17  # 85% for training, rest for validation
+        train_dataset = CustomDataset(image_files[:split_idx], transform, target_transform)
+        valid_dataset = CustomDataset(image_files[split_idx:], transform, target_transform)
+        return train_dataset, valid_dataset
+    else:
+        test_dataset = CustomDataset(image_files, transform, target_transform)
+        return test_dataset, None
 
 
 def get_dataloader(dataset, batch_size, shuffle = True, num_workers = 0):
