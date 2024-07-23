@@ -104,7 +104,7 @@ if __name__ == "__main__":
         logger.info("Starting to preprocess images")
         start = time.time()
         preprocess_and_save_images(args.data_dir, logdir, args.format)
-        logger.info("Done preprocessing, took {(time.time() - start) / 60} minutes")
+        logger.info(f"Done preprocessing, took {(time.time() - start) / 60} minutes")
     else:
         logger.info("Creating DeepSVDD model(s)...")
         deep_svdd = DeepSVDD(args.objective, args.nu)

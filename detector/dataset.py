@@ -56,7 +56,6 @@ def preprocess_and_save_images(input_dir, output_dir, frmt):
 
 class CustomDataset(Dataset):
     def __init__(self, data_files, transform = None, target_transform = None):
-        self.data_dir = data_dir
         self.transform = transform
         self.target_transform = target_transform
         self.image_files = data_files

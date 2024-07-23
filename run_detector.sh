@@ -3,7 +3,7 @@
 #SBATCH --mem=40gb
 #SBATCH --gres=gpu:1
 #SBATCH --wait-all-nodes=1
-#SBATCH --job-name=preprocess
+#SBATCH --job-name=svdd
 #SBATCH --output=experiments/slurm/%j.out
 #SBATCH --time=72:00:00
 #SBATCH --qos scavenger
@@ -31,7 +31,8 @@ if [ "$mode" == "preprocess" ]; then
 		--env_name ${env_name} \
 		--data_dir ${data_dir} \
 		--exp_name ${exp_name} \
-		--device cuda
+		--device cuda \
+		--gpu 0
 elif [ "$mode" == "train" ]; then
 	python3 detector_main.py \
 		--train \
@@ -40,6 +41,7 @@ elif [ "$mode" == "train" ]; then
 		--exp_name ${exp_name} \
 		--pretrain \
 		--device cuda \
+		--gpu 0 \
 		--seed 8888 \
 		--use_wandb
 else
