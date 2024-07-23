@@ -117,9 +117,7 @@ class DeepSVDD:
         if network_save_path:
             model_info = torch.load(network_save_path)
             self.radius = model_info["radius"]
-            print("radius:", self.radius)
             self.center = model_info["center"]
-            print("center:", self.center)
             self.net.load_state_dict(model_info["net_dict"])
         if ae_save_path:
             model_info = torch.load(ae_save_path)
