@@ -23,7 +23,6 @@ mode=$1
 env_name=$2
 data_dir=$3
 exp_name=$4
-gpu_device=$5
 
 if [ "$mode" == "preprocess" ]; then
 	python3 detector_main.py \
@@ -32,8 +31,7 @@ if [ "$mode" == "preprocess" ]; then
 		--env_name ${env_name} \
 		--data_dir ${data_dir} \
 		--exp_name ${exp_name} \
-		--device cuda \
-		--gpu ${gpu_device}
+		--device cuda
 elif [ "$mode" == "train" ]; then
 	python3 detector_main.py \
 		--train \
@@ -42,7 +40,6 @@ elif [ "$mode" == "train" ]; then
 		--exp_name ${exp_name} \
 		--pretrain \
 		--device cuda \
-		--gpu ${gpu_device} \
 		--seed 8888 \
 		--use_wandb
 else
