@@ -8,6 +8,21 @@ from detector.dataset import get_dataloader
 import wandb
 
 
+def dynamic_permute(inputs):
+    shape = inputs.shape
+    if len(shape) != 4:
+        raise ValueError(f"Expected input tensor to have 4 dimensions, but got {len(shape)} dimensions.")
+    _, dim1, dim2, dim3 = shape
+    if dim1 == 3 or dim1 == 1:  # Assuming the format is [batch_size, channels, height, width]
+        return inputs
+    elif dim2 == 3 or dim2 == 1:  # Assuming the format is [batch_size, height, channels, width]
+        return inputs.permute(0, 2, 1, 3)
+    elif dim3 == 3 or dim3 == 1:  # Assuming the format is [batch_size, height, width, channels]
+        return inputs.permute(0, 3, 1, 2)
+    else:  # Assuming the format is [batch_size, width, height, channels]
+        return inputs.permute(0, 3, 2, 1)
+
+
 class BaseTrainer:
     def __init__(
             self,
@@ -89,7 +104,7 @@ class DeepSVDDTrainer(BaseTrainer):
             epoch_start = time.time()
             for data in train_loader:
                 inputs, _, _ = data
-                inputs = inputs.float().permute(0, 2, 1, 3).to(self.device)
+                inputs = dynamic_permute(inputs.float().to(self.device))
                 optimizer.zero_grad()
                 outputs = model(inputs)
                 dist = torch.sum((outputs - self.center)**2, dim = 1)
@@ -116,7 +131,7 @@ class DeepSVDDTrainer(BaseTrainer):
             with torch.no_grad():
                 for data in valid_loader:
                     inputs, _, _ = data
-                    inputs = inputs.float().permute(0, 2, 1, 3).to(self.device)
+                    inputs = dynamic_permute(inputs.float().to(self.device))
                     outputs = model(inputs)
                     dist = torch.sum((outputs - self.center)**2, dim = 1)
                     if self.objective == "soft-boundary":
@@ -158,7 +173,7 @@ class DeepSVDDTrainer(BaseTrainer):
         with torch.no_grad():
             for data in test_loader:
                 inputs, labels, idx = data
-                inputs = inputs.float().permute(0, 2, 1, 3).to(self.device)
+                inputs = dynamic_permute(inputs.float().to(self.device))
                 outputs = model(inputs)
                 dist = torch.sum((outputs - self.center)**2, dim = 1)
                 if self.objective == "soft-boundary":
@@ -187,7 +202,7 @@ class DeepSVDDTrainer(BaseTrainer):
         with torch.no_grad():
             for data in train_loader:
                 inputs, _, _ = data
-                inputs = inputs.float().permute(0, 2, 1, 3).to(self.device)
+                inputs = dynamic_permute(inputs.float().to(self.device))
                 outputs = model(inputs)
                 num_samples += outputs.shape[0]
                 center += torch.sum(outputs, dim = 0)
@@ -241,7 +256,7 @@ class AETrainer(BaseTrainer):
             epoch_start = time.time()
             for data in train_loader:
                 inputs, _, _ = data
-                inputs = inputs.float().permute(0, 2, 1, 3).to(self.device)
+                inputs = dynamic_permute(inputs.float().to(self.device))
                 optimizer.zero_grad()
                 outputs = model(inputs)
                 scores = torch.sum((outputs - inputs)**2, dim = tuple(range(1, outputs.dim())))
@@ -262,7 +277,7 @@ class AETrainer(BaseTrainer):
             with torch.no_grad():
                 for data in valid_loader:
                     inputs, _, _ = data
-                    inputs = inputs.float().permute(0, 2, 1, 3).to(self.device)
+                    inputs = dynamic_permute(inputs.float().to(self.device))
                     outputs = model(inputs)
                     scores = torch.sum((outputs - inputs)**2, dim = tuple(range(1, outputs.dim())))
                     loss = torch.mean(scores)
