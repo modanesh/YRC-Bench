@@ -23,7 +23,7 @@ if __name__ == "__main__":
     parser.add_argument("--env_name", type = str, required = True)
     parser.add_argument("--data_dir", type = str, required = True)
     parser.add_argument("--format", type = str, default = "np", choices = ["h5", "np"])  # only for preprocessing
-    parser.add_argument("--exp_name", type = str, default = "training")
+    parser.add_argument("--exp_name", type = str, default = "DEFAULT")
     parser.add_argument("--objective", type = str, default = "one-class", choices = ["one-class", "soft-boundary"])
     parser.add_argument("--nu", type = float, default = 0.1)
     parser.add_argument("--model_file", type = str, default = None)
@@ -76,7 +76,7 @@ if __name__ == "__main__":
         folder_name = "train_detector"
     else:
         folder_name = "test_detector"
-    logdir = os.path.join(os.getcwd(), "logs", folder_name, args.env_name)
+    logdir = os.path.join(os.getcwd(), "logs", folder_name, args.env_name, args.exp_name)
     run_name = time.strftime("%Y-%m-%d__%H-%M-%S")
     if not args.preprocess:
         run_name += f"__seed_{args.seed}"

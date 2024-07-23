@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --mem=40gb
 #SBATCH --gres=gpu:1
@@ -19,13 +19,33 @@ export CLIPORT_ROOT="/nas/ucb/tutrinh/yield_request_control/cliport/"
 cd /nas/ucb/tutrinh/yield_request_control
 export PYTHONPATH="$PYTHONPATH:$PWD"
 
-python3 detector_main.py \
-	--test \
-	--model_file /nas/ucb/tutrinh/yield_request_control/logs/train_detector/coinrun/2024-07-18__01-57-25__seed_8888/network.tar \
-	--ae_model_file /nas/ucb/tutrinh/yield_request_control/logs/train_detector/coinrun/2024-07-18__01-49-42__seed_8888/autoencoder.tar \
-	--env_name coinrun \
-	--data_dir /nas/ucb/tutrinh/yield_request_control/logs/preprocess_detector/coinrun/2024-07-17__20-30-39/ \
-	--device cuda \
-	--gpu 3 \
-	--seed 8888 \
-	--use_wandb
+mode=$1
+env_name=$2
+data_dir=$3
+exp_name=$4
+gpu_device=$5
+
+if [ "$mode" == "preprocess" ]; then
+	python3 detector_main.py \
+		--preprocess \
+		--env_name ${env_name} \
+		--data_dir ${data_dir} \
+		--exp_name ${exp_name} \
+		--device cuda \
+		--gpu ${gpu_device}
+elif [ "$mode" == "train" ]; then
+	python3 detector_main.py \
+		--train \
+		--env_name ${env_name} \
+		--data_dir ${data_dir} \
+		--exp_name ${exp_name} \
+		--pretrain \
+		--device cuda \
+		--gpu ${gpu_device} \
+		--seed 8888 \
+		--use_wandb
+else
+    echo "Invalid mode: ${mode}"
+    echo "Usage: $0 {preprocess|train} env_name data_dir exp_name gpu_device"
+    exit 1
+fi
