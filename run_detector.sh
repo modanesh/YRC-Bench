@@ -27,7 +27,7 @@ exp_name=$4
 if [ "$mode" == "preprocess" ]; then
 	python3 detector_main.py \
 		--preprocess \
-		--format png \
+		--format np \
 		--env_name ${env_name} \
 		--data_dir ${data_dir} \
 		--exp_name ${exp_name} \

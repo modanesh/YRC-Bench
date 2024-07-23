@@ -38,7 +38,9 @@ def preprocess_and_save_images(input_dir, output_dir, frmt):
         run_files = os.listdir(input_dir)  # observations for each run are stored in separate npz files
         for run in run_files:
             if run.endswith(".npz"):
-                observations = np.load(os.path.join(input_dir, run))["arr_0"][0]
+                observations = np.load(os.path.join(input_dir, run))["arr_0"]
+                if not isinstance(observations[0], float):
+                    observations = observations[0]
                 run_idx = re.search(r"(\d+)", run).group(1)
                 for obs_idx, obs in enumerate(observations):
                     img_tensor = transform(obs)
