@@ -28,6 +28,7 @@ gpu_device=$5
 if [ "$mode" == "preprocess" ]; then
 	python3 detector_main.py \
 		--preprocess \
+		--format png \
 		--env_name ${env_name} \
 		--data_dir ${data_dir} \
 		--exp_name ${exp_name} \

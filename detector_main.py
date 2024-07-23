@@ -22,7 +22,7 @@ if __name__ == "__main__":
 
     parser.add_argument("--env_name", type = str, required = True)
     parser.add_argument("--data_dir", type = str, required = True)
-    parser.add_argument("--format", type = str, default = "np", choices = ["h5", "np"])  # only for preprocessing
+    parser.add_argument("--format", type = str, default = "np", choices = ["h5", "np", "png"])  # only for preprocessing
     parser.add_argument("--exp_name", type = str, default = "DEFAULT")
     parser.add_argument("--objective", type = str, default = "one-class", choices = ["one-class", "soft-boundary"])
     parser.add_argument("--nu", type = float, default = 0.1)

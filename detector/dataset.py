@@ -6,6 +6,7 @@ import re
 import torchvision.transforms as transforms
 from torch.utils.data import Dataset, DataLoader
 import random
+from PIL import Image
 
 
 def global_contrast_normalization(image, scale = "l1"):
@@ -43,6 +44,14 @@ def preprocess_and_save_images(input_dir, output_dir, frmt):
                     img_tensor = transform(obs)
                     img_normalized = (img_tensor - img_tensor.min()) / (img_tensor.max() - img_tensor.min())
                     torch.save(img_normalized, os.path.join(output_dir, f"run_{run_idx}_obs_{obs_idx}.pt"))
+    elif frmt == "png":
+        image_files = [f for f in os.listdir(input_dir) if f.endswith(".png")]  # observations are stored completely individually
+        for image_file in image_files:
+            img = Image.open(os.path.join(input_dir, image_file)).convert("RGB")
+            img_tensor = transform(img)
+            img_normalized = (img_tensor - img_tensor.min()) / (img_tensor.max() - img_tensor.min())
+            img_name = os.path.splitext(image_file)[0]
+            torch.save(img_normalized, os.path.join(output_dir, f"{img_name}.pt"))
 
 
 class CustomDataset(Dataset):
