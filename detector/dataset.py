@@ -21,44 +21,62 @@ def global_contrast_normalization(image, scale = "l1"):
     return image
 
 
+def standardization(image):
+    return (image - torch.mean(image)) / torch.std(image)
+
+
 def preprocess_and_save_images(input_dir, output_dir, frmt):
     os.makedirs(output_dir, exist_ok = True)
     transform = transforms.Compose([
         transforms.ToTensor(),
         transforms.Lambda(lambda x: global_contrast_normalization(x, scale = "l1"))
     ])
+    special_transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Lambda(lambda x: standardization(x))
+    ])
     if frmt == "h5":
         with h5py.File(os.path.join(input_dir, "saved_obs.h5"), "r") as f:
             for key in f.keys():
                 obs = f[key][:]  # each observation is stored as its own unit, same hierarchy level
+                if np.all(obs == 0):
+                    continue
                 img_tensor = transform(obs)
                 img_normalized = (img_tensor - img_tensor.min()) / (img_tensor.max() - img_tensor.min())
                 torch.save(img_normalized, os.path.join(output_dir, f"{key}.pt"))
     elif frmt == "np":
-        # observations for each run are all stored individually
+        # observations for each run are either stored individually or as a group
         obs_files = os.listdir(input_dir)
         for obs_file in obs_files:
             if obs_file.endswith(".npz"):
-                obs = np.load(os.path.join(input_dir, run))["arr_0"]
-                obs_name = os.splitext(obs_file)[0]
-                img_tensor = transform(obs)
-                img_normalized = (img_tensor - img_tensor.min()) / (img_tensor.max() - img_tensor.min())
-                torch.save(img_normalized, os.path.join(output_dir, f"{obs_name}.pt"))
-
-        # observations for each run are stored in a group
-        # run_files = os.listdir(input_dir)
-        # for run in run_files:
-        #     if run.endswith(".npz"):
-        #         observations = np.load(os.path.join(input_dir, run))["arr_0"]
-        #         run_idx = re.search(r"(\d+)", run).group(1)
-        #         for obs_idx, obs in enumerate(observations):
-        #             img_tensor = transform(obs)
-        #             img_normalized = (img_tensor - img_tensor.min()) / (img_tensor.max() - img_tensor.min())
-        #             torch.save(img_normalized, os.path.join(output_dir, f"run_{run_idx}_obs_{obs_idx}.pt"))
+                obs = np.load(os.path.join(input_dir, obs_file))["arr_0"]
+                if obs.ndim < 3:  # latent representation, special shape of (1, X)
+                    obs = obs[0]
+                    img_tensor = special_transform(obs)
+                    torch.save(img_tensor, os.path.join(output_dir, f"{os.path.splitext(obs_file)[0]}.pt"))
+                elif obs.ndim == 3:  # individual observation
+                    obs_name = os.path.splitext(obs_file)[0]
+                    if np.all(obs == 0):
+                        continue
+                    img_tensor = transform(obs)
+                    img_normalized = (img_tensor - img_tensor.min()) / (img_tensor.max() - img_tensor.min())
+                    torch.save(img_normalized, os.path.join(output_dir, f"{obs_name}.pt"))
+                else:  # group observation
+                    set_name = os.path.splitext(obs_file)[0]
+                    obs = obs.reshape(-1, 3, 64, 64)
+                    for obs_idx, o in enumerate(obs):
+                        if np.all(o == 0):
+                            continue
+                        img_tensor = transform(o)
+                        img_normalized = (img_tensor - img_tensor.min()) / (img_tensor.max() - img_tensor.min())
+                        torch.save(img_normalized, os.path.join(output_dir, f"{set_name}_idx_{obs_idx}.pt"))
     elif frmt == "png":
         image_files = [f for f in os.listdir(input_dir) if f.endswith(".png")]  # observations are stored completely individually
         for image_file in image_files:
             img = Image.open(os.path.join(input_dir, image_file)).convert("RGB")
+            img = np.array(img)
+            if np.all(img == 0):
+                continue
             img_tensor = transform(img)
             img_normalized = (img_tensor - img_tensor.min()) / (img_tensor.max() - img_tensor.min())
             img_name = os.path.splitext(image_file)[0]

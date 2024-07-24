@@ -9,19 +9,13 @@ import wandb
 
 
 def dynamic_permute(inputs):
-    return inputs.permute(0, 2, 3, 1)
-    # shape = inputs.shape
-    # if len(shape) != 4:
-    #     raise ValueError(f"Expected input tensor to have 4 dimensions, but got {len(shape)} dimensions.")
-    # _, dim1, dim2, dim3 = shape
-    # if dim1 == 3 or dim1 == 1:  # Assuming the format is [batch_size, channels, height, width]
-    #     return inputs
-    # elif dim2 == 3 or dim2 == 1:  # Assuming the format is [batch_size, height, channels, width]
-    #     return inputs.permute(0, 2, 1, 3)
-    # elif dim3 == 3 or dim3 == 1:  # Assuming the format is [batch_size, height, width, channels]
-    #     return inputs.permute(0, 3, 1, 2)
-    # else:  # Assuming the format is [batch_size, width, height, channels]
-    #     return inputs.permute(0, 3, 2, 1)
+    batch_size, dim1, dim2, dim3 = inputs.shape
+    if dim1 == 3:
+        return inputs
+    elif dim2 == 3:
+        return inputs.permute(0, 2, 1, 3)
+    elif dim3 == 3:
+        return inputs.permute(0, 3, 1, 2)
 
 
 class BaseTrainer:
