@@ -19,6 +19,7 @@ if __name__ == "__main__":
     parser.add_argument("--preprocess", action = "store_true", default = False)
     parser.add_argument("--train", action = "store_true", default = False)
     parser.add_argument("--test", action = "store_true", default = False)
+    parser.add_argument("--latent", action = "store_true", default = False)  # if not latent then image
 
     parser.add_argument("--env_name", type = str, required = True)
     parser.add_argument("--data_dir", type = str, required = True)
@@ -107,7 +108,7 @@ if __name__ == "__main__":
         logger.info(f"Done preprocessing, took {(time.time() - start) / 60} minutes")
     else:
         logger.info("Creating DeepSVDD model(s)...")
-        deep_svdd = DeepSVDD(args.objective, args.nu)
+        deep_svdd = DeepSVDD(args.objective, args.nu, args.latent)
         deep_svdd.set_network(args.exp_name)
         if args.model_file is not None:
             deep_svdd.load_model(network_save_path = args.model_file)

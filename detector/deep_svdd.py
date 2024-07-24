@@ -24,9 +24,10 @@ class DeepSVDD:
         results: A dictionary to save the results.
     """
 
-    def __init__(self, objective = "one-class", nu = 0.1):
+    def __init__(self, objective = "one-class", nu = 0.1, for_latent = False):
         self.objective = objective
         self.nu = nu
+        self.for_latent = for_latent
         self.radius = 0.0
         self.center = None
         self.net_name = None
@@ -49,7 +50,7 @@ class DeepSVDD:
         Builds neural network
         """
         self.net_name = net_name
-        self.net = Network()
+        self.net = Network(self.for_latent)
     
     def train(self, train_dataset, valid_dataset, optimizer_name = "adam", lr = 0.001, num_epochs = 50, lr_milestones = (), batch_size = 128, weight_decay = 1e-6, device = "cuda", num_jobs_dataloader = 0):
         """
@@ -79,7 +80,7 @@ class DeepSVDD:
         """
         Pretrains the weights for the Deep-SVDD model via an autoencoder
         """
-        self.ae_net = AutoEncoder()
+        self.ae_net = AutoEncoder(self.for_latent)
         self.ae_optimizer_name = optimizer_name
         self.AETrainer = AETrainer(optimizer_name, lr = lr, num_epochs = num_epochs, lr_milestones = lr_milestones, batch_size = batch_size, weight_decay = weight_decay, device = device, num_jobs_dataloader = num_jobs_dataloader)
         self.ae_net = self.AETrainer.train(train_dataset, valid_dataset, self.ae_net)
@@ -122,7 +123,7 @@ class DeepSVDD:
         if ae_save_path:
             model_info = torch.load(ae_save_path)
             if self.ae_net is None:
-                self.ae_net = AutoEncoder()
+                self.ae_net = AutoEncoder(self.for_latent)
             self.ae_net.load_state_dict(model_info["ae_net_dict"])
     
     def save_results(self, out_file):
