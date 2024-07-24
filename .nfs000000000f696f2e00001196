@@ -40,7 +40,6 @@ elif [ "$mode" == "train" ]; then
 		--data_dir ${data_dir} \
 		--exp_name ${exp_name} \
 		--pretrain \
-		--ae_model_file "/nas/ucb/tutrinh/yield_request_control/logs/train_detector/heist_aisc_many_chests/perfect_latent/2024-07-24__17-59-34__seed_8888/autoencoder.tar" \
 		--latent \
 		--device cuda \
 		--gpu 0 \

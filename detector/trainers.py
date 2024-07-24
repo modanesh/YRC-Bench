@@ -9,6 +9,8 @@ import wandb
 
 
 def dynamic_permute(inputs):
+    if inputs.dim() < 3:  # latent rep
+        return inputs.squeeze()
     batch_size, dim1, dim2, dim3 = inputs.shape
     if dim1 == 3:
         return inputs

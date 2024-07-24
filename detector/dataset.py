@@ -32,8 +32,7 @@ def preprocess_and_save_images(input_dir, output_dir, frmt):
         transforms.Lambda(lambda x: global_contrast_normalization(x, scale = "l1"))
     ])
     special_transform = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Lambda(lambda x: standardization(x))
+        transforms.Lambda(lambda x: standardization(torch.from_numpy(x)))
     ])
     if frmt == "h5":
         with h5py.File(os.path.join(input_dir, "saved_obs.h5"), "r") as f:

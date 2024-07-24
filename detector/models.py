@@ -44,6 +44,7 @@ class Network(BaseModel):
             x = F.leaky_relu(self.bn1(self.fc1(x)))
             x = F.leaky_relu(self.bn2(self.fc2(x)))
             x = self.fc3(x)
+            return x
         else:
             x = self.conv1(x)
             x = self.pool(F.leaky_relu(self.bn2d1(x)))
