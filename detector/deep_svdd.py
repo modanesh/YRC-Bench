@@ -42,7 +42,7 @@ class DeepSVDD:
             "test_time": None,
             "test_auc": None,
             "test_scores": None,
-            "test_score_percentiels": None
+            "test_thresholds": None
         }
     
     def set_network(self, net_name):
@@ -145,3 +145,4 @@ class DeepSVDD:
         """
         with open(out_file, "w") as f:
             json.dump(self.results, f)
+

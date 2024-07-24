@@ -48,27 +48,30 @@ def preprocess_and_save_images(input_dir, output_dir, frmt):
         obs_files = os.listdir(input_dir)
         for obs_file in obs_files:
             if obs_file.endswith(".npz"):
-                obs = np.load(os.path.join(input_dir, obs_file))["arr_0"]
-                if obs.ndim < 3:  # latent representation, special shape of (1, X)
-                    obs = obs[0]
-                    img_tensor = special_transform(obs)
-                    torch.save(img_tensor, os.path.join(output_dir, f"{os.path.splitext(obs_file)[0]}.pt"))
-                elif obs.ndim == 3:  # individual observation
-                    obs_name = os.path.splitext(obs_file)[0]
-                    if np.all(obs == 0):
-                        continue
-                    img_tensor = transform(obs)
-                    img_normalized = (img_tensor - img_tensor.min()) / (img_tensor.max() - img_tensor.min())
-                    torch.save(img_normalized, os.path.join(output_dir, f"{obs_name}.pt"))
-                else:  # group observation
-                    set_name = os.path.splitext(obs_file)[0]
-                    obs = obs.reshape(-1, 3, 64, 64)
-                    for obs_idx, o in enumerate(obs):
-                        if np.all(o == 0):
+                try:
+                    obs = np.load(os.path.join(input_dir, obs_file))["arr_0"]
+                    if obs.ndim < 3:  # latent representation, special shape of (1, X)
+                        obs = obs[0]
+                        img_tensor = special_transform(obs)
+                        torch.save(img_tensor, os.path.join(output_dir, f"{os.path.splitext(obs_file)[0]}.pt"))
+                    elif obs.ndim == 3:  # individual observation
+                        obs_name = os.path.splitext(obs_file)[0]
+                        if np.all(obs == 0):
                             continue
-                        img_tensor = transform(o)
+                        img_tensor = transform(obs)
                         img_normalized = (img_tensor - img_tensor.min()) / (img_tensor.max() - img_tensor.min())
-                        torch.save(img_normalized, os.path.join(output_dir, f"{set_name}_idx_{obs_idx}.pt"))
+                        torch.save(img_normalized, os.path.join(output_dir, f"{obs_name}.pt"))
+                    else:  # group observation
+                        set_name = os.path.splitext(obs_file)[0]
+                        obs = obs.reshape(-1, 3, 64, 64)
+                        for obs_idx, o in enumerate(obs):
+                            if np.all(o == 0):
+                                continue
+                            img_tensor = transform(o)
+                            img_normalized = (img_tensor - img_tensor.min()) / (img_tensor.max() - img_tensor.min())
+                            torch.save(img_normalized, os.path.join(output_dir, f"{set_name}_idx_{obs_idx}.pt"))
+                except:  # like zipfile.BadZipFile
+                    pass
     elif frmt == "png":
         image_files = [f for f in os.listdir(input_dir) if f.endswith(".png")]  # observations are stored completely individually
         for image_file in image_files:
