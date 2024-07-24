@@ -73,8 +73,21 @@ class DeepSVDD:
         self.results["test_time"] = self.trainer.test_time
         self.results["test_auc"] = self.trainer.test_auc
         self.results["test_scores"] = self.trainer.test_scores
-        percentiles = [1] + list(range(5, 96, 5)) + [99]
-        self.results["test_score_percentiles"] = [np.percentile(self.trainer.test_scores, p) for p in percentiles]
+        ood_boundary = np.max(self.trainer.test_scores)  # max distance from center for training datapoint
+        percentiles = [np.percentile(self.trainer.test_scores, p) for p in range(50, 91, 10)]
+        percentile_diffs = [abs(ood_boundary - perc) for perc in percentiles][::-1]
+        pseudo_percentiles = range(50, 151, 10)
+        thresholds = []
+        perc_diff_idx = 0
+        for i, pp in enumerate(pseudo_percentiles):
+            if pp < 100:
+                thresholds.append(percentiles[i])
+            elif pp == 100:
+                thresholds.append(ood_boundary)
+            else:
+                thresholds.append(ood_boundary + percentile_diffs[0])
+                perc_diff_idx += 1
+        self.results["test_thresholds"] = {k: v for k, v in zip(pseudo_percentiles, thresholds)}
     
     def pretrain(self, train_dataset, valid_dataset, optimizer_name = "adam", lr = 0.001, num_epochs = 100, lr_milestones = (), batch_size = 128, weight_decay = 1e-6, device = "cuda", num_jobs_dataloader = 0):
         """
