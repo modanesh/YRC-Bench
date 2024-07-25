@@ -17,7 +17,8 @@ class CliportCfg(BaseConfig):
     buffer_size = 1_000
     device = 'cuda'
     num_checkpoints = 1
-    num_timesteps = 25_000_000
+    num_timesteps = 200_000
+    num_test_steps = 10
     n_rotations = 36
     update_epochs = 10
     val_repeats = 1
@@ -62,6 +63,7 @@ class ProcgenCfg(BaseConfig):
     distribution_mode = 'easy'
     device = 'cuda'
     num_timesteps = 25_000_000
+    num_test_steps = 500_000
     seed = 0
     log_level = 40
     num_checkpoints = 1
@@ -85,12 +87,64 @@ class ProcgenCfg(BaseConfig):
             hard = dict(min=5.0, max=10.0, timeout=1000.0)
 
         class starpilot:
-            easy = dict(min=1.5, max=35.0, timeout=1000.0)
-            hard = dict(min=2.5, max=64.0, timeout=1000.0)
+            easy = dict(min=2.5, max=64.0, timeout=1000.0)
+            hard = dict(min=1.5, max=35.0, timeout=1000.0)
 
         class chaser:
-            easy = dict(min=0.5, max=14.2, timeout=1000.0)
-            hard = dict(min=0.5, max=13.0, timeout=1000.0)
+            easy = dict(min=0.5, max=13., timeout=1000.0)
+            hard = dict(min=0.5, max=14.2, timeout=1000.0)
+
+        class caveflyer:
+            easy = dict(min=3.5, max=12., timeout=1000.0)
+            hard = dict(min=2.0, max=13.4, timeout=1000.0)
+
+        class dodgeball:
+            easy = dict(min=1.5, max=19., timeout=1000.0)
+            hard = dict(min=1.5, max=19., timeout=1000.0)
+
+        class fruitbot:
+            easy = dict(min=-1.5, max=32.4, timeout=1000.0)
+            hard = dict(min=-0.5, max=27.2, timeout=1000.0)
+
+        class miner:
+            easy = dict(min=1.5, max=13., timeout=1000.0)
+            hard = dict(min=1.5, max=20., timeout=1000.0)
+
+        class jumper:
+            easy = dict(min=3., max=10., timeout=1000.0)
+            hard = dict(min=1., max=10., timeout=1000.0)
+
+        class leaper:
+            easy = dict(min=3., max=10., timeout=1000.0)
+            hard = dict(min=1.5, max=10., timeout=1000.0)
+
+        class maze:
+            easy = dict(min=5., max=10., timeout=1000.0)
+            hard = dict(min=4., max=10., timeout=1000.0)
+
+        class bigfish:
+            easy = dict(min=1., max=40., timeout=1000.0)
+            hard = dict(min=0., max=40., timeout=1000.0)
+
+        class heist:
+            easy = dict(min=3.5, max=10., timeout=1000.0)
+            hard = dict(min=2., max=10., timeout=1000.0)
+
+        class climber:
+            easy = dict(min=2., max=12.6, timeout=1000.0)
+            hard = dict(min=1., max=12.6, timeout=1000.0)
+
+        class plunder:
+            easy = dict(min=4.5, max=30., timeout=1000.0)
+            hard = dict(min=3., max=30., timeout=1000.0)
+
+        class ninja:
+            easy = dict(min=3.5, max=10., timeout=1000.0)
+            hard = dict(min=2., max=10., timeout=1000.0)
+
+        class bossfight:
+            easy = dict(min=.5, max=13., timeout=1000.0)
+            hard = dict(min=.5, max=13., timeout=1000.0)
 
     class policy:
         algo = None
