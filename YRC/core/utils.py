@@ -141,10 +141,10 @@ class Logger(object):
         self.episode_rewards = np.split(rew_batch, eps_lengths[:-1], axis=0)
         self.episode_len_buffer = np.insert(np.diff(eps_lengths), 0, eps_lengths[0])
         self.episode_reward_buffer = np.array([np.sum(rew) for rew in self.episode_rewards])
-        self.num_episodes += len(self.episode_len_buffer)
+        self.num_episodes = len(self.episode_reward_buffer)
         self.episode_rewards = []
 
-    def dump(self):
+    def dump(self, is_test=False):
         wall_time = time.time() - self.start_time
         episode_statistics = self._get_episode_statistics()
         episode_statistics_list = list(episode_statistics.values())
@@ -158,16 +158,20 @@ class Logger(object):
             writer.writerow(log)
 
         print(self.log.loc[len(self.log) - 1])
-        wandb.log({k: v for k, v in zip(self.log.columns, log)})
+        if not is_test:
+            wandb.log({k: v for k, v in zip(self.log.columns, log)})
+        else:
+            for k, v in zip(self.log.columns, log):
+                print(f'{k}: {v}')
 
     def _get_episode_statistics(self):
         episode_statistics = {}
-        episode_statistics['Rewards/max_episodes'] = np.max(self.episode_reward_buffer, initial=0)
+        episode_statistics['Rewards/max_episodes'] = np.max(self.episode_reward_buffer)
         episode_statistics['Rewards/mean_episodes'] = np.mean(self.episode_reward_buffer)
-        episode_statistics['Rewards/min_episodes'] = np.min(self.episode_reward_buffer, initial=0)
-        episode_statistics['Len/max_episodes'] = np.max(self.episode_len_buffer, initial=0)
+        episode_statistics['Rewards/min_episodes'] = np.min(self.episode_reward_buffer)
+        episode_statistics['Len/max_episodes'] = np.max(self.episode_len_buffer)
         episode_statistics['Len/mean_episodes'] = np.mean(self.episode_len_buffer)
-        episode_statistics['Len/min_episodes'] = np.min(self.episode_len_buffer, initial=0)
+        episode_statistics['Len/min_episodes'] = np.min(self.episode_len_buffer)
 
         if self.benchmark == 'procgen':
             episode_statistics['[Valid] Rewards/max_episodes'] = np.max(self.episode_reward_buffer_v, initial=0)
@@ -179,7 +183,7 @@ class Logger(object):
         return episode_statistics
 
 
-def logger_setup(cfgs):
+def logger_setup(cfgs, is_test=False):
     uuid_stamp = str(uuid.uuid4())[:8]
     env_name = cfgs.env_name if cfgs.benchmark == 'procgen' else cfgs.task
     run_name = f"PPO-{cfgs.benchmark}-help-{env_name}-type{cfgs.help_policy_type}-{uuid_stamp}"
@@ -191,7 +195,8 @@ def logger_setup(cfgs):
         os.mkdir(logdir)
     print(f'Logging to {logdir}')
     vars_cfgs = to_dict(cfgs)
-    wandb.init(config=vars_cfgs, resume="allow", project="YRC", name=run_name)
+    if not is_test:
+        wandb.init(config=vars_cfgs, resume="allow", project="YRC", name=run_name)
     writer = Logger(cfgs.policy.n_envs, logdir, cfgs.benchmark)
     return writer
 

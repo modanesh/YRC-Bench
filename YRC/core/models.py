@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -314,6 +316,30 @@ class procgenPPO:
         self.env.close()
         self.env_valid.close()
 
+    def test(self, num_timesteps):
+        print('::[LOGGING]::START TESTING...')
+        # get the last saved model in self.logger.logdir
+        last_checkpoint = os.listdir(self.logger.logdir)[-1]
+        help_policy_path = self.logger.logdir + '/model_' + last_checkpoint + '.pth'
+        help_policy = torch.load(help_policy_path)
+        self.policy.load_state_dict(help_policy["model_state_dict"])
+        self.policy.eval()
+        obs, pi_w_hidden = self.env.reset()
+        total_reward = 0
+        for i in range(num_timesteps):
+            with torch.no_grad():
+                act, log_prob_act, value = self.predict(obs, pi_w_hidden)
+                next_obs, rew, done, info, pi_w_hidden = self.env.step(act)
+                self.storage.store(obs, act, rew, done, info, log_prob_act, value)
+                obs = next_obs.copy()
+                total_reward += rew
+        _, _, last_val = self.predict(obs, pi_w_hidden)
+        self.storage.store_last(obs, last_val)
+        self.storage.compute_estimates(self.gamma, self.lmbda, self.use_gae, self.normalize_adv)
+        rew_batch, done_batch = self.storage.fetch_log_data()
+        self.logger.feed_procgen(rew_batch, done_batch, None, None)
+        self.logger.dump(is_test=True)
+
 
 class cliportPPO:
     def __init__(self,
@@ -495,4 +521,29 @@ class cliportPPO:
                            self.logger.logdir + '/model_' + str(self.t) + '.pth')
                 checkpoint_cnt += 1
         self.env.close()
-        self.env_valid.close()
+
+    def test(self, n_test_episodes):
+        print('::[LOGGING]::START TESTING...')
+        # get the last saved model in self.logger.logdir
+        last_checkpoint = os.listdir(self.logger.logdir)[-1]
+        help_policy_path = self.logger.logdir + '/model_' + last_checkpoint + '.pth'
+        help_policy = torch.load(help_policy_path)
+        self.policy.load_state_dict(help_policy["model_state_dict"])
+        self.policy.eval()
+        for i in range(n_test_episodes):
+            total_reward = 0
+            self.env.seed(self.seed + self.n_train_episodes + i)
+            obs, pi_w_hidden = self.env.reset()
+            info = self.env.info
+            print(f"test episode goal: {info['lang_goal']}")
+            for i in range(self.task.max_steps):
+                with torch.no_grad():
+                    act, log_prob_act, value = self.predict(obs, pi_w_hidden)
+                    next_obs, rew, done, info, pi_w_hidden = self.env.step(act)
+                    obs = next_obs.copy()
+                    total_reward += rew
+                if done:
+                    print(f"test episode total_reward={total_reward:.3f}, episode length (of max length)={i / self.task.max_steps:.3f}")
+                    break
+                if not done and i == self.task.max_steps - 1:
+                    print(f"test episode total_reward={total_reward:.3f}, episode length (of max length)={i / self.task.max_steps:.3f}")
