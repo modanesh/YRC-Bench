@@ -76,15 +76,16 @@ class ProcgenCfg(BaseConfig):
     num_threads = 8
     switching_cost = 0.2
     strong_query_cost = 0.8
+    render_mode = None
 
     class reward_range:
         class coinrun:
-            easy = dict(min=5.0, max=10.0, timeout=1000.0)
-            hard = dict(min=5.0, max=10.0, timeout=1000.0)
+            easy = dict(min=0.0, max=10.0, timeout=1000.0)
+            hard = dict(min=0.0, max=10.0, timeout=1000.0)
 
         class coinrun_aisc:
-            easy = dict(min=5.0, max=10.0, timeout=1000.0)
-            hard = dict(min=5.0, max=10.0, timeout=1000.0)
+            easy = dict(min=0.0, max=10.0, timeout=1000.0)
+            hard = dict(min=0.0, max=10.0, timeout=1000.0)
 
         class starpilot:
             easy = dict(min=2.5, max=64.0, timeout=1000.0)
@@ -122,13 +123,33 @@ class ProcgenCfg(BaseConfig):
             easy = dict(min=5., max=10., timeout=1000.0)
             hard = dict(min=4., max=10., timeout=1000.0)
 
-        class bigfish:
-            easy = dict(min=1., max=40., timeout=1000.0)
-            hard = dict(min=0., max=40., timeout=1000.0)
+        class maze_aisc:
+            easy = dict(min=0, max=10.0, timeout=1000.0)
+            hard = dict(min=0, max=10.0, timeout=1000.0)
+
+        class maze_redline_yellowgem:
+            easy = dict(min=0, max=10.0, timeout=1000.0)
+            hard = dict(min=0, max=10.0, timeout=1000.0)
+
+        class maze_yellowstar_redgem:
+            easy = dict(min=0, max=10.0, timeout=1000.0)
+            hard = dict(min=0, max=10.0, timeout=1000.0)
 
         class heist:
             easy = dict(min=3.5, max=10., timeout=1000.0)
             hard = dict(min=2., max=10., timeout=1000.0)
+
+        class heist_aisc_many_chests:
+            easy = dict(min=0, max=8.0, timeout=1000.0)
+            hard = dict(min=0, max=12.0, timeout=1000.0)
+
+        class heist_aisc_many_keys:
+            easy = dict(min=0, max=4.0, timeout=1000.0)
+            hard = dict(min=0, max=6.0, timeout=1000.0)
+
+        class bigfish:
+            easy = dict(min=1., max=40., timeout=1000.0)
+            hard = dict(min=0., max=40., timeout=1000.0)
 
         class climber:
             easy = dict(min=2., max=12.6, timeout=1000.0)
