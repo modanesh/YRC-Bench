@@ -34,14 +34,14 @@ class EnvRegistry():
             env_name = self.cfgs.env_name[:-5] if self.cfgs.env_name.endswith('_aisc') else self.cfgs.env_name
             self.cfgs.weak_model_file = os.path.join("YRC", "checkpoints", "procgen", env_name, self.cfgs.weak_model_file)
             self.cfgs.strong_model_file = os.path.join("YRC", "checkpoints", "procgen", env_name, self.cfgs.strong_model_file)
-            self.cfgs.switching_cost = args.switching_cost
-            self.cfgs.strong_query_cost = args.strong_query_cost
             self.cfgs.distribution_mode = args.distribution_mode
         elif args.benchmark == 'cliport':
             self.cfgs.task = args.task
             self.cfgs.benchmark = args.benchmark
             self.cfgs.help_policy_type = args.help_policy_type
             self.cfgs.weak_model_file = os.path.join("YRC", "checkpoints", "cliport", args.weak_model_file)
+        self.cfgs.switching_cost = args.switching_cost
+        self.cfgs.strong_query_cost = args.strong_query_cost
         return self.cfgs
 
 
