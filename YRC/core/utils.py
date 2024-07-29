@@ -46,6 +46,7 @@ def get_args():
     parser.add_argument('--strong_query_cost', type=float, required=True, help='Strong query cost for the help policy.')
     parser.add_argument('--distribution_mode', type=str, default='easy', help='Distribution mode for procgen.')
     parser.add_argument('--task', type=str, help='Task name for cliport.')
+    parser.add_argument('--render', action='store_true', help='Render the environment, used for test.')
     args = parser.parse_args()
     verify_args(args)
     return args
@@ -506,7 +507,7 @@ class ProcgenReplayBuffer:
 def procgen_environment_setup(n_steps, env_name, start_level, num_levels, distribution_mode, num_threads,
                               random_percent, step_penalty, key_penalty, rand_region, normalize_rew, weak_policy=None,
                               strong_policy=None, get_configs=False, strong_query_cost=0.0, switching_agent_cost=0.0,
-                              reward_max=1.0, timeout=1000, help_policy_type=None, device='cuda'):
+                              reward_max=1.0, timeout=1000, help_policy_type=None, device='cuda', render_mode=None):
     print('::[LOGGING]::INITIALIZING ENVIRONMENTS...')
     env = ProcgenEnv(num_envs=n_steps,
                      env_name=env_name,
@@ -517,7 +518,8 @@ def procgen_environment_setup(n_steps, env_name, start_level, num_levels, distri
                      random_percent=random_percent,
                      step_penalty=step_penalty,
                      key_penalty=key_penalty,
-                     rand_region=rand_region)
+                     rand_region=rand_region,
+                     render_mode=render_mode)
     env = procgen_wrappers.VecExtractDictObs(env, "rgb")
     if normalize_rew:
         env = procgen_wrappers.VecNormalize(env, ob=False)  # normalizing returns, but not
