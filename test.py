@@ -1,8 +1,3 @@
-import sys
-import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "cliport")))
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "procgenAISC")))
-
 from YRC.core import Environment, Policy
 from YRC.core import env_registry
 from YRC.core.utils import logger_setup, get_args
@@ -13,13 +8,11 @@ if __name__ == '__main__':
 
     # get configs
     exp_cfg = env_registry.setup_cfgs(args)
-    print("CONFIGS:::::")
-    print(exp_cfg.as_string("hard_500"))
     environment = Environment(exp_cfg)
     policy = Policy(exp_cfg)
 
     # setup logger
-    logger = logger_setup(exp_cfg)
+    logger = logger_setup(exp_cfg, is_test=True)
 
     # get env configs
     obs_shape, action_size = environment.get_env_configs()
@@ -30,10 +23,11 @@ if __name__ == '__main__':
 
     # Set up environment and additional variables based on benchmark. For procgen, the `additional_var` is the
     # validation env, and for cliport, the `additional_var` is the task.
-    env, env_val, task = environment.make(weak_policy, strong_policy)
+    env, _, task = environment.make(weak_policy, strong_policy)
 
     # set up help policy
-    help_algorithm = policy.setup_help_policy(env, env_val, task, weak_policy, logger, obs_shape)
+    help_algorithm = policy.setup_help_policy(env, None, task, weak_policy, logger, obs_shape)
 
     # train the help policy
-    help_algorithm.train(exp_cfg.num_timesteps)
+    help_algorithm.test(exp_cfg.num_test_steps)
+    

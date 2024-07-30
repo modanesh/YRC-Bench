@@ -10,32 +10,17 @@ class CliportCfg(BaseConfig):
     assets_root = f'{cliport_root}/cliport/environments/assets'
     disp = False
     shared_memory = False
-    task = 'stack-block-pyramid-seq-seen-colors'
-    dataset_type = 'multi'
-    data_dir = f'{cliport_root}/data'
-    n_demos = 100
-    n_val = 100
-    results_path = f'{cliport_root}/exps'
-    model_task = 'multi-language-conditioned'
+    task = None
+    weak_n_demos = 100  # only to load weak agent
     seed = 11
-    model_path = f'{cliport_root}/exps'
     agent = 'cliport'
     buffer_size = 1_000
     device = 'cuda'
-    learning_rate = 3e-4
     num_checkpoints = 1
-    num_timesteps = 25_000_000
-    n_iter = 1_000_000
+    num_timesteps = 200_000
+    num_test_steps = 10
     n_rotations = 36
-    gamma = 0.99
-    minibatch_size = 512
     update_epochs = 10
-    norm_adv = True
-    clip_coef = 0.2
-    ent_coef = 0.0
-    vf_coef = 0.5
-    max_grad_norm = 0.5
-    clip_vloss = True
     val_repeats = 1
     save_steps = [2000, 4000, 10000, 40000, 120000, 200000, 400000, 800000, 1200000]
     weak_agent_lr = 1e-4  # only to load weak agent
@@ -43,12 +28,10 @@ class CliportCfg(BaseConfig):
     trans_stream_fusion_type = 'conv'
     lang_fusion_type = 'mult'
     batchnorm = False
-    log = False
-    dataset_images = True
-    dataset_cache = True
     batch_size = 16
     switching_cost = 0.2
     strong_query_cost = 0.8
+    weak_model_file = None
 
     class policy:
         n_steps = 128
@@ -67,13 +50,13 @@ class CliportCfg(BaseConfig):
         normalize_rew = True
         use_gae = True
         gae_lambda = 0.95
-        n_train_episodes = 2
+        n_train_episodes = 10
         seed = 0
 
 
 class ProcgenCfg(BaseConfig):
     exp_name = None
-    env_name = 'coinrun'
+    env_name = None
     val_env_name = None
     start_level = 0
     num_levels = 0
@@ -82,6 +65,7 @@ class ProcgenCfg(BaseConfig):
     device = 'cuda'
     num_timesteps = 25_000_000
     seed = 8888
+    num_test_steps = 500_000
     log_level = 40
     num_checkpoints = 1
     weak_model_file = None
@@ -131,13 +115,88 @@ class ProcgenCfg(BaseConfig):
             # max(env_chests) = (13 - 5)/2 + 1 + 1 = 6
             hard = dict(min=0, max=6.0, timeout=256.0)
 
+        class coinrun_aisc:
+            easy = dict(min=5.0, max=10.0, timeout=1000.0)
+            hard = dict(min=5.0, max=10.0, timeout=1000.0)
+
         class starpilot:
-            easy = dict(min=1.5, max=35.0, timeout=1000.0)
-            hard = dict(min=2.5, max=64.0, timeout=1000.0)
+            easy = dict(min=2.5, max=64.0, timeout=1000.0)
+            hard = dict(min=1.5, max=35.0, timeout=1000.0)
 
         class chaser:
-            easy = dict(min=0.5, max=14.2, timeout=1000.0)
-            hard = dict(min=0.5, max=13.0, timeout=1000.0)
+            easy = dict(min=0.5, max=13., timeout=1000.0)
+            hard = dict(min=0.5, max=14.2, timeout=1000.0)
+
+        class caveflyer:
+            easy = dict(min=3.5, max=12., timeout=1000.0)
+            hard = dict(min=2.0, max=13.4, timeout=1000.0)
+
+        class dodgeball:
+            easy = dict(min=1.5, max=19., timeout=1000.0)
+            hard = dict(min=1.5, max=19., timeout=1000.0)
+
+        class fruitbot:
+            easy = dict(min=-1.5, max=32.4, timeout=1000.0)
+            hard = dict(min=-0.5, max=27.2, timeout=1000.0)
+
+        class miner:
+            easy = dict(min=1.5, max=13., timeout=1000.0)
+            hard = dict(min=1.5, max=20., timeout=1000.0)
+
+        class jumper:
+            easy = dict(min=3., max=10., timeout=1000.0)
+            hard = dict(min=1., max=10., timeout=1000.0)
+
+        class leaper:
+            easy = dict(min=3., max=10., timeout=1000.0)
+            hard = dict(min=1.5, max=10., timeout=1000.0)
+
+        class maze:
+            easy = dict(min=5., max=10., timeout=1000.0)
+            hard = dict(min=4., max=10., timeout=1000.0)
+
+        class bigfish:
+            easy = dict(min=1., max=40., timeout=1000.0)
+            hard = dict(min=0., max=40., timeout=1000.0)
+
+        class heist:
+            easy = dict(min=3.5, max=10., timeout=1000.0)
+            hard = dict(min=2., max=10., timeout=1000.0)
+
+        class climber:
+            easy = dict(min=2., max=12.6, timeout=1000.0)
+            hard = dict(min=1., max=12.6, timeout=1000.0)
+
+        class plunder:
+            easy = dict(min=4.5, max=30., timeout=1000.0)
+            hard = dict(min=3., max=30., timeout=1000.0)
+
+        class ninja:
+            easy = dict(min=3.5, max=10., timeout=1000.0)
+            hard = dict(min=2., max=10., timeout=1000.0)
+
+        class bossfight:
+            easy = dict(min=.5, max=13., timeout=1000.0)
+            hard = dict(min=.5, max=13., timeout=1000.0)
+
+    class policy:
+        algo = None
+        n_envs = None
+        n_steps = None
+        epoch = None
+        mini_batch_per_epoch = None
+        mini_batch_size = None
+        gamma = None
+        lmbda = None
+        learning_rate = None
+        grad_clip_norm = None
+        eps_clip = None
+        value_coef = None
+        entropy_coef = None
+        normalize_adv = None
+        normalize_rew = None
+        use_gae = None
+        architecture = None
 
     class debug:
         algo = 'ppo'
@@ -347,3 +406,11 @@ class ProcgenCfg(BaseConfig):
         normalize_rew = False
         use_gae = True
         architecture = 'impala'
+
+    @classmethod
+    def load_subclass_attributes(cls, subclass_name):
+        subclass = getattr(cls, subclass_name, None)
+        if subclass is None:
+            raise ValueError(f"No subclass with name {subclass_name}")
+
+        return {k: v for k, v in subclass.__dict__.items() if not k.startswith('__') and not callable(v)}
