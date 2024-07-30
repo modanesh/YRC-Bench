@@ -4,9 +4,9 @@
 #SBATCH --mem=40gb
 #SBATCH --gres=gpu:1
 #SBATCH --wait-all-nodes=1
-#SBATCH --job-name=skyline
+#SBATCH --job-name=heist_skyline
 #SBATCH --output=experiments/slurm/%j.out
-#SBATCH --time=36:00:00
+#SBATCH --time=72:00:00
 #SBATCH --qos scavenger
 #SBATCH --partition scavenger
 
