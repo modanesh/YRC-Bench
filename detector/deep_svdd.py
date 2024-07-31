@@ -88,6 +88,8 @@ class DeepSVDD:
                 thresholds.append(ood_boundary + percentile_diffs[0])
                 perc_diff_idx += 1
         self.results["test_thresholds"] = {k: v for k, v in zip(pseudo_percentiles, thresholds)}
+        addl_percentiles = [1, 5] + list(range(10, 41, 10))
+        self.results["test_thresholds"].update({k: v for k, v in zip(addl_percentiles, [np.percentile(self.trainer.test_scores, p) for p in addl_percentiles])})
     
     def pretrain(self, train_dataset, valid_dataset, optimizer_name = "adam", lr = 0.001, num_epochs = 100, lr_milestones = (), batch_size = 128, weight_decay = 1e-6, device = "cuda", num_jobs_dataloader = 0):
         """
