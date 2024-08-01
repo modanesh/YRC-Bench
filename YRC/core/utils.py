@@ -46,6 +46,7 @@ def get_args():
     parser.add_argument('--strong_query_cost', type=float, required=True, help='Strong query cost for the help policy.')
     parser.add_argument('--distribution_mode', type=str, default='easy', help='Distribution mode for procgen.')
     parser.add_argument('--task', type=str, help='Task name for cliport.')
+    parser.add_argument('--help_policy_path', type=str, default=None)
     args = parser.parse_args()
     verify_args(args)
     return args
@@ -185,20 +186,37 @@ class Logger(object):
 
 
 def logger_setup(cfgs, is_test=False):
-    uuid_stamp = str(uuid.uuid4())[:8]
     env_name = cfgs.env_name if cfgs.benchmark == 'procgen' else cfgs.task
-    run_name = f"PPO-{cfgs.benchmark}-help-{env_name}-type-{cfgs.help_policy_type}-query-cost-{cfgs.strong_query_cost}-{uuid_stamp}"
     logdir = os.path.join('logs', env_name)
-    if not (os.path.exists(logdir)):
-        os.makedirs(logdir)
-    logdir = os.path.join(logdir, run_name)
-    if not (os.path.exists(logdir)):
-        os.mkdir(logdir)
+    float_mapper = {0: 0.0, 0.1: 0.1, 0.5: 0.5, 1: 1.0, 2: 2.0, 5: 5.0, 10: 10.0, 20: 20.0, 50: 50.0}
+    if is_test:
+        correct_model_log = None
+        possible_model_logs = os.listdir(logdir)
+        for pml in possible_model_logs:
+            if cfgs.benchmark in pml and f"-{env_name}-" in pml and f"-{cfgs.help_policy_type}-" in pml and f"-{float_mapper[cfgs.strong_query_cost]}-" in pml:
+                contents = os.listdir(os.path.join(logdir, pml))
+                print("Qualified:", pml)
+                print("Contents:", contents)
+                if any([".pth" in content for content in contents]):
+                    correct_model_log = pml
+                    break
+        logdir = os.path.join(logdir, correct_model_log)
+    else:
+        uuid_stamp = str(uuid.uuid4())[:8]
+        run_name = f"PPO-{cfgs.benchmark}-help-{env_name}-type-{cfgs.help_policy_type}-query-cost-{cfgs.strong_query_cost}-{uuid_stamp}"
+        if not (os.path.exists(logdir)):
+            os.makedirs(logdir)
+        logdir = os.path.join(logdir, run_name)
+        if not (os.path.exists(logdir)):
+            os.mkdir(logdir)
     print(f'Logging to {logdir}')
     vars_cfgs = to_dict(cfgs)
     if not is_test:
         wandb.init(config=vars_cfgs, resume="allow", project="YRC", name=run_name)
-    writer = Logger(cfgs.policy.n_envs, logdir, cfgs.benchmark)
+    if is_test:
+        writer = Logger(1000, logdir, cfgs.benchmark)
+    else:
+        writer = Logger(cfgs.policy.n_envs, logdir, cfgs.benchmark)
     return writer
 
 
@@ -509,7 +527,7 @@ def procgen_environment_setup(n_steps, env_name, start_level, num_levels, distri
                               strong_policy=None, get_configs=False, strong_query_cost=0.0, switching_agent_cost=0.0,
                               reward_max=1.0, timeout=1000, help_policy_type=None, device='cuda'):
     print('::[LOGGING]::INITIALIZING ENVIRONMENTS...')
-    env = ProcgenEnv(num_envs=n_steps,
+    env = ProcgenEnv(num_envs=n_steps if False else 1000,
                      env_name=env_name,
                      num_levels=num_levels,
                      start_level=start_level,

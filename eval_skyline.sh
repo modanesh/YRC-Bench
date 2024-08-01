@@ -22,6 +22,7 @@ export PYTHONPATH="$PYTHONPATH:$PWD"
 
 env_name=$1
 help_option=$2
+query_cost=$3
 if [ "$env_name" == "maze" ]; then
     model_file="/nas/ucb/tutrinh/train-procgen-pytorch/logs/using/maze_aisc/model_200015872.pth"
     expert_model_file="/nas/ucb/tutrinh/train-procgen-pytorch/logs/using/maze/model_200015872.pth"
@@ -36,7 +37,7 @@ elif [ "$env_name" == "coinrun_aisc" ]; then
     expert_model_file="/nas/ucb/tutrinh/train-procgen-pytorch/logs/using/coinrun_aisc/model_200015872.pth"
 fi
 
-python3 main.py \
+python3 test.py \
     --benchmark procgen \
     --env_name ${env_name} \
     --param_name hard_plus \

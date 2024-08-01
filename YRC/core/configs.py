@@ -65,7 +65,8 @@ class ProcgenCfg(BaseConfig):
     device = 'cuda'
     num_timesteps = 25_000_000
     seed = 8888
-    num_test_steps = 500_000
+    num_test_steps = 256
+    n_envs = 1000
     log_level = 40
     num_checkpoints = 1
     weak_model_file = None
