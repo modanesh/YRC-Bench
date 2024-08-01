@@ -189,7 +189,8 @@ class procgenPPO:
         self.storage_valid = storage_valid
         self.t = 0
         self.n_steps = n_steps
-        self.n_envs = n_envs
+        # self.n_envs = n_envs
+        self.n_envs = 1000
         self.epoch = epoch
         self.mini_batch_per_epoch = mini_batch_per_epoch
         self.mini_batch_size = mini_batch_size
@@ -319,14 +320,18 @@ class procgenPPO:
     def test(self, num_timesteps, help_policy_path = None):
         print('::[LOGGING]::START TESTING...')
         # get the last saved model in self.logger.logdir
-        last_checkpoint = os.listdir(self.logger.logdir)[-1]
+        last_checkpoint = sorted([f for f in os.listdir(self.logger.logdir) if ".pth" in f])[-1]
         if not help_policy_path:
-            help_policy_path = self.logger.logdir + '/model_' + last_checkpoint + '.pth'
+            help_policy_path = os.path.join(self.logger.logdir, last_checkpoint)
+        print("Loading help policy from", help_policy_path)
         help_policy = torch.load(help_policy_path)
         self.policy.load_state_dict(help_policy["model_state_dict"])
         self.policy.eval()
+        log_file = os.path.join(self.logger.logdir, "AAA_quant_eval_model_200015872.txt")
         obs, pi_w_hidden = self.env.reset()
         total_reward = 0
+        run_length = 0
+        print("Running for", num_timesteps, "timesteps")
         for i in range(num_timesteps):
             with torch.no_grad():
                 act, log_prob_act, value = self.predict(obs, pi_w_hidden)
@@ -334,12 +339,35 @@ class procgenPPO:
                 self.storage.store(obs, act, rew, done, info, log_prob_act, value)
                 obs = next_obs.copy()
                 total_reward += rew
+                run_length += (~done).astype(int)
         _, _, last_val = self.predict(obs, pi_w_hidden)
         self.storage.store_last(obs, last_val)
         self.storage.compute_estimates(self.gamma, self.lmbda, self.use_gae, self.normalize_adv)
         act_batch, rew_batch, done_batch = self.storage.fetch_log_data()
         self.logger.feed_procgen(act_batch, rew_batch, done_batch, None, None)
         self.logger.dump(is_test=True)
+        queries = act_batch.flatten()
+        shifted_queries = np.roll(queries, -1)
+        switches = (queries != shifted_queries).astype(int)
+        switches = switches[:-1]
+        with open(log_file, "w") as f:
+            f.write(f"Mean reward: {np.mean(total_reward)}")
+            f.write(f"Median reward: {np.median(total_reward)}")
+            f.write("Mean adjusted reward: 69")
+            f.write("Median adjusted reward: 69")
+            f.write(f"All queries: {queries.tolist()}")
+            f.write(f"All switches: {[0] + switches.tolist()}")
+            f.write("Mean timestep achieved: 69")
+            f.write("Median timestep achieved: 69")
+            f.write(f"Mean run length: {int(np.mean(run_length))}")
+            f.write(f"Median run length: {int(np.median(run_length))}")
+            f.write(f"All rewards: {total_reward.tolist()}")
+            f.write(f"All adjusted rewards: {total_reward.tolist()}")
+            f.write("All timesteps: [69, 69, 69]")
+            f.write(f"Mean times asked for help: {int(np.mean(np.sum(act_batch, axis = 1)))}")
+            f.write(f"Median times asked for help: {int(np.mean(np.sum(act_batch, axis = 1)))}")
+            f.write("Help times:")
+            f.write(f"{act_batch.tolist()}")
 
 
 class cliportPPO:

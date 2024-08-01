@@ -1,3 +1,8 @@
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "cliport")))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "procgenAISC")))
+
 from YRC.core import Environment, Policy
 from YRC.core import env_registry
 from YRC.core.utils import logger_setup, get_args
@@ -8,8 +13,10 @@ if __name__ == '__main__':
 
     # get configs
     exp_cfg = env_registry.setup_cfgs(args)
+    print("CONFIGS:::::")
+    print(exp_cfg.as_string("hard_plus"))
     environment = Environment(exp_cfg)
-    policy = Policy(exp_cfg)
+    policy = Policy(exp_cfg, is_test = True)
 
     # setup logger
     logger = logger_setup(exp_cfg, is_test=True)

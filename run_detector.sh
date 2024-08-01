@@ -52,10 +52,8 @@ elif [ "$mode" == "test" ]; then
 		--env_name ${env_name} \
 		--data_dir ${data_dir} \
 		--exp_name ${exp_name} \
-		--model_file "/nas/ucb/tutrinh/yield_request_control/logs/train_detector/heist_aisc_many_chests/perfect_latent/2024-07-24__12-38-40__seed_8888/network.tar" \
 		--latent \
-		--device cuda \
-		--gpu 0
+		--model_file "/nas/ucb/tutrinh/yield_request_control/logs/train_detector/heist_aisc_many_chests/perfect_latent/2024-07-24__12-38-40__seed_8888/network.tar"
 else
     echo "Invalid mode: ${mode}"
     echo "Usage: $0 {preprocess|train} env_name data_dir exp_name gpu_device"

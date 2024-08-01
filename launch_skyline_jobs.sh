@@ -8,18 +8,18 @@ fi
 env_name=$1
 
 combinations=(
-    "T1 0.1"
-    "T1 0.5"
-    "T1 1"
-    "T1 2"
-    "T2 0.1"
-    "T2 0.5"
-    "T2 1"
-    "T2 2"
-    "T3 0.1"
-    "T3 0.5"
-    "T3 1"
-    "T3 2"
+    "T1 0"
+    "T1 10"
+    "T1 20"
+    "T1 50"
+    "T2 0"
+    "T2 10"
+    "T2 20"
+    "T2 50"
+    "T3 0"
+    "T3 10"
+    "T3 20"
+    "T3 50"
 )
 
 for combination in "${combinations[@]}"; do

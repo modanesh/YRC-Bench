@@ -2,8 +2,9 @@ from . import utils
 
 
 class Policy:
-    def __init__(self, exp_cfg):
+    def __init__(self, exp_cfg, is_test=False):
         self.exp_cfg = exp_cfg
+        self.is_test = is_test
 
     def load_acting_policies(self, kwargs):
         if self.exp_cfg.benchmark == 'procgen':
@@ -19,9 +20,9 @@ class Policy:
     def setup_help_policy(self, env, env_val, task, weak_agent, writer, observation_shape):
         if self.exp_cfg.benchmark == 'procgen':
             storage = utils.ProcgenReplayBuffer(observation_shape, self.exp_cfg.policy.n_steps,
-                                                self.exp_cfg.policy.n_envs, self.exp_cfg.device)
+                                                1000 if self.is_test else self.exp_cfg.policy.n_envs, self.exp_cfg.device)
             storage_val = utils.ProcgenReplayBuffer(observation_shape, self.exp_cfg.policy.n_steps,
-                                                    self.exp_cfg.policy.n_envs, self.exp_cfg.device)
+                                                    1000 if self.is_test else self.exp_cfg.policy.n_envs, self.exp_cfg.device)
 
             _, help_policy = utils.procgen_define_help_policy(env, weak_agent, self.exp_cfg.help_policy_type, self.exp_cfg.device)
         elif self.exp_cfg.benchmark == 'cliport':

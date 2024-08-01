@@ -43,8 +43,8 @@ if __name__ == "__main__":
     parser.add_argument("--ae_batch_size", type = int, default = 128)
     parser.add_argument("--ae_weight_decay", type = float, default = 1e-6)
 
-    parser.add_argument("--device", type = str, default = "cpu")
-    parser.add_argument("--gpu", type = int)
+    parser.add_argument("--device", type = str, default = "cuda")
+    parser.add_argument("--gpu", type = int, default = 0)
     parser.add_argument("--seed", type = int, default = 8888)
     parser.add_argument("--use_wandb", action = "store_true", default = False)
 
