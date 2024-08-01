@@ -61,7 +61,7 @@ class ProcgenCfg(BaseConfig):
     start_level = 0
     num_levels = 0
     distribution_mode = 'hard'
-    param_name = 'hard_500'
+    param_name = 'hard_plus'
     device = 'cuda'
     num_timesteps = 25_000_000
     seed = 8888
@@ -279,6 +279,25 @@ class ProcgenCfg(BaseConfig):
         n_envs = 256
         n_steps = 256
         epoch = 3
+        mini_batch_per_epoch = 8
+        mini_batch_size = 8192
+        gamma = 0.999
+        lmbda = 0.95
+        learning_rate = 0.0005
+        grad_clip_norm = 0.5
+        eps_clip = 0.2
+        value_coef = 0.5
+        entropy_coef = 0.01
+        normalize_adv = True
+        normalize_rew = False
+        use_gae = True
+        architecture = 'impala'
+
+    class hard_plus:
+        algo = 'ppo'
+        n_envs = 1000
+        n_steps = 256
+        epoch = 1
         mini_batch_per_epoch = 8
         mini_batch_size = 8192
         gamma = 0.999

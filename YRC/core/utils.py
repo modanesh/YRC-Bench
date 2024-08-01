@@ -105,7 +105,7 @@ class Logger(object):
         self.timesteps = 0
         self.num_episodes = 0
 
-    def feed_procgen(self, rew_batch, done_batch, rew_batch_v=None, done_batch_v=None):
+    def feed_procgen(self, act_batch, rew_batch, done_batch, rew_batch_v=None, done_batch_v=None):
         steps = rew_batch.shape[0]
         rew_batch = rew_batch.T
         done_batch = done_batch.T
@@ -117,6 +117,7 @@ class Logger(object):
 
         for i in range(self.n_envs):
             for j in range(steps):
+                # TODO FOR EVAL: make it so that actions are also logged to csv. if doesn't work, just log to some text file
                 self.episode_rewards[i].append(rew_batch[i][j])
                 if valid:
                     self.episode_rewards_v[i].append(rew_batch_v[i][j])
@@ -500,7 +501,7 @@ class ProcgenReplayBuffer:
             done_batch = np.array(done_batch)
         else:
             done_batch = self.done_batch.numpy()
-        return rew_batch, done_batch
+        return self.act_batch.numpy(), rew_batch, done_batch
 
 
 def procgen_environment_setup(n_steps, env_name, start_level, num_levels, distribution_mode, num_threads,

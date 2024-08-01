@@ -28,6 +28,6 @@ if __name__ == '__main__':
     # set up help policy
     help_algorithm = policy.setup_help_policy(env, None, task, weak_policy, logger, obs_shape)
 
-    # train the help policy
-    help_algorithm.test(exp_cfg.num_test_steps)
+    # test the help policy
+    help_algorithm.test(exp_cfg.num_test_steps, args.help_policy_path)
     

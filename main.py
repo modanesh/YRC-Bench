@@ -14,7 +14,7 @@ if __name__ == '__main__':
     # get configs
     exp_cfg = env_registry.setup_cfgs(args)
     print("CONFIGS:::::")
-    print(exp_cfg.as_string("hard_500"))
+    print(exp_cfg.as_string("hard_plus"))
     environment = Environment(exp_cfg)
     policy = Policy(exp_cfg)
 
