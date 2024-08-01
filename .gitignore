@@ -7,6 +7,7 @@ wandb/
 __pycache__/
 *.pth
 .DS_Store
+slurm
 
 # Created by .ignore support plugin (hsz.mobi)
 ### Python template

@@ -7,7 +7,7 @@ class BaseConfig:
         self.init_member_classes(self)
 
     @staticmethod
-    def init_member_classes(obj, skip_classes = ["hard_500"]):
+    def init_member_classes(obj, skip_classes = ["hard_500", "hard_plus"]):
         if skip_classes is None:
             skip_classes = []
         # iterate over all attributes names
