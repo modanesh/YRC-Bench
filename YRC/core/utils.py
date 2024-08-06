@@ -47,6 +47,7 @@ def get_args():
     parser.add_argument('--distribution_mode', type=str, default='easy', help='Distribution mode for procgen.')
     parser.add_argument('--task', type=str, help='Task name for cliport.')
     parser.add_argument('--help_policy_path', type=str, default=None)
+    parser.add_argument('--animate', action="store_true", default=False)
     args = parser.parse_args()
     verify_args(args)
     return args

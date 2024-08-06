@@ -1,3 +1,5 @@
+from PIL import Image, ImageDraw, ImageFont
+import torch
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "cliport")))
@@ -6,6 +8,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "procgen
 from YRC.core import Environment, Policy
 from YRC.core import env_registry
 from YRC.core.utils import logger_setup, get_args
+from YRC.animate import animate
 
 if __name__ == '__main__':
     args = get_args()
@@ -36,5 +39,8 @@ if __name__ == '__main__':
     help_algorithm = policy.setup_help_policy(env, None, task, weak_policy, logger, obs_shape)
 
     # test the help policy
-    help_algorithm.test(exp_cfg.num_test_steps, args.help_policy_path)
-    
+    saved_run_data = help_algorithm.test(exp_cfg.num_test_steps, args.help_policy_path, args.animate)
+
+    # animate select trajectories
+    if args.animate:
+        animate(saved_run_data, logger.logdir)

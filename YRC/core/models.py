@@ -317,7 +317,7 @@ class procgenPPO:
         self.env.close()
         self.env_valid.close()
 
-    def test(self, num_timesteps, help_policy_path = None):
+    def test(self, num_timesteps, help_policy_path = None, save_run = False):
         print('::[LOGGING]::START TESTING...')
         # get the last saved model in self.logger.logdir
         last_checkpoint = sorted([f for f in os.listdir(self.logger.logdir) if ".pth" in f])[-1]
@@ -369,6 +369,18 @@ class procgenPPO:
             f.write(f"Median times asked for help: {int(np.mean(np.sum(act_batch, axis = 1)))}\n")
             f.write("Help times:\n")
             f.write(f"{act_batch.tolist()}\n")
+        if save_run:
+            selected_envs = np.random.randint(0, self.n_envs, 20)
+            env_data = {env: {"observations": [], "actions": [], "probs": []} for env in selected_envs}
+            for env in selected_envs:
+                env_data[env]["observations"] = self.obs_batch[:, env]
+                env_data[env]["actions"] = self.act_batch[:, env].tolist()
+                log_probs = self.log_prob_act_batch[:, env]
+                probs = torch.exp(log_probs)
+                probs = torch.stack([probs, 1 - probs], dim = 1)
+                env_data[env]["probs"] = probs.tolist()
+            return env_data
+        return None
 
 
 class cliportPPO:
