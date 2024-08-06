@@ -189,8 +189,8 @@ class procgenPPO:
         self.storage_valid = storage_valid
         self.t = 0
         self.n_steps = n_steps
-        self.n_envs = n_envs
-        # self.n_envs = 1000
+        # self.n_envs = n_envs
+        self.n_envs = 1000
         self.epoch = epoch
         self.mini_batch_per_epoch = mini_batch_per_epoch
         self.mini_batch_size = mini_batch_size

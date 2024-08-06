@@ -45,4 +45,5 @@ python3 test.py \
     --strong_model_file ${expert_model_file} \
     --help_policy_type ${help_option} \
     --strong_query_cost ${query_cost} \
-    --switching_cost 0
+    --switching_cost 0 \
+    --animate
