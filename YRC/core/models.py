@@ -189,8 +189,8 @@ class procgenPPO:
         self.storage_valid = storage_valid
         self.t = 0
         self.n_steps = n_steps
-        # self.n_envs = n_envs
-        self.n_envs = 1000
+        self.n_envs = n_envs
+        # self.n_envs = 1000
         self.epoch = epoch
         self.mini_batch_per_epoch = mini_batch_per_epoch
         self.mini_batch_size = mini_batch_size
@@ -351,23 +351,24 @@ class procgenPPO:
         switches = (queries != shifted_queries).astype(int)
         switches = switches[:-1]
         with open(log_file, "w") as f:
-            f.write(f"Mean reward: {np.mean(total_reward)}")
-            f.write(f"Median reward: {np.median(total_reward)}")
-            f.write("Mean adjusted reward: 69")
-            f.write("Median adjusted reward: 69")
-            f.write(f"All queries: {queries.tolist()}")
-            f.write(f"All switches: {[0] + switches.tolist()}")
-            f.write("Mean timestep achieved: 69")
-            f.write("Median timestep achieved: 69")
-            f.write(f"Mean run length: {int(np.mean(run_length))}")
-            f.write(f"Median run length: {int(np.median(run_length))}")
-            f.write(f"All rewards: {total_reward.tolist()}")
-            f.write(f"All adjusted rewards: {total_reward.tolist()}")
-            f.write("All timesteps: [69, 69, 69]")
-            f.write(f"Mean times asked for help: {int(np.mean(np.sum(act_batch, axis = 1)))}")
-            f.write(f"Median times asked for help: {int(np.mean(np.sum(act_batch, axis = 1)))}")
-            f.write("Help times:")
-            f.write(f"{act_batch.tolist()}")
+            f.write(f"Mean reward: {np.mean(total_reward)}\n")
+            f.write(f"Median reward: {np.median(total_reward)}\n")
+            f.write("Mean adjusted reward: 69\n")
+            f.write("Median adjusted reward: 69\n")
+            f.write(f"All queries: {queries.tolist()}\n")
+            f.write(f"All switches: {[0] + switches.tolist()}\n")
+            f.write("Mean timestep achieved: 69\n")
+            f.write("Median timestep achieved: 69\n")
+            f.write(f"Mean run length: {int(np.mean(run_length))}\n")
+            f.write(f"Median run length: {int(np.median(run_length))}\n")
+            f.write(f"All rewards: {total_reward.tolist()}\n")
+            f.write(f"All run lengths: {run_length.tolist()}\n")
+            f.write(f"All adjusted rewards: {total_reward.tolist()}\n")
+            f.write("All timesteps: [69, 69, 69]\n")
+            f.write(f"Mean times asked for help: {int(np.mean(np.sum(act_batch, axis = 1)))}\n")
+            f.write(f"Median times asked for help: {int(np.mean(np.sum(act_batch, axis = 1)))}\n")
+            f.write("Help times:\n")
+            f.write(f"{act_batch.tolist()}\n")
 
 
 class cliportPPO:

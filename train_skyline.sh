@@ -6,9 +6,10 @@
 #SBATCH --wait-all-nodes=1
 #SBATCH --job-name=heist_skyline
 #SBATCH --output=experiments/slurm/%j.out
-#SBATCH --time=72:00:00
+#SBATCH --time=36:00:00
 #SBATCH --qos scavenger
 #SBATCH --partition scavenger
+#SBATCH --exclude=vae.ist.berkeley.edu,ppo.ist.berkeley.edu
 
 eval "$(/nas/ucb/tutrinh/anaconda3/bin/conda shell.bash hook)"
 conda activate ood
