@@ -76,7 +76,8 @@ class DeepSVDDTrainer(BaseTrainer):
         logger = logging.getLogger()
         model = model.to(self.device)
         train_loader = get_dataloader(train_dataset, batch_size = self.batch_size, num_workers = self.num_jobs_dataloader)
-        valid_loader = get_dataloader(valid_dataset, batch_size = self.batch_size, num_workers = self.num_jobs_dataloader)
+        if valid_dataset is not None:
+            valid_loader = get_dataloader(valid_dataset, batch_size = self.batch_size, num_workers = self.num_jobs_dataloader)
         optimizer = optim.Adam(model.parameters(), lr = self.lr, weight_decay = self.weight_decay, amsgrad = self.optimizer_name == "amsgrad")
         scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones = self.lr_milestones, gamma = 0.1)
         
@@ -122,35 +123,36 @@ class DeepSVDDTrainer(BaseTrainer):
             if self.use_wandb:
                 wandb.log({"epoch": epoch + 1, "train_time": epoch_train_time, "avg_loss": epoch_loss / num_batches})
             
-            model.eval()
-            val_loss = 0.0
-            num_val_batches = 0
-            with torch.no_grad():
-                for data in valid_loader:
-                    inputs, _, _ = data
-                    inputs = dynamic_permute(inputs.float().to(self.device))
-                    outputs = model(inputs)
-                    dist = torch.sum((outputs - self.center)**2, dim = 1)
-                    if self.objective == "soft-boundary":
-                        scores = dist - self.radius**2
-                        loss = self.radius**2 + (1 / self.nu) * torch.mean(torch.max(torch.zeros_like(scores), scores))
-                    else:
-                        loss = torch.mean(dist)
-                    val_loss += loss.item()
-                    num_val_batches += 1
-            avg_val_loss = val_loss / num_val_batches
-            logger.info("  Validation Loss: {:.8f}".format(avg_val_loss))
-            if self.use_wandb:
-                wandb.log({"epoch": epoch + 1, "val_loss": avg_val_loss})
-            if avg_val_loss < best_loss:
-                best_loss = avg_val_loss
-                patience_counter = 0
-                best_model_state = model.state_dict()
-            else:
-                patience_counter += 1
-            if patience_counter >= patience:
-                logger.info("Early stopping triggered after epoch {}".format(epoch + 1))
-                break
+            if valid_dataset is not None:
+                model.eval()
+                val_loss = 0.0
+                num_val_batches = 0
+                with torch.no_grad():
+                    for data in valid_loader:
+                        inputs, _, _ = data
+                        inputs = dynamic_permute(inputs.float().to(self.device))
+                        outputs = model(inputs)
+                        dist = torch.sum((outputs - self.center)**2, dim = 1)
+                        if self.objective == "soft-boundary":
+                            scores = dist - self.radius**2
+                            loss = self.radius**2 + (1 / self.nu) * torch.mean(torch.max(torch.zeros_like(scores), scores))
+                        else:
+                            loss = torch.mean(dist)
+                        val_loss += loss.item()
+                        num_val_batches += 1
+                avg_val_loss = val_loss / num_val_batches
+                logger.info("  Validation Loss: {:.8f}".format(avg_val_loss))
+                if self.use_wandb:
+                    wandb.log({"epoch": epoch + 1, "val_loss": avg_val_loss})
+                if avg_val_loss < best_loss:
+                    best_loss = avg_val_loss
+                    patience_counter = 0
+                    best_model_state = model.state_dict()
+                else:
+                    patience_counter += 1
+                if patience_counter >= patience:
+                    logger.info("Early stopping triggered after epoch {}".format(epoch + 1))
+                    break
 
         self.train_time = time.time() - start_time
         logger.info("Training time: %.3f" % self.train_time)
@@ -233,7 +235,8 @@ class AETrainer(BaseTrainer):
         logger = logging.getLogger()
         model = model.to(self.device)
         train_loader = get_dataloader(train_dataset, batch_size = self.batch_size, num_workers = self.num_jobs_dataloader)
-        valid_loader = get_dataloader(valid_dataset, batch_size = self.batch_size, num_workers = self.num_jobs_dataloader)
+        if valid_dataset is not None:
+            valid_loader = get_dataloader(valid_dataset, batch_size = self.batch_size, num_workers = self.num_jobs_dataloader)
         optimizer = optim.Adam(model.parameters(), lr = self.lr, weight_decay = self.weight_decay, amsgrad = self.optimizer_name == "amsgrad")
         scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones = self.lr_milestones, gamma = 0.1)
 
@@ -268,31 +271,32 @@ class AETrainer(BaseTrainer):
             if self.use_wandb:
                 wandb.log({"epoch": epoch + 1, "train_time": epoch_train_time, "avg_loss": epoch_loss / num_batches})
             
-            model.eval()
-            val_loss = 0.0
-            num_val_batches = 0
-            with torch.no_grad():
-                for data in valid_loader:
-                    inputs, _, _ = data
-                    inputs = dynamic_permute(inputs.float().to(self.device))
-                    outputs = model(inputs)
-                    scores = torch.sum((outputs - inputs)**2, dim = tuple(range(1, outputs.dim())))
-                    loss = torch.mean(scores)
-                    val_loss += loss.item()
-                    num_val_batches += 1
-            avg_val_loss = val_loss / num_val_batches
-            logger.info("  Validation Loss: {:.8f}" .format(avg_val_loss))
-            if self.use_wandb:
-                wandb.log({"epoch": epoch + 1, "avg_val_loss": avg_val_loss})
-            if avg_val_loss < best_loss:
-                best_loss = avg_val_loss
-                patience_counter = 0
-                best_model_state = model.state_dict()
-            else:
-                patience_counter += 1
-            if patience_counter >= patience:
-                logger.info("Early stopping triggered after epoch {}".format(epoch + 1))
-                break
+            if valid_dataset is not None:
+                model.eval()
+                val_loss = 0.0
+                num_val_batches = 0
+                with torch.no_grad():
+                    for data in valid_loader:
+                        inputs, _, _ = data
+                        inputs = dynamic_permute(inputs.float().to(self.device))
+                        outputs = model(inputs)
+                        scores = torch.sum((outputs - inputs)**2, dim = tuple(range(1, outputs.dim())))
+                        loss = torch.mean(scores)
+                        val_loss += loss.item()
+                        num_val_batches += 1
+                avg_val_loss = val_loss / num_val_batches
+                logger.info("  Validation Loss: {:.8f}" .format(avg_val_loss))
+                if self.use_wandb:
+                    wandb.log({"epoch": epoch + 1, "avg_val_loss": avg_val_loss})
+                if avg_val_loss < best_loss:
+                    best_loss = avg_val_loss
+                    patience_counter = 0
+                    best_model_state = model.state_dict()
+                else:
+                    patience_counter += 1
+                if patience_counter >= patience:
+                    logger.info("Early stopping triggered after epoch {}".format(epoch + 1))
+                    break
 
         self.train_time = time.time() - start_time
         logger.info("Pretraining time: %.3f" % self.train_time)

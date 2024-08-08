@@ -95,7 +95,8 @@ class DeepSVDD:
         """
         Pretrains the weights for the Deep-SVDD model via an autoencoder
         """
-        self.ae_net = AutoEncoder(self.for_latent)
+        if self.ae_net is None:
+            self.ae_net = AutoEncoder(self.for_latent)
         self.ae_optimizer_name = optimizer_name
         self.AETrainer = AETrainer(optimizer_name, lr = lr, num_epochs = num_epochs, lr_milestones = lr_milestones, batch_size = batch_size, weight_decay = weight_decay, device = device, num_jobs_dataloader = num_jobs_dataloader)
         self.ae_net = self.AETrainer.train(train_dataset, valid_dataset, self.ae_net)

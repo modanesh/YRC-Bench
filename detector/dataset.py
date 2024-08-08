@@ -22,10 +22,10 @@ def global_contrast_normalization(image, scale = "l1"):
 
 
 def standardization(image):
-    return (image - torch.mean(image)) / torch.std(image)
+    return (image - torch.mean(image)) / torch.std(image)    
 
 
-def preprocess_and_save_images(input_dir, output_dir, frmt):
+def preprocess_and_save_images(input_dir, output_dir, frmt, save_unique = True):
     os.makedirs(output_dir, exist_ok = True)
     transform = transforms.Compose([
         transforms.ToTensor(),
@@ -44,6 +44,12 @@ def preprocess_and_save_images(input_dir, output_dir, frmt):
                 img_normalized = (img_tensor - img_tensor.min()) / (img_tensor.max() - img_tensor.min())
                 torch.save(img_normalized, os.path.join(output_dir, f"{key}.pt"))
     elif frmt == "np":
+        # delete previously saved preprocessed *.pt files in the output_dir to make way for the new ones in concurrent training
+        existing_preprocessed_obs = os.listdir(output_dir)
+        existing_pattern = re.compile(r"^obs_\d+\.pt$")
+        for epo in existing_preprocessed_obs:
+            if existing_pattern.match(epo):
+                os.remove(os.path.join(output_dir, epo))
         # observations for each run are either stored individually or as a group
         obs_files = os.listdir(input_dir)
         for obs_file in obs_files:
@@ -69,7 +75,7 @@ def preprocess_and_save_images(input_dir, output_dir, frmt):
                                 continue
                             img_tensor = transform(o)
                             img_normalized = (img_tensor - img_tensor.min()) / (img_tensor.max() - img_tensor.min())
-                            torch.save(img_normalized, os.path.join(output_dir, f"{set_name}_idx_{obs_idx}.pt"))
+                            torch.save(img_normalized, os.path.join(output_dir, f"{set_name}_idx_{obs_idx}.pt" if save_unique else f"obs_{obs_idx}.pt"))
                 except:  # like zipfile.BadZipFile
                     pass
     elif frmt == "png":
