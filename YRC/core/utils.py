@@ -528,7 +528,7 @@ def procgen_environment_setup(n_steps, env_name, start_level, num_levels, distri
                               strong_policy=None, get_configs=False, strong_query_cost=0.0, switching_agent_cost=0.0,
                               reward_max=1.0, timeout=1000, help_policy_type=None, device='cuda'):
     print('::[LOGGING]::INITIALIZING ENVIRONMENTS...')
-    env = ProcgenEnv(num_envs=n_steps if True else 1000,
+    env = ProcgenEnv(num_envs=n_steps if False else 1000,
                      env_name=env_name,
                      num_levels=num_levels,
                      start_level=start_level,
