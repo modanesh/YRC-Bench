@@ -1,32 +1,21 @@
-from YRC.core import Environment, Policy
-from YRC.core import env_registry
-from YRC.core.utils import logger_setup, get_args
+from YRC.core import HelpPolicy
+from YRC.core.utils import logger_setup
+from YRC.core import environment
+from YRC.core import PPOAlgorithm
+from YRC.core import Evaluator
+from YRC.core.configs import config_utils
 
 if __name__ == '__main__':
-    args = get_args()
-    env_registry.set_cfgs(name=args.benchmark)
+    config = config_utils.parse_args()
+    config = config_utils.merge(config, vars(config))
+    logger = logger_setup(config)
 
-    # get configs
-    exp_cfg = env_registry.setup_cfgs(args)
-    environment = Environment(exp_cfg)
-    policy = Policy(exp_cfg)
+    train_env, eval_env, test_env = environment.make_help_envs(config)
+    help_policy = HelpPolicy.create_policy(config.help_policy, train_env)
+    algorithm = PPOAlgorithm(config.algorithm, logger, train_env)
 
-    # setup logger
-    logger = logger_setup(exp_cfg)
+    evaluator = Evaluator(config.evaluation, logger, eval_env, test_env)
+    algorithm.train(help_policy, evaluator, train_env=train_env)
 
-    # get env configs
-    obs_shape, action_size = environment.get_env_configs()
-
-    # load executing policies
-    policy_kwargs = {'obs_shape': obs_shape, 'action_size': action_size}
-    weak_policy, strong_policy = policy.load_acting_policies(policy_kwargs)
-
-    # Set up environment and additional variables based on benchmark. For procgen, the `additional_var` is the
-    # validation env, and for cliport, the `additional_var` is the task.
-    env, env_val, task = environment.make(weak_policy, strong_policy)
-
-    # set up help policy
-    help_algorithm = policy.setup_help_policy(env, env_val, task, weak_policy, logger, obs_shape)
-
-    # train the help policy
-    help_algorithm.train(exp_cfg.num_timesteps)
+    test_policy = HelpPolicy.create_policy(config.help_policy, test_env)
+    algorithm.test(test_policy, test_env, evaluator.best_index)
