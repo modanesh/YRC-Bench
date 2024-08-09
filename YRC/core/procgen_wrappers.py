@@ -415,10 +415,10 @@ class HelpEnvWrapper(VecEnvWrapper):
         pi_w_hidden = self.get_weak_policy_features(obs_tensor)
         return obs, pi_w_hidden
 
-    def get_weak_policy_features(self, obs):
+    def get_weak_policy_features(self, obs, info=None):
         pi_w_hidden = None
         if self.obs_type in ["T2", "T3"]:
-            pi_w_hidden = self.weak_policy.policy.get_inner_values(obs)
+            pi_w_hidden = self.weak_policy.policy.extract_features(obs)
         return pi_w_hidden
 
     def strong_query(self, rew):
