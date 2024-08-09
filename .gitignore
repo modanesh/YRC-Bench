@@ -8,6 +8,8 @@ __pycache__/
 *.pth
 .DS_Store
 slurm
+logs/
+
 
 # Created by .ignore support plugin (hsz.mobi)
 ### Python template
