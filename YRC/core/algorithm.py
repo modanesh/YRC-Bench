@@ -22,9 +22,14 @@ class Algorithm(ABC):
         self.storage = None
         self.logger = logger
 
-    def train(self, policy, evaluator, train_env=None, dataset=None):
+    def train(self, policy, evaluator, train_env=None, dataset=None, weak_policy=None, strong_policy=None):
         for i in range(self.training_steps):
-            self.train_one_iteration(policy, train_env, dataset)
+            if dataset is not None:
+                self.train_one_iteration_offline(policy, dataset, weak_policy, strong_policy)
+            elif train_env is not None:
+                self.train_one_iteration_online(policy, train_env)
+            else:
+                raise ValueError("Either train_env or dataset should be provided for training")
             if i % self.log_freq == 0:
                 evaluator.evaluate(policy)
                 if i % self.save_freq == 0 or evaluator.model_improved:
@@ -117,12 +122,16 @@ class Algorithm(ABC):
         return policy
 
     @abstractmethod
-    def train_one_iteration(self, policy, train_env=None, dataset=None):
+    def train_one_iteration_online(self, policy, train_env):
+        pass
+
+    @abstractmethod
+    def train_one_iteration_offline(self, policy, dataset, weak_policy, strong_policy):
         pass
 
 
 class PPOAlgorithm(Algorithm):
-    def __init__(self, config, logger, train_env):
+    def __init__(self, config, logger, env):
         super().__init__(config, logger)
         self.t = 0
         self.rollout_length = config.rollout_length
@@ -132,15 +141,18 @@ class PPOAlgorithm(Algorithm):
         self.grad_clip_norm = config.grad_clip_norm
         self.value_coef = config.value_coef
         self.entropy_coef = config.entropy_coef
-
-        obs_shape = train_env.observation_space.shape if get_global_variable("benchmark") == 'procgen' else (6, 320, 160)
-        num_envs = train_env.base_env.num_envs
-        self.storage = (ProcgenReplayBuffer if get_global_variable("benchmark") == 'procgen' else CliportReplayBuffer)(config.gamma, config.lmbda,
-                                                                                                                       config.use_gae,
-                                                                                                                       config.normalize_adv, obs_shape,
+        self.gamma = config.gamma
+        self.lmbda = config.lmbda
+        self.use_gae = config.use_gae
+        self.normalize_adv = config.normalize_adv
+        obs_shape = env.observation_space.shape if get_global_variable("benchmark") == 'procgen' else (6, 320, 160)
+        num_envs = env.base_env.num_envs
+        self.storage = (ProcgenReplayBuffer if get_global_variable("benchmark") == 'procgen' else CliportReplayBuffer)(self.gamma, self.lmbda,
+                                                                                                                       self.use_gae,
+                                                                                                                       self.normalize_adv, obs_shape,
                                                                                                                        config.rollout_length, num_envs)
 
-    def train_one_iteration(self, policy, train_env=None, dataset=None):
+    def train_one_iteration_online(self, policy, train_env):
         obs, pi_w_hidden = train_env.reset()
         ep_steps = 0
 
@@ -162,17 +174,47 @@ class PPOAlgorithm(Algorithm):
         self.storage.store_last(obs, last_val)
         self.storage.compute_estimates()
 
-        summary = self.update_policy(policy, train_env)
+        summary = self.update_policy_online(policy, train_env)
         self._update_training_progress(policy)
 
         return summary
+
+    def train_one_iteration_offline(self, policy, dataset, weak_policy, strong_policy):
+        all_obs, all_acts, all_rewards, all_infos, all_dones = [], [], [], [], []
+
+        for i in range(dataset.n_demos):
+            demonstrations, seed = dataset.load(i)
+            batch_obs, batch_act, batch_reward, batch_info = zip(*demonstrations)
+            batch_done = [0.] * (len(batch_obs) - 1) + [1.]
+            img_batch = []
+            for obs in batch_obs:
+                img = dataset.get_image(obs)
+                img_batch.append(img)
+            all_obs.extend(img_batch)
+            all_acts.extend(batch_act)
+            all_rewards.extend(batch_reward)
+            all_infos.extend(batch_info)
+            all_dones.extend(batch_done)
+
+        summary = self.update_policy_offline(policy, all_obs, all_acts, all_rewards, all_dones, all_infos, weak_policy)
+        self._update_training_progress(policy)
+
+        return summary
+
+    def _compute_returns(self, rewards, last_value):
+        returns = torch.zeros_like(rewards)
+        running_return = last_value
+        for t in reversed(range(len(rewards))):
+            running_return = rewards[t] + self.gamma * running_return
+            returns[t] = running_return
+        return returns
 
     def _update_training_progress(self, policy):
         self.t += self.rollout_length * self.storage.num_envs
         self.log_training_progress()
         policy.optimizer = adjust_lr(policy.optimizer, policy.learning_rate, self.t, self.training_steps)
 
-    def update_policy(self, policy, train_env):
+    def update_policy_online(self, policy, train_env):
         pi_loss_list, value_loss_list, entropy_loss_list = [], [], []
         batch_size = self.rollout_length * self.storage.num_envs // self.mini_batch_per_epoch
         self.mini_batch_size = min(self.mini_batch_size, batch_size)
@@ -208,6 +250,124 @@ class PPOAlgorithm(Algorithm):
             'Loss/v': np.mean(value_loss_list),
             'Loss/entropy': np.mean(entropy_loss_list)
         }
+
+    def update_policy_offline(self, policy, obs_batch, act_batch, reward_batch, done_batch, info_batch, weak_policy):
+        pi_loss_list, value_loss_list, entropy_loss_list = [], [], []
+        batch_size = len(obs_batch)
+        self.mini_batch_size = min(self.mini_batch_size, batch_size)
+        grad_accumulation_steps = batch_size / self.mini_batch_size
+        grad_accumulation_cnt = 1
+
+        # Compute features and values
+        if policy.type != "T1":
+            with torch.no_grad():
+                pi_w_pick_hidden, pi_w_place_hidden = weak_policy.extract_features(obs_batch, info_batch)
+                pi_w_pick_hidden = torch.stack(pi_w_pick_hidden) if isinstance(pi_w_pick_hidden, list) else pi_w_pick_hidden
+                pi_w_place_hidden = torch.stack(pi_w_place_hidden) if isinstance(pi_w_place_hidden, list) else pi_w_place_hidden
+                if pi_w_pick_hidden.dim() != 2:
+                    pi_w_pick_hidden = pi_w_pick_hidden.unsqueeze(0)
+                    pi_w_place_hidden = pi_w_place_hidden.unsqueeze(0)
+                pi_w_hidden_batch = torch.cat([pi_w_pick_hidden, pi_w_place_hidden], dim=-1)
+        else:
+            pi_w_hidden_batch = None
+
+        obs_batch = torch.FloatTensor(obs_batch).to(device=get_global_variable("device"))
+        obs_batch = obs_batch.permute(0, 3, 1, 2)
+        reward_batch = torch.FloatTensor(reward_batch).to(device=get_global_variable("device"))
+        done_batch = torch.FloatTensor(done_batch).to(device=get_global_variable("device"))
+
+        with torch.no_grad():
+            _, value_batch = policy(obs_batch, pi_w_hidden_batch)
+
+            # Calculate returns and advantages
+            returns = torch.zeros_like(reward_batch)
+            advantages = torch.zeros_like(reward_batch)
+            last_value = 0
+            running_return = 0
+            running_advantage = 0
+
+            for t in reversed(range(batch_size)):
+                if done_batch[t]:
+                    running_return = 0
+                    running_advantage = 0
+                    last_value = 0
+
+                running_return = reward_batch[t] + self.gamma * (1 - done_batch[t]) * running_return
+                returns[t] = running_return
+
+                td_error = reward_batch[t] + self.gamma * (1 - done_batch[t]) * last_value - value_batch[t]
+                running_advantage = td_error + self.gamma * self.lmbda * (1 - done_batch[t]) * running_advantage
+                advantages[t] = running_advantage
+
+                last_value = value_batch[t]
+
+            # Normalize advantages
+            advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
+
+        for _ in range(self.epoch):
+            # Shuffle the data
+            indices = torch.randperm(batch_size)
+            obs_batch = obs_batch[indices]
+            act_batch = [act_batch[i] for i in indices]
+            returns = returns[indices]
+            advantages = advantages[indices]
+            old_value_batch = value_batch[indices]
+            if pi_w_hidden_batch is not None:
+                pi_w_hidden_batch = pi_w_hidden_batch[indices]
+
+            for start_idx in range(0, batch_size, self.mini_batch_size):
+                end_idx = start_idx + self.mini_batch_size
+                mb_obs = obs_batch[start_idx:end_idx]
+                mb_act = act_batch[start_idx:end_idx]
+                mb_returns = returns[start_idx:end_idx]
+                mb_advantages = advantages[start_idx:end_idx]
+                mb_old_value = old_value_batch[start_idx:end_idx]
+                mb_pi_w_hidden = pi_w_hidden_batch[start_idx:end_idx] if pi_w_hidden_batch is not None else None
+
+                dist_batch, value_batch = policy(mb_obs, mb_pi_w_hidden)
+
+                # Calculate the log probability of the actions
+                log_probs = self.calculate_action_log_probs(dist_batch, mb_act)
+
+                # Compute policy loss
+                ratio = torch.exp(log_probs - self.calculate_action_log_probs(dist_batch.detach(), mb_act))
+                surr1 = ratio * mb_advantages
+                surr2 = torch.clamp(ratio, 1.0 - self.eps_clip, 1.0 + self.eps_clip) * mb_advantages
+                pi_loss = -torch.min(surr1, surr2).mean()
+
+                # Compute value loss
+                value_loss = 0.5 * (mb_returns - value_batch).pow(2).mean()
+
+                # Compute entropy loss
+                entropy_loss = dist_batch.entropy().mean()
+
+                loss = pi_loss + self.value_coef * value_loss - self.entropy_coef * entropy_loss
+                loss.backward()
+
+                if grad_accumulation_cnt % grad_accumulation_steps == 0:
+                    torch.nn.utils.clip_grad_norm_(policy.parameters(), self.grad_clip_norm)
+                    policy.optimizer.step()
+                    policy.optimizer.zero_grad()
+                grad_accumulation_cnt += 1
+
+                pi_loss_list.append(pi_loss.item())
+                value_loss_list.append(value_loss.item())
+                entropy_loss_list.append(entropy_loss.item())
+
+        return {
+            'Loss/pi': np.mean(pi_loss_list),
+            'Loss/v': np.mean(value_loss_list),
+            'Loss/entropy': np.mean(entropy_loss_list)
+        }
+
+    def calculate_action_log_probs(self, dist_batch, actions):
+        log_probs = []
+        for dist, action in zip(dist_batch, actions):
+            pose0, pose1 = action['pose0'], action['pose1']
+            pick_log_prob = dist.log_prob(torch.tensor(pose0[0] + pose0[1]).to(dist.loc.device))
+            place_log_prob = dist.log_prob(torch.tensor(pose1[0] + pose1[1]).to(dist.loc.device))
+            log_probs.append(pick_log_prob + place_log_prob)
+        return torch.stack(log_probs)
 
     def log_training_progress(self):
         rew_batch, done_batch = self.storage.fetch_log_data()

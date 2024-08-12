@@ -9,11 +9,11 @@ from .configs.global_configs import get_global_variable
 
 
 class CategoricalPolicy(nn.Module):
-    def __init__(self, config, in_channels=None, action_size=2, additional_hidden_dim=0):
+    def __init__(self, config, in_channels=None, action_size=2, additional_hidden_dim=0, policy_type="T1"):
         super().__init__()
         self.architecture = config.architecture
         self.eps_clip = config.eps_clip
-
+        self.type = policy_type
         if self.architecture == 'impala':
             self.embedder = ImpalaModel(in_channels, benchmark=get_global_variable("benchmark"))
             # Compute total input dimension for fc_policy considering additional tensors
@@ -26,15 +26,12 @@ class CategoricalPolicy(nn.Module):
         self.fc_value = orthogonal_init(nn.Linear(total_input_dim, 1), gain=1.0)
 
     def forward(self, x, pi_w_hidden):
-        if self.embedder:
-            # T1 or T2
-            hidden = self.embedder(x)
-            if pi_w_hidden is not None:
-                # T2
-                hidden = torch.cat([hidden, pi_w_hidden], dim=1)
-        else:
-            # T3
+        if self.type == "T3":
             hidden = pi_w_hidden
+        else:
+            hidden = self.embedder(x)
+            if self.type == "T2":
+                hidden = torch.cat([hidden, pi_w_hidden], dim=1)
 
         logits = self.fc_policy(hidden)
         log_probs = F.log_softmax(logits, dim=1)
@@ -43,7 +40,7 @@ class CategoricalPolicy(nn.Module):
         return p, v
 
     def extract_features(self, x):
-        return self.embedder(x) if self.embedder else None
+        return self.embedder(x) if self.type != "T3" else None
 
     def compute_losses(self, dist, value, act, old_log_prob_act, old_value, return_batch, adv_batch):
         log_prob_act = dist.log_prob(act)
@@ -76,8 +73,8 @@ class CategoricalPolicy(nn.Module):
 
 
 class ProcgenPPO(CategoricalPolicy):
-    def __init__(self, config, in_channels, action_size=2, additional_hidden_dim=0):
-        super().__init__(config, in_channels, action_size, additional_hidden_dim)
+    def __init__(self, config, in_channels, action_size=2, additional_hidden_dim=0, policy_type="T1"):
+        super().__init__(config, in_channels, action_size, additional_hidden_dim, policy_type)
         self.learning_rate = config.learning_rate
         self.optimizer = optim.Adam(self.parameters(), lr=self.learning_rate, eps=1e-5)
 
@@ -87,8 +84,8 @@ class ProcgenPPO(CategoricalPolicy):
 
 
 class CliportPPO(CategoricalPolicy):
-    def __init__(self, config, in_channels, action_size=2, additional_hidden_dim=0):
-        super().__init__(config, in_channels, action_size, additional_hidden_dim)
+    def __init__(self, config, in_channels, action_size=2, additional_hidden_dim=0, policy_type="T1"):
+        super().__init__(config, in_channels, action_size, additional_hidden_dim, policy_type)
         self.learning_rate = config.learning_rate
         self.optimizer = optim.Adam(self.parameters(), lr=self.learning_rate, eps=1e-5)
 

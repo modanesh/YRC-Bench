@@ -10,14 +10,14 @@ Added environments and benchmarks:
 ### How to
 To run the code, configurations for each run can be modified. The set of available configs are located at: `YRC/core/configs/config.yaml`. Any parameter within that file can be modified by passing the desired value as an argument to the script. For example, to change the benchmark, the following command can be used:
 ```shell
-python main.py --general.benchmark BENCHMARK_NAME
+python main_online.py --general.benchmark BENCHMARK_NAME
 ```
 
 For the following, it is assumed that the weak and strong agents are available for the benchmark and the environment. To run the training, the file to the weak and strong agents should be passed as arguments. The following commands can be used to run the code for each benchmark:
 
 - Procgen:
 ```shell
-python main.py --general.benchmark procgen --acting_policy.weak.env_name coinrun --acting_policy.strong.env_name coinrun --acting_policy.weak.file PPO-procgen-coinrun-easy-200-2fc595d8/model_80019456.pth --acting_policy.strong.file PPO-procgen-coinrun-hard-500-bde01d68/model_80019456.pth --help_env.policy_type T3 --environments.procgen.train.env_name coinrun --environments.procgen.val.env_name starpilot --help_env.switching_cost 0.1 --help_env.strong_query_cost 0.1
+python main_online.py --general.benchmark procgen --acting_policy.weak.env_name coinrun --acting_policy.strong.env_name coinrun --acting_policy.weak.file PPO-procgen-coinrun-easy-200-2fc595d8/model_80019456.pth --acting_policy.strong.file PPO-procgen-coinrun-hard-500-bde01d68/model_80019456.pth --help_env.policy_type T3 --environments.procgen.train.env_name coinrun --environments.procgen.val.env_name starpilot --help_env.switching_cost 0.1 --help_env.strong_query_cost 0.1
 ```
 
 - Cliport:

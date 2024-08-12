@@ -1,10 +1,11 @@
 import inspect
+import os
 import random
 import numpy as np
 import torch
 import wandb
 from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
-
+from cliport.dataset import RavensDataset, RavensMultiTaskDataset
 from cliport.utils import utils as cliport_utils
 from .logger import Logger
 from YRC.core.configs import get_global_variable
@@ -50,6 +51,18 @@ def set_global_seeds(seed, torch_deterministic=True):
     torch.cuda.manual_seed_all(seed)
     torch.backends.cudnn.deterministic = torch_deterministic
     torch.backends.cudnn.benchmark = not torch_deterministic
+
+
+def load_dataset(config):
+    data_dir = config.data_dir
+    dataset_type = config.dataset_type
+    task = config.task
+    num_demos = config.num_demos
+    if 'multi' in dataset_type:
+        train_ds = RavensMultiTaskDataset(data_dir, config.to_dict(), group=task, mode='train', n_demos=num_demos, augment=True)
+    else:
+        train_ds = RavensDataset(os.path.join(data_dir, '{}-train'.format(task)), config.to_dict(), n_demos=num_demos, augment=True)
+    return train_ds
 
 
 class ReplayBuffer:

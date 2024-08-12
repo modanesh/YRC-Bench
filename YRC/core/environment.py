@@ -5,6 +5,7 @@ import numpy as np
 import torch
 from .models import CategoricalPolicy, PPOFrozen
 from cliport.utils import utils as cliport_utils
+from .utils import load_dataset
 from procgen import ProcgenEnv
 from . import procgen_wrappers
 from cliport import tasks, agents
@@ -20,13 +21,17 @@ def make_help_envs(config):
     weak_policy, strong_policy = load_agents(benchmark, config.acting_policy, obs_shape, action_size)
 
     envs = {}
-    for name in ["train", "val", "test"]:
-        if benchmark == 'cliport':
-            strong_policy = base_envs[name].task.oracle(base_envs[name])[0]
-            config.help_env.timeout = base_envs[name].task.max_steps
-        envs[name] = HelpEnvironment(config.help_env, base_envs[name], weak_policy, strong_policy)
+    env_set = ["val", "test"] if config.general.offline else ["train", "val", "test"]
+    if config.general.offline:
+        envs["train"] = load_dataset(config.offline)
 
-    return tuple(envs.values())
+    for name in env_set:
+        current_env = base_envs[name]
+        if benchmark == 'cliport':
+            strong_policy = current_env.task.oracle(current_env)[0]
+            config.help_env.timeout = current_env.task.max_steps
+        envs[name] = HelpEnvironment(config.help_env, current_env, weak_policy, strong_policy)
+    return tuple(envs.values()) if not config.general.offline else (tuple(envs.values()), weak_policy, strong_policy)
 
 
 def get_env_specs(benchmark, base_envs):

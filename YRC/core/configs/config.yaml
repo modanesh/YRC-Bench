@@ -1,6 +1,15 @@
 general:
   benchmark: null
   device: 'cuda'
+  offline: false
+
+offline:
+  data_dir: null
+  dataset_type: 'multi'
+  dataset_images: true
+  dataset_cache: true
+  task: null
+  num_demos: 100
 
 help_policy:
   architecture: impala
