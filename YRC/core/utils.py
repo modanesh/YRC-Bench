@@ -1,6 +1,8 @@
 import inspect
 import os
 import random
+from collections import deque
+
 import numpy as np
 import torch
 import wandb
@@ -12,12 +14,13 @@ from YRC.core.configs import get_global_variable
 
 
 def logger_setup(config, is_test=False):
-    print(f'Logging to {config.algorithm.save_dir}')
+    save_dir = config.algorithm.PPO.save_dir if config.algorithm.cls == "PPO" else config.algorithm.DQN.save_dir
+    print(f'Logging to {save_dir}')
     vars_config = config.to_dict()
     # if not is_test:
     #     wandb.init(config=vars_config, resume="allow", project="YRC", name=run_name, settings=wandb.Settings(code_dir="."))  # todo: uncomment
     num_envs = int(config.environments.procgen.common.num_envs if config.general.benchmark == 'procgen' else 1)
-    writer = Logger(num_envs, config.algorithm.save_dir, config.general.benchmark)
+    writer = Logger(num_envs, save_dir, config.general.benchmark)
     return writer
 
 
@@ -154,14 +157,14 @@ class ReplayBuffer:
         self.value_batch[self.pointer] = self._to_torch(last_value)
 
 
-class CliportReplayBuffer(ReplayBuffer):
+class CliportReplayBufferOnPolicy(ReplayBuffer):
     def __init__(self, gamma, lmbda, use_gae, normalize_adv, obs_shape, buffer_size, num_envs):
         super().__init__(gamma, lmbda, use_gae, normalize_adv, obs_shape, buffer_size, num_envs)
 
-    def add_transition(self, state, action, logprob, reward, next_state, done, value, info):
-        img_state = self._process_image(state)
-        img_next_state = self._process_image(next_state)
-        super().add_transition(img_state, action, logprob, reward, img_next_state, done, value, info)
+    def add_transition(self, obs, action, logprob, reward, next_obs, done, value, info):
+        img_obs = self._process_image(obs)
+        img_next_obs = self._process_image(next_obs)
+        super().add_transition(img_obs, action, logprob, reward, img_next_obs, done, value, info)
 
     def store_last(self, last_obs, last_value):
         img_last_obs = self._process_image(last_obs)
@@ -170,9 +173,114 @@ class CliportReplayBuffer(ReplayBuffer):
     def store_last_done(self):
         self.done_batch[self.pointer - 1] = 1
 
-    def _process_image(self, state):
-        return cliport_utils.get_image(state).transpose(2, 0, 1)
+    def _process_image(self, obs):
+        return cliport_utils.get_image(obs).transpose(2, 0, 1)
 
 
-class ProcgenReplayBuffer(ReplayBuffer):
-    pass  # No changes needed for ProcgenReplayBuffer
+class ProcgenReplayBufferOnPolicy(ReplayBuffer):
+    pass  # No changes needed for ProcgenReplayBufferOnPolicy
+
+
+class ReplayBufferOffPolicy(ReplayBuffer):
+    def __init__(self, capacity, obs_shape, action_size, num_envs=1, n_step=3, gamma=0.99):
+        self.capacity = capacity
+        self.obs_shape = obs_shape
+        self.action_size = action_size
+        self.num_envs = num_envs
+        self.n_step = n_step
+        self.gamma = gamma
+        self.device = get_global_variable("device")
+
+        self.obs = torch.zeros((capacity, *obs_shape), dtype=torch.float32, device=self.device)
+        self.next_obs = torch.zeros((capacity, *obs_shape), dtype=torch.float32, device=self.device)
+        self.actions = torch.zeros((capacity, 1), dtype=torch.long, device=self.device)
+        self.raw_rewards = torch.zeros((capacity, 1), dtype=torch.float32, device=self.device)
+        self.rewards = torch.zeros((capacity, 1), dtype=torch.float32, device=self.device)
+        self.dones = torch.zeros((capacity, 1), dtype=torch.float32, device=self.device)
+        self.infos = [None for _ in range(capacity)]
+
+        self.pos = 0
+        self.full = False
+        self.episode_buffer = []
+
+    def _to_tensor(self, data):
+        if isinstance(data, torch.Tensor):
+            return data.to(self.device)
+        else:
+            return torch.as_tensor(data, dtype=torch.float32, device=self.device)
+
+    def add_transition(self, observations, actions, rewards, next_observations, dones, infos, **kwargs):
+        tensors = map(self._to_tensor, (observations, actions, rewards, next_observations, dones))
+        self.episode_buffer.append((*tensors, infos))
+
+        if dones:
+            self._process_episode()
+
+    def _process_episode(self):
+        episode_length = len(self.episode_buffer)
+
+        for i in range(episode_length):
+            raw_reward = self.episode_buffer[i][2].clone()
+            n_step_reward = self._get_n_step_reward(i, min(self.n_step, episode_length - i))
+
+            obs, action, _, next_obs, done, info = self.episode_buffer[i]
+
+            self.obs[self.pos] = obs
+            self.actions[self.pos] = action
+            self.raw_rewards[self.pos] = raw_reward
+            self.rewards[self.pos] = n_step_reward
+            self.next_obs[self.pos] = next_obs
+            self.dones[self.pos] = done
+            self.infos[self.pos] = info
+
+            self.pos = (self.pos + 1) % self.capacity
+            self.full = self.full or self.pos == 0
+
+        self.episode_buffer.clear()
+
+    def _get_n_step_reward(self, start_idx, steps):
+        reward = self.episode_buffer[start_idx][2]  # Initial reward
+
+        for i in range(1, steps):
+            step_reward = self.episode_buffer[start_idx + i][2]
+            reward += (self.gamma ** i) * step_reward
+            if self.episode_buffer[start_idx + i][4]:  # If this step is done
+                break  # Stop accumulating reward if we hit the end of the episode
+
+        return reward
+
+    def sample(self, batch_size):
+        indices = torch.randint(0, self.capacity if self.full else self.pos, (batch_size,))
+
+        return (
+            self.obs[indices],
+            self.actions[indices].squeeze(-1),
+            self.raw_rewards[indices].squeeze(-1),
+            self.rewards[indices].squeeze(-1),
+            self.next_obs[indices],
+            self.dones[indices].squeeze(-1),
+            [self.infos[i.item()] for i in indices]
+        )
+
+    def __len__(self):
+        return self.capacity if self.full else self.pos
+
+    def fetch_log_data(self):
+        if self.full:
+            return self.raw_rewards.cpu().numpy(), self.rewards.cpu().numpy(), self.dones.cpu().numpy()
+        else:
+            return self.raw_rewards[:self.pos].cpu().numpy(), self.rewards[:self.pos].cpu().numpy(), self.dones[:self.pos].cpu().numpy()
+
+
+class CliportReplayBufferOffPolicy(ReplayBufferOffPolicy):
+    def add_transition(self, obs, action, reward, next_obs, done, info, **kwargs):
+        img_obs = self._process_image(obs)
+        img_next_obs = self._process_image(next_obs)
+        super().add_transition(img_obs, action, reward, img_next_obs, done, info)
+
+    def _process_image(self, obs):
+        return cliport_utils.get_image(obs).transpose(2, 0, 1)
+
+
+class ProcgenReplayBufferOffPolicy(ReplayBufferOffPolicy):
+    pass  # No changes needed

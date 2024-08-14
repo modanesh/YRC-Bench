@@ -12,10 +12,16 @@ offline:
   num_demos: 100
 
 help_policy:
-  architecture: impala
-  hidden_size: 256
-  eps_clip: 0.2
-  learning_rate: 0.0005
+  PPO:
+    architecture: impala
+    eps_clip: 0.2
+    learning_rate: 0.0005
+  DQN:
+    architecture: impala
+    learning_rate: 0.0001
+    v_min: -10
+    v_max: 10
+    num_atoms: 51
 
 acting_policy:
   weak:
@@ -83,28 +89,51 @@ help_env:
   policy_type: null
 
 algorithm:
-  cls: PPO
-  log_freq: 10
-  save_freq: 100
-  rollout_length: 128
-  gamma: 0.999
-  lmbda: 0.95
-  normalize_adv: true
-  use_gae: true
-  mini_batch_per_epoch: 8
-  mini_batch_size: 4096
-  epoch: 3
-  value_coef: 0.5
-  entropy_coef: 0.01
-  grad_clip_norm: 0.5
-  load_best: false
-  load_last: false
-  load_custom_index: -1
-  training_steps: 25_000_000
-  test_steps: 500_000
-  seed: 0
-  log_level: 40
-  num_checkpoints: 10
+  cls: null
+  PPO:
+    log_freq: 10
+    save_freq: 100
+    rollout_length: 128
+    gamma: 0.999
+    lmbda: 0.95
+    normalize_adv: true
+    use_gae: true
+    mini_batch_per_epoch: 8
+    mini_batch_size: 4096
+    epoch: 3
+    value_coef: 0.5
+    entropy_coef: 0.01
+    grad_clip_norm: 0.5
+    load_best: false
+    load_last: false
+    load_custom_index: -1
+    training_steps: 25_000_000
+    test_steps: 500_000
+    seed: 0
+    log_level: 40
+    num_checkpoints: 10
+  DQN:
+    batch_size: 32
+    update_frequency: 20
+    target_update_frequency: 1000
+    gamma: 0.99
+    n_step: 4
+    prioritized_replay: true
+    buffer_size: 100
+    grad_clip_norm: 0.5
+    load_best: false
+    load_last: false
+    log_freq: 10
+    save_freq: 100
+    load_custom_index: -1
+    v_min: -10
+    v_max: 10
+    num_atoms: 51
+    learning_rate: 0.0001
+    learning_starts: 10000 # todo: find where to use this during training
+    max_steps: 1000000 # todo: find where to use this during training
+    training_steps: 25_000_000
+    test_steps: 500_000
 
 evaluation:
   validation_steps: 200

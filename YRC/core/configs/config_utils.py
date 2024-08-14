@@ -95,11 +95,6 @@ def merge(config: ConfigDict, args: Dict) -> ConfigDict:
 
         for k, v in config.environments.procgen.to_dict().items():
             for kk, vv in v.items():
-                # if kk == "param_name":
-                    # for kkk, vvv in procgen_params.to_dict()[vv].items():
-                    #     if kkk == 'n_envs':
-                    #         vvv = config.n_envs
-                    #     setattr(getattr(config.environments.procgen, k), kkk, vvv)
                 if kk == "start_level":
                     if k == "val":
                         setattr(getattr(config.environments.procgen, k), 'start_level', random.randint(0, 999))
@@ -115,24 +110,32 @@ def merge(config: ConfigDict, args: Dict) -> ConfigDict:
 
     uuid_stamp = str(uuid.uuid4())[:8]
     env_name = getattr(config.environments, config.general.benchmark).train.env_name
-    run_name = f"PPO-{config.general.benchmark}-help{config.help_env.policy_type}-{env_name}-{uuid_stamp}"
+    run_name = f"{config.algorithm.cls}-{config.general.benchmark}-help{config.help_env.policy_type}-{env_name}-{uuid_stamp}"
     logdir = os.path.join('logs', env_name)
     if not (os.path.exists(logdir)):
         os.makedirs(logdir)
     logdir = os.path.join(logdir, run_name)
     if not (os.path.exists(logdir)):
         os.mkdir(logdir)
-    config.algorithm.save_dir = logdir
 
-    config.algorithm.rollout_length = int(config.algorithm.rollout_length)
-    config.algorithm.mini_batch_size = int(config.algorithm.mini_batch_size)
+    if config.algorithm.cls == "PPO":
+        config.algorithm.PPO.save_dir = logdir
+        config.algorithm.PPO.rollout_length = int(config.algorithm.PPO.rollout_length)
+        config.algorithm.PPO.mini_batch_size = int(config.algorithm.PPO.mini_batch_size)
+    elif config.algorithm.cls == "DQN":
+        config.algorithm.DQN.save_dir = logdir
+        config.algorithm.DQN.batch_size = int(config.algorithm.DQN.batch_size)
+        config.algorithm.DQN.target_update_frequency = int(config.algorithm.DQN.target_update_frequency)
+        config.algorithm.DQN.learning_starts = int(config.algorithm.DQN.learning_starts)
+        config.algorithm.DQN.max_steps = int(config.algorithm.DQN.max_steps)
     config.evaluation.validation_steps = int(config.evaluation.validation_steps)
 
     set_global_variable("benchmark", config.general.benchmark)
     set_global_variable("device", config.general.device)
 
     if config.help_env.policy_type == "T3":
-        config.help_policy.architecture = None
+        config.help_policy.DQN.architecture = None
+        config.help_policy.PPO.architecture = None
 
     return config
 
