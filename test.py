@@ -8,7 +8,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "procgen
 from YRC.core import Environment, Policy
 from YRC.core import env_registry
 from YRC.core.utils import logger_setup, get_args
-from YRC.animate import animate
+from animate import animate
 
 if __name__ == '__main__':
     args = get_args()

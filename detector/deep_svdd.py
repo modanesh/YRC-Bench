@@ -123,6 +123,8 @@ class DeepSVDD:
                 "net_dict": self.net.state_dict()
             }, network_save_path)
         if ae_save_path:
+            if self.ae_net is None:
+                self.ae_net = AutoEncoder(self.for_latent)
             torch.save({
                 "ae_net_dict": self.ae_net.state_dict()
             }, ae_save_path)

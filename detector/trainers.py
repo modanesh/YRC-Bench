@@ -157,7 +157,8 @@ class DeepSVDDTrainer(BaseTrainer):
         self.train_time = time.time() - start_time
         logger.info("Training time: %.3f" % self.train_time)
         logger.info("Finished training Deep-SVDD!!!!!")
-        model.load_state_dict(best_model_state)
+        if valid_dataset is not None:
+            model.load_state_dict(best_model_state)
         return model
     
     def test(self, dataset, model):
@@ -301,7 +302,8 @@ class AETrainer(BaseTrainer):
         self.train_time = time.time() - start_time
         logger.info("Pretraining time: %.3f" % self.train_time)
         logger.info("Finished pretraining!!!!!")
-        model.load_state_dict(best_model_state)
+        if valid_dataset is not None:
+            model.load_state_dict(best_model_state)
         return model
     
     def test(self, dataset, model):

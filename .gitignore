@@ -197,4 +197,4 @@ fabric.properties
 
 logs/
 experiments/
-test.py
+inspect.sh

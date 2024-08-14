@@ -1,5 +1,5 @@
 import os
-
+import pickle
 import numpy as np
 import torch
 import torch.nn as nn
@@ -373,12 +373,14 @@ class procgenPPO:
             selected_envs = np.random.randint(0, self.n_envs, 20)
             env_data = {env: {"observations": [], "actions": [], "probs": []} for env in selected_envs}
             for env in selected_envs:
-                env_data[env]["observations"] = self.obs_batch[:, env]
-                env_data[env]["actions"] = self.act_batch[:, env].tolist()
-                log_probs = self.log_prob_act_batch[:, env]
+                env_data[env]["observations"] = self.storage.obs_batch[:, env].detach().cpu().numpy()
+                env_data[env]["actions"] = self.storage.act_batch[:, env].tolist()
+                log_probs = self.storage.log_prob_act_batch[:, env]
                 probs = torch.exp(log_probs)
                 probs = torch.stack([probs, 1 - probs], dim = 1)
                 env_data[env]["probs"] = probs.tolist()
+            with open(os.path.join(self.logger.logdir, "gif_data.pkl"), "wb") as f:
+                pickle.dump(env_data, f)
             return env_data
         return None
 
