@@ -1,7 +1,8 @@
 from PIL import Image, ImageDraw, ImageFont
 import numpy as np
-import torch
+import pickle
 import os
+import argparse
 
 
 def create_frame(image, frame_number, probs, action_taken):
@@ -45,3 +46,12 @@ def create_gif(env_data, env_index, save_dir):
 def animate(env_data, save_dir):
     for env_index in env_data:
         create_gif(env_data[env_index], env_index, save_dir)
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--dir", "-d", type = str)
+    args = parser.parse_args()
+    full_dir = os.path.join("logs/coinrun_aisc/", args.dir)
+    with open(os.path.join(full_dir, "gif_data.pkl"), "rb") as f:
+        env_data = pickle.load(f)
+    animate(env_data, full_dir)
