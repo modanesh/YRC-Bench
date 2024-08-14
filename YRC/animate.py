@@ -7,7 +7,6 @@ import os
 def create_frame(image, frame_number, probs, action_taken):
     border_size = 60
     new_size = (image.width, image.height + border_size)
-
     new_frame = Image.new("RGB", new_size, "white")
     new_frame.paste(image, ((new_size[0] - image.width) // 2, 0))
 
