@@ -6,22 +6,24 @@ import os
 
 def create_frame(image, frame_number, probs, action_taken):
     border_size = 60
-    new_size = (frame.width + 2 * border_size, frame.height + border_size + border_size // 2)
+    new_size = (image.width, image.height + border_size)
 
     new_frame = Image.new("RGB", new_size, "white")
-    new_frame.paste(image, (border_size, border_size // 3))
+    new_frame.paste(image, ((new_size[0] - image.width) // 2, 0))
 
     draw = ImageDraw.Draw(new_frame)
     font = ImageFont.truetype("DejaVuSans.ttf", size = 7)
 
-    draw.text((10, 10), f"Step {frame_number}", fill = "black", font = font)
-    draw.text((10, new_size[1] - 60), f"0: {probs[0]:.2f}", fill = "black", font = font)
-    draw.text((10, new_size[1] - 45), f"1: {probs[1]:.2f}", fill = "black", font = font)
+    # draw.text((10, 10), f"Step {frame_number}", fill = "black", font = font)
+    # draw.text((10, new_size[1] - 60), f"0: {probs[0]:.2f}", fill = "black", font = font)
+    # draw.text((10, new_size[1] - 45), f"1: {probs[1]:.2f}", fill = "black", font = font)
     
     if action_taken == 1:
-        draw.text((10, new_size[1] - 30), "Asked for help!", fill = "green", font = font)
+        text = "Help!"
+        text_width, text_height = draw.textsize(text, font = font)
+        draw.text(((new_size[0] - text_width) // 2, image.height + 5), text, fill = "red", font = font)
     
-    return image
+    return new_frame
 
 
 def create_gif(env_data, env_index, save_dir):
