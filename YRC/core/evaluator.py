@@ -29,7 +29,7 @@ class Evaluator:
             obs, pi_w_hidden = self.val_env.reset()
             ep_steps = 0
             for i in range(self.validation_steps):
-                action, _, _ = policy.predict(obs, pi_w_hidden)
+                action = policy.act(obs, pi_w_hidden)
                 obs, reward, done, info, pi_w_hidden = self.val_env.step(action)
                 reward_batch[i] = reward
                 done_batch[i] = done
