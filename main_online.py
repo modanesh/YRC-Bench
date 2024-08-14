@@ -1,7 +1,7 @@
 from YRC.core import HelpPolicy
 from YRC.core.utils import logger_setup
 from YRC.core import environment
-from YRC.core import PPOAlgorithm
+from YRC.core import PPOAlgorithm, DQNAlgorithm
 from YRC.core import Evaluator
 from YRC.core.configs import config_utils
 
@@ -11,8 +11,13 @@ if __name__ == '__main__':
     logger = logger_setup(config)
 
     train_env, eval_env, test_env = environment.make_help_envs(config)
-    help_policy = HelpPolicy.create_policy(config.help_policy, train_env)
-    algorithm = PPOAlgorithm(config.algorithm, logger, train_env)
+    help_policy = HelpPolicy.create_policy(config.help_policy, config.algorithm.cls, train_env)
+
+    algorithm_cls = {"PPO": PPOAlgorithm, "DQN": DQNAlgorithm}.get(config.algorithm.cls)
+    if not algorithm_cls:
+        raise ValueError(f"Unsupported algorithm: {config.algorithm.cls}")
+
+    algorithm = algorithm_cls(getattr(config.algorithm, config.algorithm.cls), logger, train_env)
 
     evaluator = Evaluator(config.evaluation, logger, eval_env, test_env)
     algorithm.train(help_policy, evaluator, train_env=train_env)
