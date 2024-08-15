@@ -19,7 +19,7 @@ def logger_setup(config, is_test=False):
     print(f'Logging to {save_dir}')
     vars_config = config.to_dict()
     if not is_test:
-        wandb.init(config=vars_config, resume="allow", project="YRC", name=run_name, settings=wandb.Settings(code_dir="."))  # todo: uncomment
+        wandb.init(config=vars_config, resume="allow", project="YRC", name=run_name, settings=wandb.Settings(code_dir="."))
     num_envs = int(config.environments.procgen.common.num_envs if config.general.benchmark == 'procgen' else 1)
     writer = Logger(num_envs, save_dir, config.general.benchmark)
     return writer
@@ -199,6 +199,7 @@ class ReplayBufferOffPolicy(ReplayBuffer):
         self.rewards = torch.zeros((capacity, 1), dtype=torch.float32, device=self.device)
         self.dones = torch.zeros((capacity, 1), dtype=torch.float32, device=self.device)
         self.infos = [None for _ in range(capacity)]
+        self.next_infos = [None for _ in range(capacity)]
 
         self.pos = 0
         self.full = False
@@ -233,6 +234,7 @@ class ReplayBufferOffPolicy(ReplayBuffer):
             self.next_obs[self.pos] = next_obs
             self.dones[self.pos] = done
             self.infos[self.pos] = info
+            self.next_infos[self.pos] = self.episode_buffer[i + 1][5] if i + 1 < episode_length else None
 
             self.pos = (self.pos + 1) % self.capacity
             self.full = self.full or self.pos == 0
@@ -260,7 +262,8 @@ class ReplayBufferOffPolicy(ReplayBuffer):
             self.rewards[indices].squeeze(-1),
             self.next_obs[indices],
             self.dones[indices].squeeze(-1),
-            [self.infos[i.item()] for i in indices]
+            [self.infos[i.item()] for i in indices],
+            [self.next_infos[i.item()] for i in indices]
         )
 
     def __len__(self):

@@ -423,6 +423,7 @@ class DQNAlgorithm(Algorithm):
                 ))
 
             if self._should_reset_environment(done, ep_steps, train_env):
+                # only come here for Cliport
                 idx = 0
                 if self.num_envs > 1:
                     raise NotImplementedError("Resetting environment is not implemented for multiple environments for Cliport")
@@ -435,6 +436,7 @@ class DQNAlgorithm(Algorithm):
                 obs, pi_w_hidden = self._reset_environment(train_env, ep_steps)
                 ep_steps = 0
             elif isinstance(done, np.ndarray) and done.any():
+                # only come here for Procgen
                 completed_episodes_idx = done.nonzero()[0]
                 for idx in completed_episodes_idx:
                     completed_episodes.append(episode_buffers[idx])
@@ -464,9 +466,11 @@ class DQNAlgorithm(Algorithm):
         NotImplementedError("Offline training is not implemented for DQN")
 
     def update_policy_online(self, policy, train_env):
-        obs_batch, act_batch, raw_reward_batch, reward_batch, next_obs_batch, done_batch, info_batch = self.rb.sample(self.batch_size)
+        obs_batch, act_batch, raw_reward_batch, reward_batch, next_obs_batch, done_batch, info_batch, next_info_batch = self.rb.sample(self.batch_size)
+        next_info_batch_nones = [i for i, v in enumerate(next_info_batch) if v is None]
+
         pi_w_hidden_batch = train_env.get_weak_policy_features(obs_batch, info_batch)
-        next_pi_w_hidden_batch = train_env.get_weak_policy_features(next_obs_batch, info_batch)  # todo: info should be for the next obs
+        next_pi_w_hidden_batch = train_env.get_weak_policy_features(next_obs_batch, next_info_batch)
 
         current_q_dist = policy(obs_batch, pi_w_hidden_batch)
         next_q_dist = policy.target_network(next_obs_batch, next_pi_w_hidden_batch)
@@ -476,7 +480,7 @@ class DQNAlgorithm(Algorithm):
 
         # Compute the target distribution
         next_q_dist_max = next_q_dist[range(self.batch_size), next_q_dist.mean(dim=2).argmax(dim=1)]
-        target_q_dist = self.compute_target_distribution(next_q_dist_max, reward_batch, done_batch, policy)
+        target_q_dist = self.compute_target_distribution(next_q_dist_max, reward_batch, done_batch, policy, next_info_batch_nones)
 
         loss = policy.compute_loss(current_q_action, target_q_dist)
 
@@ -487,7 +491,7 @@ class DQNAlgorithm(Algorithm):
 
         return {'Loss/q': loss.item()}
 
-    def compute_target_distribution(self, next_q_dist, rewards, dones, policy):
+    def compute_target_distribution(self, next_q_dist, rewards, dones, policy, terminal_indices):
         # Compute the projected distribution
         target_z = rewards.unsqueeze(-1) + (1 - dones.unsqueeze(-1)) * self.gamma ** self.n_step * policy.support.unsqueeze(0)
         target_z = target_z.clamp(policy.v_min, policy.v_max)
@@ -501,6 +505,10 @@ class DQNAlgorithm(Algorithm):
         offset = torch.linspace(0, (self.batch_size - 1) * policy.num_atoms, self.batch_size).unsqueeze(1).expand(self.batch_size, policy.num_atoms).long().to(get_global_variable('device'))
         target_dist.view(-1).index_add_(0, (l + offset).view(-1), (next_q_dist * (u.float() - b)).view(-1))
         target_dist.view(-1).index_add_(0, (u + offset).view(-1), (next_q_dist * (b - l.float())).view(-1))
+
+        # For terminal states, directly assign the reward to the target distribution (used only for Cliport)
+        if terminal_indices and get_global_variable("benchmark") == 'cliport':
+            target_dist[terminal_indices] = rewards[terminal_indices].unsqueeze(-1).expand(-1, policy.num_atoms)
 
         return target_dist
 
