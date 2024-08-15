@@ -1,4 +1,4 @@
-from .policy import HelpPolicy
+from .help_policy import HelpPolicy
 from .algorithm import PPOAlgorithm, DQNAlgorithm
 from .evaluator import Evaluator
 from .utils import Logger
