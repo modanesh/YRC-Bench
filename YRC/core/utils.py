@@ -15,10 +15,11 @@ from YRC.core.configs import get_global_variable
 
 def logger_setup(config, is_test=False):
     save_dir = config.algorithm.PPO.save_dir if config.algorithm.cls == "PPO" else config.algorithm.DQN.save_dir
+    run_name = config.algorithm.run_name
     print(f'Logging to {save_dir}')
     vars_config = config.to_dict()
-    # if not is_test:
-    #     wandb.init(config=vars_config, resume="allow", project="YRC", name=run_name, settings=wandb.Settings(code_dir="."))  # todo: uncomment
+    if not is_test:
+        wandb.init(config=vars_config, resume="allow", project="YRC", name=run_name, settings=wandb.Settings(code_dir="."))  # todo: uncomment
     num_envs = int(config.environments.procgen.common.num_envs if config.general.benchmark == 'procgen' else 1)
     writer = Logger(num_envs, save_dir, config.general.benchmark)
     return writer

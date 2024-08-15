@@ -111,6 +111,7 @@ def merge(config: ConfigDict, args: Dict) -> ConfigDict:
     uuid_stamp = str(uuid.uuid4())[:8]
     env_name = getattr(config.environments, config.general.benchmark).train.env_name
     run_name = f"{config.algorithm.cls}-{config.general.benchmark}-help{config.help_env.policy_type}-{env_name}-{uuid_stamp}"
+    config.algorithm.run_name = run_name
     logdir = os.path.join('logs', env_name)
     if not (os.path.exists(logdir)):
         os.makedirs(logdir)
