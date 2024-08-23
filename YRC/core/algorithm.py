@@ -1,11 +1,14 @@
+import os
 from abc import ABC, abstractmethod
 from pathlib import Path
 
-import torch
 import numpy as np
-import os
-from .utils import ProcgenReplayBufferOnPolicy, CliportReplayBufferOnPolicy, ProcgenReplayBufferOffPolicy, CliportReplayBufferOffPolicy
+import torch
+
+from cliport.utils import utils as cliport_utils
 from .configs.global_configs import get_global_variable
+from .utils import ProcgenReplayBufferOnPolicy, CliportReplayBufferOnPolicy, ProcgenReplayBufferOffPolicy, CliportReplayBufferOffPolicy, \
+    ReplayBufferOffPolicy
 
 
 def adjust_lr(optimizer, init_lr, timesteps, max_timesteps):
@@ -25,29 +28,34 @@ class Algorithm(ABC):
         self.load_best = config.load_best
         self.load_last = config.load_last
         self.load_custom_index = config.load_custom_index
-
+        self.learning_starts = config.learning_starts
         self.rb = None
         self.logger = logger
 
-    def train(self, policy, evaluator, train_env=None, dataset=None, weak_policy=None, strong_policy=None):
+    def train(self, policy, evaluator, train_env=None, dataset=None):
+        is_off_policy = isinstance(self.rb, ReplayBufferOffPolicy)
         for i in range(self.training_steps):
             if dataset is not None:
-                self.train_one_iteration_offline(policy, dataset, weak_policy, strong_policy)
+                self.train_one_iteration_offline(policy, dataset)
             elif train_env is not None:
                 self.train_one_iteration_online(policy, train_env)
             else:
                 raise ValueError("Either train_env or dataset should be provided for training")
-            if (i + 1) % self.log_freq == 0:
-                evaluator.evaluate(policy)
-                if (i + 1) % self.save_freq == 0 or evaluator.model_improved:
-                    evaluator.best_index = i
-                    policy.save_model(os.path.join(self.save_dir, f"model_{i}.pt"))
-        train_env.close()
-        evaluator.eval_env.close()
 
-    def test(self, policy, test_env, best_model_index):
-        policy = self.load_fresh_model(policy, best_model_index)
-        policy.eval()
+            if not is_off_policy or (is_off_policy and len(self.rb) > self.learning_starts):
+                if (i + 1) % self.log_freq == 0:
+                    evaluator.evaluate_policy(policy)
+                    if (i + 1) % self.save_freq == 0 or evaluator.model_improved['id']:
+                        evaluator.best_id_index = i
+                        policy.save_model(os.path.join(self.save_dir, f"id_model_{i}.pt"))
+                    if (i + 1) % self.save_freq == 0 or evaluator.model_improved['ood']:
+                        evaluator.best_ood_index = i
+                        policy.save_model(os.path.join(self.save_dir, f"ood_model_{i}.pt"))
+
+        train_env.close()
+
+    def test(self, policy, test_env, best_model_index, id_evaluated=True):
+        policy = self.load_fresh_model(policy, best_model_index, id_evaluated)
 
         num_envs = test_env.base_env.num_envs
         reward_batch, done_batch = self._run_test_episodes(policy, test_env)
@@ -73,7 +81,7 @@ class Algorithm(ABC):
 
                 if self._should_reset_environment(done, ep_steps, test_env):
                     done_batch[i] = True
-                    obs, pi_w_hidden = self._reset_environment(test_env, i)
+                    obs, pi_w_hidden = self._reset_environment(test_env)
                     ep_steps = 0
 
         return reward_batch, done_batch
@@ -81,8 +89,8 @@ class Algorithm(ABC):
     def _should_reset_environment(self, done, ep_steps, env):
         return (get_global_variable('benchmark') == 'cliport' and (done or ep_steps == env.base_env.task.max_steps))
 
-    def _reset_environment(self, env, step):
-        env.base_env.seed(env.base_env._seed + step)
+    def _reset_environment(self, env):
+        env.base_env.seed(env.base_env._seed + 1)
         return env.reset()
 
     def _calculate_episode_stats(self, reward_batch, done_batch, num_envs):
@@ -116,23 +124,22 @@ class Algorithm(ABC):
         for key, value in stats.items():
             print(f"{key.replace('_', ' ').title()}: {value}")
 
-    def load_fresh_model(self, policy, best_index):
+    def load_fresh_model(self, policy, best_index, id_evaluated):
+        model_name = "id_model" if id_evaluated else "ood_model"
         if self.load_best:
-            model_path = os.path.join(self.save_dir, f'model_{best_index}.pt')
+            model_path = os.path.join(self.save_dir, f'{model_name}_{best_index}.pt')
         elif self.load_custom_index != -1:
-            model_path = os.path.join(self.save_dir, f'model_{self.load_custom_index}.pt')
+            model_path = os.path.join(self.save_dir, f'{model_name}_{self.load_custom_index}.pt')
         elif self.load_last:
             model_path = str(sorted(Path(self.save_dir).iterdir(), key=os.path.getmtime)[0])
         checkpoint = torch.load(model_path)
         policy.load_state_dict(checkpoint["model_state_dict"])
         return policy
 
-    @abstractmethod
-    def train_one_iteration_online(self, policy, train_env):
+    def train_one_iteration_online(self, help_policy, train_env):
         pass
 
-    @abstractmethod
-    def train_one_iteration_offline(self, policy, dataset, weak_policy, strong_policy):
+    def train_one_iteration_offline(self, help_policy, dataset):
         pass
 
 
@@ -151,7 +158,7 @@ class PPOAlgorithm(Algorithm):
         self.lmbda = config.lmbda
         self.use_gae = config.use_gae
         self.normalize_adv = config.normalize_adv
-        obs_shape = env.observation_space.shape if get_global_variable("benchmark") == 'procgen' else (6, 320, 160)
+        obs_shape = env.observation_space.shape if get_global_variable("benchmark") == 'procgen' else (320, 160, 6)
         num_envs = env.base_env.num_envs
         self.rb = (ProcgenReplayBufferOnPolicy if get_global_variable("benchmark") == 'procgen' else CliportReplayBufferOnPolicy)(self.gamma,
                                                                                                                                   self.lmbda,
@@ -161,12 +168,12 @@ class PPOAlgorithm(Algorithm):
                                                                                                                                   config.rollout_length,
                                                                                                                                   num_envs)
 
-    def train_one_iteration_online(self, policy, train_env):
+    def train_one_iteration_online(self, help_policy, train_env):
         obs, pi_w_hidden = train_env.reset()
         ep_steps = 0
 
         for _ in range(self.rollout_length):
-            act, log_prob_act, value = policy.predict(obs, pi_w_hidden)
+            act, log_prob_act, value = help_policy.predict(obs, pi_w_hidden)
             next_obs, rew, done, info, pi_w_hidden = train_env.step(act)
 
             self.rb.add_transition(obs, act, log_prob_act, rew, next_obs, done, value, info)
@@ -176,19 +183,19 @@ class PPOAlgorithm(Algorithm):
 
             if self._should_reset_environment(done, ep_steps, train_env):
                 self.rb.store_last_done()
-                obs, pi_w_hidden = self._reset_environment(train_env, ep_steps)
+                obs, pi_w_hidden = self._reset_environment(train_env)
                 ep_steps = 0
 
-        _, _, last_val = policy.predict(obs, pi_w_hidden)
+        _, _, last_val = help_policy.predict(obs, pi_w_hidden)
         self.rb.store_last(obs, last_val)
         self.rb.compute_estimates()
 
-        summary = self.update_policy_online(policy, train_env)
-        self._update_training_progress(policy)
+        summary = self.update_policy_online(help_policy.policy, train_env)
+        self._update_training_progress(help_policy.policy)
 
         return summary
 
-    def train_one_iteration_offline(self, policy, dataset, weak_policy, strong_policy):
+    def train_one_iteration_offline(self, policy, dataset):
         all_obs, all_acts, all_rewards, all_infos, all_dones = [], [], [], [], []
 
         for i in range(dataset.n_demos):
@@ -205,7 +212,7 @@ class PPOAlgorithm(Algorithm):
             all_infos.extend(batch_info)
             all_dones.extend(batch_done)
 
-        summary = self.update_policy_offline(policy, all_obs, all_acts, all_rewards, all_dones, all_infos, weak_policy)
+        summary = self.update_policy_offline(policy, all_obs, all_acts, all_rewards, all_dones, all_infos)
         self._update_training_progress(policy)
 
         return summary
@@ -235,6 +242,8 @@ class PPOAlgorithm(Algorithm):
             for sample in generator:
                 obs_batch, act_batch, done_batch, old_log_prob_act_batch, old_value_batch, return_batch, adv_batch, info_batch = sample
                 pi_w_hidden_batch = train_env.get_weak_policy_features(obs_batch, info_batch)
+                if get_global_variable("benchmark") == 'cliport':
+                    obs_batch = obs_batch.permute(0, 3, 1, 2)
                 dist_batch, value_batch = policy(obs_batch, pi_w_hidden_batch)
 
                 pi_loss, value_loss, entropy_loss = policy.compute_losses(dist_batch, value_batch, act_batch,
@@ -394,22 +403,23 @@ class DQNAlgorithm(Algorithm):
         self.gamma = config.gamma
         self.n_step = config.n_step
         self.prioritized_replay = config.prioritized_replay
-        self.obs_shape = env.observation_space.shape if get_global_variable("benchmark") == 'procgen' else (6, 320, 160)
+        self.obs_shape = env.observation_space.shape if get_global_variable("benchmark") == 'procgen' else (320, 160, 6)
         self.num_actions = env.action_space.n
         self.num_envs = env.base_env.num_envs
         self.grad_clip_norm = config.grad_clip_norm
+        self.learning_starts = config.learning_starts
 
         ReplayBufferClass = ProcgenReplayBufferOffPolicy if get_global_variable("benchmark") == 'procgen' else CliportReplayBufferOffPolicy
         self.rb = ReplayBufferClass(capacity=config.buffer_size, obs_shape=self.obs_shape, action_size=self.num_actions, num_envs=self.num_envs,
                                     n_step=self.n_step, gamma=self.gamma)
 
-    def train_one_iteration_online(self, policy, train_env):
+    def train_one_iteration_online(self, help_policy, train_env):
         obs, pi_w_hidden = train_env.reset()
         ep_steps = 0
         episode_buffers = [[] for _ in range(self.num_envs)]
         completed_episodes = []
         for _ in range(self.update_frequency):
-            action, q_values = policy.predict(obs, pi_w_hidden)
+            action, _, q_values = help_policy.predict(obs, pi_w_hidden)
             next_obs, reward, done, info, pi_w_hidden = train_env.step(action)
 
             for env_idx in range(self.num_envs):
@@ -419,7 +429,7 @@ class DQNAlgorithm(Algorithm):
                     reward[env_idx] if self.num_envs > 1 else reward,
                     next_obs[env_idx] if self.num_envs > 1 else next_obs,
                     done[env_idx] if self.num_envs > 1 else done,
-                    info[env_idx] if self.num_envs > 1 else info
+                    info[env_idx] if self.num_envs > 1 else (info[0] if isinstance(info, list) else info)
                 ))
 
             if self._should_reset_environment(done, ep_steps, train_env):
@@ -433,7 +443,7 @@ class DQNAlgorithm(Algorithm):
                     episode_buffers[idx][-1] = tuple(last_step)  # setting the last step as done
                 completed_episodes.append(episode_buffers[idx])
                 episode_buffers[idx] = []
-                obs, pi_w_hidden = self._reset_environment(train_env, ep_steps)
+                obs, pi_w_hidden = self._reset_environment(train_env)
                 ep_steps = 0
             elif isinstance(done, np.ndarray) and done.any():
                 # only come here for Procgen
@@ -452,11 +462,11 @@ class DQNAlgorithm(Algorithm):
             for i, transition in enumerate(episode):
                 self.rb.add_transition(*transition)
 
-        if len(self.rb) > self.batch_size and completed_episodes:
-            summary = self.update_policy_online(policy, train_env)
+        if len(self.rb) > self.batch_size and completed_episodes and len(self.rb) > self.learning_starts:
+            summary = self.update_policy_online(help_policy.policy, train_env)
             if self.t % self.target_update_frequency == 0:
-                policy.update_target_network()
-            self._update_training_progress(policy)
+                help_policy.update_target_network()
+            self._update_training_progress(help_policy.policy)
         else:
             summary = {}
 
@@ -471,6 +481,9 @@ class DQNAlgorithm(Algorithm):
 
         pi_w_hidden_batch = train_env.get_weak_policy_features(obs_batch, info_batch)
         next_pi_w_hidden_batch = train_env.get_weak_policy_features(next_obs_batch, next_info_batch)
+        if get_global_variable("benchmark") == 'cliport':
+            obs_batch = obs_batch.permute(0, 3, 1, 2)
+            next_obs_batch = next_obs_batch.permute(0, 3, 1, 2)
 
         current_q_dist = policy(obs_batch, pi_w_hidden_batch)
         next_q_dist = policy.target_network(next_obs_batch, next_pi_w_hidden_batch)
@@ -502,7 +515,9 @@ class DQNAlgorithm(Algorithm):
         u = b.ceil().long()
 
         target_dist = torch.zeros_like(next_q_dist)
-        offset = torch.linspace(0, (self.batch_size - 1) * policy.num_atoms, self.batch_size).unsqueeze(1).expand(self.batch_size, policy.num_atoms).long().to(get_global_variable('device'))
+        offset = torch.linspace(0, (self.batch_size - 1) * policy.num_atoms, self.batch_size).unsqueeze(1).expand(self.batch_size,
+                                                                                                                  policy.num_atoms).long().to(
+            get_global_variable('device'))
         target_dist.view(-1).index_add_(0, (l + offset).view(-1), (next_q_dist * (u.float() - b)).view(-1))
         target_dist.view(-1).index_add_(0, (u + offset).view(-1), (next_q_dist * (b - l.float())).view(-1))
 
@@ -523,3 +538,177 @@ class DQNAlgorithm(Algorithm):
         raw_rew_batch, rew_batch, done_batch = self.rb.fetch_log_data()
         self.logger.feed(raw_rew_batch, done_batch)
         self.logger.dump()
+
+
+class OODAlgorithm(Algorithm):
+    def __init__(self, config, logger):
+        super().__init__(config, logger)
+        self.train_rollout_len = config.train_rollout_len
+        self.eval_rollout_len = self.train_rollout_len // 10
+        self.test_size = config.test_size
+        self.seed = config.seed
+
+    def train(self, policy, evaluator, train_env=None, dataset=None):
+        if train_env is None:
+            raise ValueError("offline training should be implemented!")
+
+        train_obs = policy.gather_rollouts(self.train_rollout_len, train_env)
+        classifier = policy.train(train_obs)
+        evaluator.evaluate_detector(policy, classifier, train_env)
+        policy.save_model(self.save_dir, classifier)
+        train_env.close()
+
+    def test(self, ood_detector, test_env, best_model_index, id_evaluated=True):
+        loaded_policy = ood_detector.load_model(self.save_dir)
+        ood_detector.policy = loaded_policy
+        num_envs = test_env.base_env.num_envs
+        reward_batch, done_batch = self._run_test_episodes(ood_detector, test_env)
+
+        episode_stats = self._calculate_episode_stats(reward_batch, done_batch, num_envs)
+        self._print_test_performance(episode_stats)
+
+        test_env.close()
+
+    def _run_test_episodes(self, ood_detector, test_env):
+        num_envs = test_env.base_env.num_envs
+        reward_batch = np.zeros((self.test_steps, num_envs))
+        done_batch = np.zeros((self.test_steps, num_envs), dtype=bool)
+
+        with torch.no_grad():
+            obs, pi_w_hidden = test_env.reset()
+            ep_steps = 0
+
+            for i in range(self.test_steps):
+                if get_global_variable("benchmark") == 'cliport':
+                    obs = cliport_utils.get_image(obs)
+                obs = obs.reshape(num_envs, -1)
+                action = ood_detector.predict(obs, pi_w_hidden)
+                obs, reward, done, info, pi_w_hidden = test_env.step(action)
+                reward_batch[i], done_batch[i] = reward, done
+                ep_steps += 1
+
+                if self._should_reset_environment(done, ep_steps, test_env):
+                    done_batch[i] = True
+                    obs, pi_w_hidden = self._reset_environment(test_env)
+                    ep_steps = 0
+
+        return reward_batch, done_batch
+
+    def train_one_iteration_online(self, policy, train_env):
+        NotImplementedError("Online training is not implemented for OOD")
+
+    def train_one_iteration_offline(self, policy, dataset, weak_policy, strong_policy):
+        NotImplementedError("Offline training is not implemented for OOD")
+
+
+class SVDDAlgorithm(OODAlgorithm):
+    def __init__(self, config, logger, env):
+        super().__init__(config, logger)
+
+
+class KDEAlgorithm(OODAlgorithm):
+    def __init__(self, config, logger, env):
+        super().__init__(config, logger)
+
+
+class NonParametricAlgorithm(Algorithm):
+    def __init__(self, config, logger, env):
+        self.help_percentile = config.help_percentile
+        self.rollout_len = config.rollout_len
+        self.sampled_logit_threshold = None
+        self.save_dir = config.save_dir
+        self.test_steps = config.test_steps
+
+    def train(self, help_policy, evaluator, train_env=None, dataset=None):
+        help_policy.gather_rollouts(self.rollout_len, train_env)
+        help_policy.determine_sampled_logit_threshold()
+        evaluator.evaluate_nonparam(help_policy)
+        help_policy.save_model(self.save_dir)
+        train_env.close()
+
+    def test(self, help_policy, test_env, best_model_index, id_evaluated=True):
+        help_policy = help_policy.load_model(self.save_dir)
+        num_envs = test_env.base_env.num_envs
+        reward_batch, done_batch = self._run_test_episodes(help_policy, test_env)
+
+        episode_stats = self._calculate_episode_stats(reward_batch, done_batch, num_envs)
+        self._print_test_performance(episode_stats)
+
+        test_env.close()
+
+    def _run_test_episodes(self, model, test_env):
+        num_envs = test_env.base_env.num_envs
+        reward_batch = np.zeros((self.test_steps, num_envs))
+        done_batch = np.zeros((self.test_steps, num_envs), dtype=bool)
+
+        with torch.no_grad():
+            obs, pi_w_hidden = test_env.reset()
+            ep_steps = 0
+            for i in range(self.test_steps):
+                sampled_logits, max_logits, sampled_probs, max_probs, entropy = test_env.weak_policy.get_logits_probs(obs)
+                actions = self._get_actions(model, sampled_logits, max_logits, sampled_probs, max_probs, entropy)
+                obs, reward, done, info, pi_w_hidden = test_env.step(actions)
+                reward_batch[i] = reward
+                done_batch[i] = done
+                ep_steps += 1
+                if self._should_reset_environment(done, ep_steps, test_env):
+                    done_batch[i] = True
+                    obs, pi_w_hidden = self._reset_environment(test_env)
+                    ep_steps = 0
+
+        return reward_batch, done_batch
+
+    def _get_actions(self, policy, sampled_logits, max_logits, sampled_probs, max_probs, entropy):
+        policy_type = policy.type
+        threshold = policy.threshold
+        if policy_type == "sampled_logit":
+            return np.where(sampled_logits < threshold, 0, 1)
+        elif policy_type == "max_logit":
+            return np.where(max_logits < threshold, 0, 1)
+        elif policy_type == "sampled_prob":
+            return np.where(sampled_probs < threshold, 0, 1)
+        elif policy_type == "max_prob":
+            return np.where(max_probs < threshold, 0, 1)
+        elif policy_type == "entropy":
+            return np.where(entropy < threshold, 0, 1)
+        else:
+            raise ValueError(f"Unknown policy type: {policy_type}")
+
+
+class RandomAlgorithm(Algorithm):
+    def __init__(self, config, logger, env):
+        self.save_dir = config.save_dir
+        self.test_steps = config.test_steps
+        self.help_percentage = config.help_percentage
+
+    def train(self, policy, evaluator, train_env):
+        print("Random policy does not require training")
+        pass
+
+    def test(self, policy, test_env, best_model_index, id_evaluated=True):
+        num_envs = test_env.base_env.num_envs
+        reward_batch, done_batch = self._run_test_episodes(policy, test_env)
+
+        episode_stats = self._calculate_episode_stats(reward_batch, done_batch, num_envs)
+        self._print_test_performance(episode_stats)
+
+        test_env.close()
+
+    def _run_test_episodes(self, policy, test_env):
+        reward_batch = np.zeros((self.test_steps, test_env.base_env.num_envs))
+        done_batch = np.zeros((self.test_steps, test_env.base_env.num_envs), dtype=bool)
+
+        with torch.no_grad():
+            obs, pi_w_hidden = test_env.reset()
+            ep_steps = 0
+            for i in range(self.test_steps):
+                actions = np.where(np.random.rand(obs.shape[0]) < self.help_percentage, 0, 1)
+                _, reward, done, _, _ = test_env.step(actions)
+                reward_batch[i], done_batch[i] = reward, done
+                ep_steps += 1
+
+                if self._should_reset_environment(done, ep_steps, test_env):
+                    done_batch[i] = True
+                    obs, pi_w_hidden = self._reset_environment(test_env)
+                    ep_steps = 0
+        return reward_batch, done_batch

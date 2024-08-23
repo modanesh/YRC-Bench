@@ -1,7 +1,7 @@
 import contextlib
 import os
 from abc import ABC, abstractmethod
-import torch
+
 import gym
 import numpy as np
 from gym import spaces
@@ -374,5 +374,3 @@ class ScaledFloatFrame(VecEnvWrapper):
     def reset(self):
         obs = self.venv.reset()
         return obs / 255.0
-
-

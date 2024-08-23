@@ -1,25 +1,25 @@
 import inspect
 import os
 import random
-from collections import deque
 
 import numpy as np
 import torch
 import wandb
 from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
+
+from YRC.core.configs import get_global_variable
 from cliport.dataset import RavensDataset, RavensMultiTaskDataset
 from cliport.utils import utils as cliport_utils
 from .logger import Logger
-from YRC.core.configs import get_global_variable
 
 
 def logger_setup(config, is_test=False):
-    save_dir = config.algorithm.PPO.save_dir if config.algorithm.cls == "PPO" else config.algorithm.DQN.save_dir
+    save_dir = getattr(config.algorithm, config.algorithm.cls).save_dir
     run_name = config.algorithm.run_name
     print(f'Logging to {save_dir}')
     vars_config = config.to_dict()
-    if not is_test:
-        wandb.init(config=vars_config, resume="allow", project="YRC", name=run_name, settings=wandb.Settings(code_dir="."))
+    # if not is_test:
+    #     wandb.init(config=vars_config, resume="allow", project="YRC", name=run_name, settings=wandb.Settings(code_dir="."))
     num_envs = int(config.environments.procgen.common.num_envs if config.general.benchmark == 'procgen' else 1)
     writer = Logger(num_envs, save_dir, config.general.benchmark)
     return writer
@@ -175,7 +175,10 @@ class CliportReplayBufferOnPolicy(ReplayBuffer):
         self.done_batch[self.pointer - 1] = 1
 
     def _process_image(self, obs):
-        return cliport_utils.get_image(obs).transpose(2, 0, 1)
+        obs = cliport_utils.get_image(obs)
+        obs = torch.FloatTensor(obs).to(device=get_global_variable("device"))
+        # obs = obs.permute(2, 0, 1)
+        return obs
 
 
 class ProcgenReplayBufferOnPolicy(ReplayBuffer):
@@ -283,7 +286,10 @@ class CliportReplayBufferOffPolicy(ReplayBufferOffPolicy):
         super().add_transition(img_obs, action, reward, img_next_obs, done, info)
 
     def _process_image(self, obs):
-        return cliport_utils.get_image(obs).transpose(2, 0, 1)
+        obs = cliport_utils.get_image(obs)
+        obs = torch.FloatTensor(obs).to(device=get_global_variable("device"))
+        # obs = obs.permute(2, 0, 1)
+        return obs
 
 
 class ProcgenReplayBufferOffPolicy(ReplayBufferOffPolicy):

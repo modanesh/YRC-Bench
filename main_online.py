@@ -1,26 +1,30 @@
-from YRC.core import HelpPolicy
-from YRC.core.utils import logger_setup
-from YRC.core import environment
-from YRC.core import PPOAlgorithm, DQNAlgorithm
 from YRC.core import Evaluator
+from YRC.core import HelpPolicy
+from YRC.core import PPOAlgorithm, DQNAlgorithm, SVDDAlgorithm, KDEAlgorithm, NonParametricAlgorithm, RandomAlgorithm
+from YRC.core import environment
 from YRC.core.configs import config_utils
+from YRC.core.utils import logger_setup
 
 if __name__ == '__main__':
     config = config_utils.parse_args()
     config = config_utils.merge(config, vars(config))
     logger = logger_setup(config)
+    alg_class = config.algorithm.cls
 
-    train_env, eval_env, test_env = environment.make_help_envs(config)
-    help_policy = HelpPolicy.create_policy(config.help_policy, config.algorithm.cls, train_env)
+    train_env, eval_id_env, eval_ood_env, test_env = environment.make_help_envs(config)
+    help_policy = HelpPolicy(config.help_policy, alg_class, train_env)
 
-    algorithm_cls = {"PPO": PPOAlgorithm, "DQN": DQNAlgorithm}.get(config.algorithm.cls)
-    if not algorithm_cls:
-        raise ValueError(f"Unsupported algorithm: {config.algorithm.cls}")
+    algorithms = {"PPO": PPOAlgorithm, "DQN": DQNAlgorithm, "SVDD": SVDDAlgorithm, "KDE": KDEAlgorithm, "NonParam": NonParametricAlgorithm, "Random": RandomAlgorithm}.get(alg_class)
+    if not algorithms:
+        raise ValueError(f"Unsupported algorithm: {alg_class}")
 
-    algorithm = algorithm_cls(getattr(config.algorithm, config.algorithm.cls), logger, train_env)
+    algorithm = algorithms(getattr(config.algorithm, alg_class), logger, train_env)
 
-    evaluator = Evaluator(config.evaluation, logger, eval_env, test_env)
-    algorithm.train(help_policy, evaluator, train_env=train_env)
+    evaluator = Evaluator(config.evaluation, logger, eval_id_env, eval_ood_env)
+    algorithm.train(help_policy, evaluator, train_env)
 
-    test_policy = HelpPolicy.create_policy(config.help_policy, test_env)
-    algorithm.test(test_policy, test_env, evaluator.best_index)
+    test_policy = HelpPolicy(config.help_policy, alg_class, test_env)
+    print("Testing on the best model from the ID eval env")
+    algorithm.test(test_policy, test_env, evaluator.best_id_index, id_evaluated=True)
+    print("Testing on the best model from the OOD eval env")
+    algorithm.test(test_policy, test_env, evaluator.best_ood_index, id_evaluated=False)

@@ -3,14 +3,15 @@ import inspect
 import gym
 import numpy as np
 import torch
-from .models import CategoricalPolicy, PPOFrozen
-from cliport.utils import utils as cliport_utils
-from .utils import load_dataset
-from procgen import ProcgenEnv
-from . import procgen_wrappers
+
+from YRC.algorithms.rl import PPO, PPOFrozen
+from YRC.core.configs import get_global_variable
 from cliport import tasks, agents
 from cliport.environments import environment as cliport_environment
-from YRC.core.configs import get_global_variable
+from cliport.utils import utils as cliport_utils
+from procgen import ProcgenEnv
+from . import procgen_wrappers
+from .utils import load_dataset
 
 
 def make_help_envs(config):
@@ -21,7 +22,7 @@ def make_help_envs(config):
     weak_policy, strong_policy = load_agents(benchmark, config.acting_policy, obs_shape, action_size)
 
     envs = {}
-    env_set = ["val", "test"] if config.general.offline else ["train", "val", "test"]
+    env_set = ["val_id", "val_ood", "test"] if config.general.offline else ["train", "val_id", "val_ood", "test"]
     if config.general.offline:
         envs["train"] = load_dataset(config.offline)
 
@@ -46,7 +47,8 @@ def get_env_specs(benchmark, base_envs):
 def make_raw_envs(benchmark, config):
     envs = {}
     create_envs = {"procgen": create_procgen_env, "cliport": create_cliport_env}
-    for name in ["train", "val", "test"]:
+    for name in ["train", "val_id", "val_ood", "test"]:
+        print(f"Creating {benchmark} environment: {name}")
         env_config = getattr(config, benchmark)
         specific_config = getattr(env_config, name)
         env = create_envs[benchmark](name, env_config.common, specific_config)
@@ -65,7 +67,7 @@ def load_agents(benchmark, config, obs_shape, action_size):
 
 
 def load_policy(config, obs_size, action_size, frozen=False):
-    policy = CategoricalPolicy(config, in_channels=obs_size, action_size=action_size)
+    policy = PPO(config, in_channels=obs_size, action_size=action_size)
     policy.to(get_global_variable("device"))
     policy.eval()
     agent = PPOFrozen(policy, get_global_variable("device"))
@@ -110,15 +112,15 @@ def to_dict(cls):
 
 def create_procgen_env(env_mode, common_config, specific_config):
     env = ProcgenEnv(num_envs=int(common_config.num_envs),
-                     env_name=specific_config.env_name,
+                     env_name=common_config.env_name,
                      num_levels=specific_config.num_levels,
                      start_level=specific_config.start_level,
                      distribution_mode=specific_config.distribution_mode,
                      num_threads=common_config.num_threads,
-                     random_percent=common_config.random_percent,
-                     step_penalty=common_config.step_penalty,
-                     key_penalty=common_config.key_penalty,
-                     rand_region=common_config.rand_region,
+                     random_percent=0,
+                     step_penalty=0,
+                     key_penalty=0,
+                     rand_region=0,
                      rand_seed=specific_config.seed)
     env = procgen_wrappers.VecExtractDictObs(env, "rgb")
     if common_config.normalize_rew:
@@ -152,7 +154,7 @@ class HelpEnvironment(gym.Env):
         self.switching_agent_cost_per_action = (config.reward_max / config.timeout) * self.switching_cost
         self.action = None
         self.prev_action = None
-        self.policy_type = config.policy_type
+        self.feature_type = config.feature_type
         self.device = get_global_variable('device')
         self.benchmark = get_global_variable('benchmark')
 
@@ -162,7 +164,8 @@ class HelpEnvironment(gym.Env):
     def switching_agent(self, rew, done):
         if self.prev_action is not None:
             switching_idx = np.where((self.action != self.prev_action) & (~done))
-            rew[switching_idx] -= self.switching_agent_cost_per_action
+            if switching_idx[0].size > 0:
+                rew[switching_idx] -= self.switching_agent_cost_per_action
         self.prev_action = self.action
         return rew
 
@@ -174,7 +177,7 @@ class HelpEnvironment(gym.Env):
         self.switching_agent_cost_per_action = (reward_max / self.timeout) * self.switching_cost
 
     def get_weak_policy_features(self, obs, info=None):
-        if self.policy_type not in ["T2", "T3"]:
+        if self.feature_type not in ["T2", "T3"]:
             return None
 
         if self.benchmark == "procgen":

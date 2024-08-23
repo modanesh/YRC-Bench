@@ -1,6 +1,7 @@
-import time
 import csv
+import time
 from collections import deque
+
 import numpy as np
 import pandas as pd
 
@@ -13,7 +14,8 @@ class Logger:
         self.benchmark = benchmark
 
         self.train_data = self._initialize_data()
-        self.val_data = self._initialize_data()
+        self.val_id_data = self._initialize_data()
+        self.val_ood_data = self._initialize_data()
 
         time_metrics = ["timesteps", "wall_time", "num_episodes"]
         episode_metrics = [
@@ -38,8 +40,14 @@ class Logger:
         columns = time_metrics + [f"{m}{suffix}" for m in episode_metrics]
         return pd.DataFrame(columns=columns)
 
-    def feed(self, rew_batch, done_batch, is_val=False):
-        data = self.val_data if is_val else self.train_data
+    def feed(self, rew_batch, done_batch, is_val=False, is_id=False):
+        if is_val:
+            if is_id:
+                data = self.val_id_data
+            else:
+                data = self.val_ood_data
+        else:
+            data = self.train_data
         total_reward = self._process_batch(rew_batch, done_batch, data)
         return total_reward
 
@@ -79,8 +87,14 @@ class Logger:
         data["episode_rewards"][env_index] = []
         data["episode_lengths"][env_index] = 0
 
-    def dump(self, is_val=False):
-        data = self.val_data if is_val else self.train_data
+    def dump(self, is_val=False, is_id=False):
+        if is_val:
+            if is_id:
+                data = self.val_id_data
+            else:
+                data = self.val_ood_data
+        else:
+            data = self.train_data
         log_df = self.log_v if is_val else self.log
 
         wall_time = time.time() - self.start_time
@@ -89,7 +103,7 @@ class Logger:
 
         log_df.loc[len(log_df)] = log_entry
         self._write_to_csv(log_entry, is_val)
-        self._print_log(log_df, is_val)
+        self._print_log(log_df, is_val, is_id)
 
     def _write_to_csv(self, log_entry, is_val):
         with open(f"{self.logdir}/log-append.csv", 'a') as f:
@@ -98,8 +112,14 @@ class Logger:
                 writer.writerow(self.log_v.columns if is_val else self.log.columns)
             writer.writerow(log_entry)
 
-    def _print_log(self, log_df, is_val=False):
-        print(":::::::::::::EVALUATION LOG:::::::::::::" if is_val else ":::::::::::::TRAINING LOG:::::::::::::")
+    def _print_log(self, log_df, is_val=False, is_id=False):
+        if not is_val:
+            print(":::::::::::::TRAINING LOG:::::::::::::")
+        else:
+            if is_id:
+                print(":::::::::::::VALIDATION ID LOG:::::::::::::")
+            else:
+                print(":::::::::::::VALIDATION OOD LOG:::::::::::::")
         print(log_df.loc[len(log_df) - 1])
 
     def _get_episode_statistics(self, data, is_val):

@@ -4,9 +4,10 @@ import argparse
 import os
 import random
 import uuid
+from typing import Dict
 
 import yaml
-from typing import Dict
+
 from .global_configs import set_global_variable
 
 
@@ -90,13 +91,14 @@ def merge(config: ConfigDict, args: Dict) -> ConfigDict:
     # benchmark specific setup
     if config.general.benchmark == 'procgen':
         config.acting_policy.weak.file = os.path.join("YRC", "checkpoints", "procgen", config.acting_policy.weak.env_name, config.acting_policy.weak.file)
-        config.acting_policy.strong.file = os.path.join("YRC", "checkpoints", "procgen", config.acting_policy.strong.env_name, config.acting_policy.strong.file)
+        config.acting_policy.strong.file = os.path.join("YRC", "checkpoints", "procgen", config.acting_policy.strong.env_name,
+                                                        config.acting_policy.strong.file)
         # procgen_params = make(file_path="YRC/core/configs/procgen_config.yaml")
 
         for k, v in config.environments.procgen.to_dict().items():
             for kk, vv in v.items():
                 if kk == "start_level":
-                    if k == "val":
+                    if k == "val_id" or k == "val_ood":
                         setattr(getattr(config.environments.procgen, k), 'start_level', random.randint(0, 999))
                     elif k == "test":
                         setattr(getattr(config.environments.procgen, k), 'start_level', random.randint(999, 9999))
@@ -109,8 +111,14 @@ def merge(config: ConfigDict, args: Dict) -> ConfigDict:
         config.environments.cliport.common.assets_root = f'{cliport_root}/cliport/environments/assets'
 
     uuid_stamp = str(uuid.uuid4())[:8]
-    env_name = getattr(config.environments, config.general.benchmark).train.env_name
-    run_name = f"{config.algorithm.cls}-{config.general.benchmark}-help{config.help_env.policy_type}-{env_name}-{uuid_stamp}"
+    if config.general.benchmark == 'cliport':
+        env_name = getattr(config.environments, config.general.benchmark).train.env_name
+    else:
+        env_name = getattr(config.environments, config.general.benchmark).common.env_name
+    if config.algorithm.cls != "NonParam":
+        run_name = f"{config.algorithm.cls}-help-{config.help_env.feature_type}-{env_name}-{uuid_stamp}"
+    else:
+        run_name = f"{config.algorithm.cls}-help-{config.help_policy.NonParam.type}-{env_name}-{uuid_stamp}"
     config.algorithm.run_name = run_name
     logdir = os.path.join('logs', env_name)
     if not (os.path.exists(logdir)):
@@ -123,18 +131,34 @@ def merge(config: ConfigDict, args: Dict) -> ConfigDict:
         config.algorithm.PPO.save_dir = logdir
         config.algorithm.PPO.rollout_length = int(config.algorithm.PPO.rollout_length)
         config.algorithm.PPO.mini_batch_size = int(config.algorithm.PPO.mini_batch_size)
+        config.algorithm.PPO.learning_starts = int(config.algorithm.PPO.learning_starts)
+        config.algorithm.PPO.training_steps = int(config.algorithm.PPO.training_steps)
+        config.algorithm.PPO.test_steps = int(config.algorithm.PPO.test_steps)
     elif config.algorithm.cls == "DQN":
         config.algorithm.DQN.save_dir = logdir
         config.algorithm.DQN.batch_size = int(config.algorithm.DQN.batch_size)
         config.algorithm.DQN.target_update_frequency = int(config.algorithm.DQN.target_update_frequency)
         config.algorithm.DQN.learning_starts = int(config.algorithm.DQN.learning_starts)
-        config.algorithm.DQN.max_steps = int(config.algorithm.DQN.max_steps)
+        config.algorithm.DQN.training_steps = int(config.algorithm.DQN.training_steps)
+        config.algorithm.DQN.test_steps = int(config.algorithm.DQN.test_steps)
+    elif config.algorithm.cls == "SVDD":
+        config.algorithm.SVDD.save_dir = logdir
+        config.algorithm.SVDD.test_steps = int(config.algorithm.SVDD.test_steps)
+        config.algorithm.SVDD.train_rollout_len = int(config.algorithm.SVDD.train_rollout_len)
+    elif config.algorithm.cls == "KDE":
+        config.algorithm.KDE.save_dir = logdir
+        config.algorithm.KDE.test_steps = int(config.algorithm.KDE.test_steps)
+        config.algorithm.KDE.train_rollout_len = int(config.algorithm.KDE.train_rollout_len)
+    elif config.algorithm.cls == "NonParam":
+        config.algorithm.NonParam.save_dir = logdir
+        config.algorithm.NonParam.rollout_len = int(config.algorithm.NonParam.rollout_len)
+
     config.evaluation.validation_steps = int(config.evaluation.validation_steps)
 
     set_global_variable("benchmark", config.general.benchmark)
     set_global_variable("device", config.general.device)
 
-    if config.help_env.policy_type == "T3":
+    if config.help_env.feature_type == "T3":
         config.help_policy.DQN.architecture = None
         config.help_policy.PPO.architecture = None
 
