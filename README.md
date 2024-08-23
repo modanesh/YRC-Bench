@@ -23,6 +23,7 @@ The current setup supports these benchmarks:
   - NonParam - Max Logits
   - NonParam - Sampled Probs
   - NonParam - Max Probs
+  - NonParam - Entropy
   - NonParam - Random
 - Cliport:
   - PPO
