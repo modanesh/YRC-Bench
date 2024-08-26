@@ -12,7 +12,7 @@ from cliport.utils import utils as cliport_utils
 
 class PPO(nn.Module):
     def __init__(self, config, in_channels=None, action_size=2, additional_hidden_dim=0, feature_type="T1"):
-        super().__init__()
+        super(PPO, self).__init__()
         self.architecture = config.architecture
         self.eps_clip = config.eps_clip
         self.type = feature_type
@@ -48,7 +48,7 @@ class PPO(nn.Module):
             print("Log_probs shape:", log_probs.shape)
             print("Log_probs contains NaN:", torch.isnan(log_probs).any())
         p = Categorical(logits=log_probs)
-        v = self.fc_value(hidden).squeeze(-1)
+        v = self.fc_value(hidden).reshape(-1)
         return p, v
 
     def extract_features(self, x):
@@ -140,7 +140,7 @@ class ResidualBlock(nn.Module):
 
 class ImpalaBlock(nn.Module):
     def __init__(self, in_channels, out_channels):
-        super().__init__()
+        super(ImpalaBlock, self).__init__()
         self.conv = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=3, stride=1, padding=1)
         self.res1 = ResidualBlock(out_channels)
         self.res2 = ResidualBlock(out_channels)
@@ -155,7 +155,7 @@ class ImpalaBlock(nn.Module):
 
 class ImpalaModel(nn.Module):
     def __init__(self, in_channels, benchmark, scale=1):
-        super().__init__()
+        super(ImpalaModel, self).__init__()
         self.block1 = ImpalaBlock(in_channels=in_channels, out_channels=16 * scale)
         self.block2 = ImpalaBlock(in_channels=16 * scale, out_channels=32 * scale)
         self.block3 = ImpalaBlock(in_channels=32 * scale, out_channels=32 * scale)
@@ -164,7 +164,7 @@ class ImpalaModel(nn.Module):
         elif benchmark == 'cliport':
             fc_input = 32 * scale * 20 * 40
 
-        self.fc = nn.Linear(fc_input, 256)
+        self.fc = nn.Linear(in_features=fc_input, out_features=256)
         self.output_dim = 256
         self.apply(xavier_uniform_init)
 
@@ -173,7 +173,8 @@ class ImpalaModel(nn.Module):
         x = self.block2(x)
         x = self.block3(x)
         x = nn.ReLU()(x)
-        x = torch.flatten(x, start_dim=1)
+        # x = torch.flatten(x, start_dim=1)
+        x = Flatten()(x)
         x = self.fc(x)
         x = nn.ReLU()(x)
         if torch.isnan(x).any():
@@ -210,6 +211,7 @@ class PPOFrozen:
         entropy = dist.entropy().cpu().numpy()
         return sampled_logits, max_logits, sampled_probs, max_probs, entropy
 
+
 def orthogonal_init(module, gain=nn.init.calculate_gain('relu')):
     if isinstance(module, (nn.Linear, nn.Conv2d)):
         nn.init.orthogonal_(module.weight.data, gain)
@@ -222,6 +224,11 @@ def xavier_uniform_init(module, gain=1.0):
         nn.init.xavier_uniform_(module.weight.data, gain)
         nn.init.constant_(module.bias.data, 0)
     return module
+
+
+class Flatten(nn.Module):
+    def forward(self, x):
+        return torch.flatten(x, start_dim=1)
 
 
 class RainbowDQN(nn.Module):
@@ -313,4 +320,3 @@ class CliportDQN(RainbowDQN):
         obs = torch.Tensor(obs).to(device=get_global_variable("device"))
         obs = obs.permute(2, 0, 1).unsqueeze(0)
         return super().act(obs, pi_w_hidden)
-

@@ -18,8 +18,8 @@ def logger_setup(config, is_test=False):
     run_name = config.algorithm.run_name
     print(f'Logging to {save_dir}')
     vars_config = config.to_dict()
-    # if not is_test:
-    #     wandb.init(config=vars_config, resume="allow", project="YRC", name=run_name, settings=wandb.Settings(code_dir="."))
+    if not is_test:
+        wandb.init(config=vars_config, resume="allow", project="YRC", name=run_name, settings=wandb.Settings(code_dir="."))
     num_envs = int(config.environments.procgen.common.num_envs if config.general.benchmark == 'procgen' else 1)
     writer = Logger(num_envs, save_dir, config.general.benchmark)
     return writer
