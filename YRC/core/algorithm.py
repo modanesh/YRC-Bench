@@ -4,7 +4,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
-
+from tqdm import trange
 from cliport.utils import utils as cliport_utils
 from .configs.global_configs import get_global_variable
 from .utils import ProcgenReplayBufferOnPolicy, CliportReplayBufferOnPolicy, ProcgenReplayBufferOffPolicy, CliportReplayBufferOffPolicy, \
@@ -28,13 +28,11 @@ class Algorithm(ABC):
         self.load_best = config.load_best
         self.load_last = config.load_last
         self.load_custom_index = config.load_custom_index
-        self.learning_starts = config.learning_starts
         self.rb = None
         self.logger = logger
 
     def train(self, policy, evaluator, train_env=None, dataset=None):
-        is_off_policy = isinstance(self.rb, ReplayBufferOffPolicy)
-        for i in range(self.training_steps):
+        for i in trange(self.training_steps):
             if dataset is not None:
                 self.train_one_iteration_offline(policy, dataset)
             elif train_env is not None:
@@ -42,15 +40,14 @@ class Algorithm(ABC):
             else:
                 raise ValueError("Either train_env or dataset should be provided for training")
 
-            if not is_off_policy or (is_off_policy and len(self.rb) > self.learning_starts):
-                if (i + 1) % self.log_freq == 0:
-                    evaluator.evaluate_policy(policy)
-                    if (i + 1) % self.save_freq == 0 or evaluator.model_improved['id']:
-                        evaluator.best_id_index = i
-                        policy.save_model(os.path.join(self.save_dir, f"id_model_{i}.pt"))
-                    if (i + 1) % self.save_freq == 0 or evaluator.model_improved['ood']:
-                        evaluator.best_ood_index = i
-                        policy.save_model(os.path.join(self.save_dir, f"ood_model_{i}.pt"))
+            if (i + 1) % self.log_freq == 0:
+                evaluator.evaluate_policy(policy)
+                if (i + 1) % self.save_freq == 0 or evaluator.model_improved['id']:
+                    evaluator.best_id_index = i
+                    policy.save_model(os.path.join(self.save_dir, f"id_model_{i}.pt"))
+                if (i + 1) % self.save_freq == 0 or evaluator.model_improved['ood']:
+                    evaluator.best_ood_index = i
+                    policy.save_model(os.path.join(self.save_dir, f"ood_model_{i}.pt"))
 
         train_env.close()
 
@@ -192,7 +189,7 @@ class PPOAlgorithm(Algorithm):
 
         summary = self.update_policy_online(help_policy.policy, train_env)
         self._update_training_progress(help_policy.policy)
-
+        self.logger.wandb_log_loss(summary)
         return summary
 
     def train_one_iteration_offline(self, policy, dataset):
@@ -252,7 +249,6 @@ class PPOAlgorithm(Algorithm):
 
                 loss = pi_loss + self.value_coef * value_loss - self.entropy_coef * entropy_loss
                 loss.backward()
-
                 if grad_accumulation_cnt % grad_accumulation_steps == 0:
                     torch.nn.utils.clip_grad_norm_(policy.parameters(), self.grad_clip_norm)
                     policy.optimizer.step()
@@ -398,16 +394,17 @@ class DQNAlgorithm(Algorithm):
         super().__init__(config, logger)
         self.t = 0
         self.batch_size = config.batch_size
-        self.update_frequency = config.update_frequency
+        self.rollout_length = config.rollout_length
+        self.mini_batch_per_epoch = config.mini_batch_per_epoch
         self.target_update_frequency = config.target_update_frequency
         self.gamma = config.gamma
         self.n_step = config.n_step
+        self.epoch = config.epoch
         self.prioritized_replay = config.prioritized_replay
         self.obs_shape = env.observation_space.shape if get_global_variable("benchmark") == 'procgen' else (320, 160, 6)
         self.num_actions = env.action_space.n
         self.num_envs = env.base_env.num_envs
         self.grad_clip_norm = config.grad_clip_norm
-        self.learning_starts = config.learning_starts
 
         ReplayBufferClass = ProcgenReplayBufferOffPolicy if get_global_variable("benchmark") == 'procgen' else CliportReplayBufferOffPolicy
         self.rb = ReplayBufferClass(capacity=config.buffer_size, obs_shape=self.obs_shape, action_size=self.num_actions, num_envs=self.num_envs,
@@ -418,7 +415,7 @@ class DQNAlgorithm(Algorithm):
         ep_steps = 0
         episode_buffers = [[] for _ in range(self.num_envs)]
         completed_episodes = []
-        for _ in range(self.update_frequency):
+        while len(completed_episodes) < self.rollout_length * self.num_envs:
             action, _, q_values = help_policy.predict(obs, pi_w_hidden)
             next_obs, reward, done, info, pi_w_hidden = train_env.step(action)
 
@@ -441,7 +438,8 @@ class DQNAlgorithm(Algorithm):
                     last_step = list(episode_buffers[idx][-1])
                     last_step[4] = True
                     episode_buffers[idx][-1] = tuple(last_step)  # setting the last step as done
-                completed_episodes.append(episode_buffers[idx])
+                for i, transition in enumerate(episode_buffers[idx]):
+                    completed_episodes.append(transition)
                 episode_buffers[idx] = []
                 obs, pi_w_hidden = self._reset_environment(train_env)
                 ep_steps = 0
@@ -449,7 +447,8 @@ class DQNAlgorithm(Algorithm):
                 # only come here for Procgen
                 completed_episodes_idx = done.nonzero()[0]
                 for idx in completed_episodes_idx:
-                    completed_episodes.append(episode_buffers[idx])
+                    for i, transition in enumerate(episode_buffers[idx]):
+                        completed_episodes.append(transition)
                     episode_buffers[idx] = []
                 obs = next_obs
             else:
@@ -457,52 +456,50 @@ class DQNAlgorithm(Algorithm):
                 ep_steps += 1
             self.t += 1
 
-        # Add completed episodes to the replay buffer
-        for episode in completed_episodes:
-            for i, transition in enumerate(episode):
-                self.rb.add_transition(*transition)
+        for transition in completed_episodes:
+            self.rb.add_transition(*transition)
 
-        if len(self.rb) > self.batch_size and completed_episodes and len(self.rb) > self.learning_starts:
-            summary = self.update_policy_online(help_policy.policy, train_env)
-            if self.t % self.target_update_frequency == 0:
-                help_policy.update_target_network()
-            self._update_training_progress(help_policy.policy)
-        else:
-            summary = {}
-
+        summary = self.update_policy_online(help_policy.policy, train_env)
+        if self.t % self.target_update_frequency == 0:
+            help_policy.update_target_network()
+        self._update_training_progress(help_policy.policy)
+        self.logger.wandb_log_loss(summary)
         return summary
 
     def train_one_iteration_offline(self, policy, dataset, weak_policy, strong_policy):
         NotImplementedError("Offline training is not implemented for DQN")
 
     def update_policy_online(self, policy, train_env):
-        obs_batch, act_batch, raw_reward_batch, reward_batch, next_obs_batch, done_batch, info_batch, next_info_batch = self.rb.sample(self.batch_size)
-        next_info_batch_nones = [i for i, v in enumerate(next_info_batch) if v is None]
+        value_loss_list = []
+        batch_size = len(self.rb) // self.mini_batch_per_epoch
+        for _ in range(self.epoch):
+            for batch in range(self.mini_batch_per_epoch):
+                obs_batch, act_batch, raw_reward_batch, reward_batch, next_obs_batch, done_batch, info_batch, next_info_batch = self.rb.sample(batch_size)
+                next_info_batch_nones = [i for i, v in enumerate(next_info_batch) if v is None]
 
-        pi_w_hidden_batch = train_env.get_weak_policy_features(obs_batch, info_batch)
-        next_pi_w_hidden_batch = train_env.get_weak_policy_features(next_obs_batch, next_info_batch)
-        if get_global_variable("benchmark") == 'cliport':
-            obs_batch = obs_batch.permute(0, 3, 1, 2)
-            next_obs_batch = next_obs_batch.permute(0, 3, 1, 2)
+                pi_w_hidden_batch = train_env.get_weak_policy_features(obs_batch, info_batch)
+                next_pi_w_hidden_batch = train_env.get_weak_policy_features(next_obs_batch, next_info_batch)
+                if get_global_variable("benchmark") == 'cliport':
+                    obs_batch = obs_batch.permute(0, 3, 1, 2)
+                    next_obs_batch = next_obs_batch.permute(0, 3, 1, 2)
 
-        current_q_dist = policy(obs_batch, pi_w_hidden_batch)
-        next_q_dist = policy.target_network(next_obs_batch, next_pi_w_hidden_batch)
+                current_q_dist = policy(obs_batch, pi_w_hidden_batch)
+                next_q_dist = policy.target_network(next_obs_batch, next_pi_w_hidden_batch)
 
-        # Select the distributional Q-value for the taken action
-        current_q_action = current_q_dist[range(self.batch_size), act_batch.long()]
+                # Select the distributional Q-value for the taken action
+                current_q_action = current_q_dist[range(batch_size), act_batch.long()]
 
-        # Compute the target distribution
-        next_q_dist_max = next_q_dist[range(self.batch_size), next_q_dist.mean(dim=2).argmax(dim=1)]
-        target_q_dist = self.compute_target_distribution(next_q_dist_max, reward_batch, done_batch, policy, next_info_batch_nones)
+                # Compute the target distribution
+                next_q_dist_max = next_q_dist[range(batch_size), next_q_dist.mean(dim=2).argmax(dim=1)]
+                target_q_dist = self.compute_target_distribution(next_q_dist_max, reward_batch, done_batch, policy, next_info_batch_nones)
 
-        loss = policy.compute_loss(current_q_action, target_q_dist)
-
-        policy.optimizer.zero_grad()
-        loss.backward()
-        torch.nn.utils.clip_grad_norm_(policy.parameters(), self.grad_clip_norm)
-        policy.optimizer.step()
-
-        return {'Loss/q': loss.item()}
+                loss = policy.compute_loss(current_q_action, target_q_dist)
+                policy.optimizer.zero_grad()
+                loss.backward()
+                torch.nn.utils.clip_grad_norm_(policy.parameters(), self.grad_clip_norm)
+                policy.optimizer.step()
+                value_loss_list.append(loss.item())
+        return {'Loss/q': np.mean(value_loss_list)}
 
     def compute_target_distribution(self, next_q_dist, rewards, dones, policy, terminal_indices):
         # Compute the projected distribution
@@ -515,9 +512,7 @@ class DQNAlgorithm(Algorithm):
         u = b.ceil().long()
 
         target_dist = torch.zeros_like(next_q_dist)
-        offset = torch.linspace(0, (self.batch_size - 1) * policy.num_atoms, self.batch_size).unsqueeze(1).expand(self.batch_size,
-                                                                                                                  policy.num_atoms).long().to(
-            get_global_variable('device'))
+        offset = torch.linspace(0, (next_q_dist.shape[0] - 1) * policy.num_atoms, next_q_dist.shape[0]).unsqueeze(1).expand(next_q_dist.shape[0], policy.num_atoms).long().to(get_global_variable('device'))
         target_dist.view(-1).index_add_(0, (l + offset).view(-1), (next_q_dist * (u.float() - b)).view(-1))
         target_dist.view(-1).index_add_(0, (u + offset).view(-1), (next_q_dist * (b - l.float())).view(-1))
 
@@ -543,8 +538,8 @@ class DQNAlgorithm(Algorithm):
 class OODAlgorithm(Algorithm):
     def __init__(self, config, logger):
         super().__init__(config, logger)
-        self.train_rollout_len = config.train_rollout_len
-        self.eval_rollout_len = self.train_rollout_len // 10
+        self.rollout_len = config.rollout_len
+        self.eval_rollout_len = self.rollout_len // 10
         self.test_size = config.test_size
         self.seed = config.seed
 
@@ -552,7 +547,7 @@ class OODAlgorithm(Algorithm):
         if train_env is None:
             raise ValueError("offline training should be implemented!")
 
-        train_obs = policy.gather_rollouts(self.train_rollout_len, train_env)
+        train_obs = policy.gather_rollouts(self.rollout_len, train_env)
         classifier = policy.train(train_obs)
         evaluator.evaluate_detector(policy, classifier, train_env)
         policy.save_model(self.save_dir, classifier)
