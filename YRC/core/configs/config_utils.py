@@ -93,8 +93,6 @@ def merge(config: ConfigDict, args: Dict) -> ConfigDict:
         config.acting_policy.weak.file = os.path.join("YRC", "checkpoints", "procgen", config.acting_policy.weak.env_name, config.acting_policy.weak.file)
         config.acting_policy.strong.file = os.path.join("YRC", "checkpoints", "procgen", config.acting_policy.strong.env_name,
                                                         config.acting_policy.strong.file)
-        # procgen_params = make(file_path="YRC/core/configs/procgen_config.yaml")
-
         for k, v in config.environments.procgen.to_dict().items():
             for kk, vv in v.items():
                 if kk == "start_level":
@@ -157,6 +155,9 @@ def merge(config: ConfigDict, args: Dict) -> ConfigDict:
 
     set_global_variable("benchmark", config.general.benchmark)
     set_global_variable("device", config.general.device)
+
+    config.help_env.reward_max = float(config.help_env.reward_max)
+    config.help_env.timeout = float(config.help_env.timeout)
 
     if config.help_env.feature_type == "T3":
         config.help_policy.DQN.architecture = None
