@@ -121,20 +121,21 @@ algorithm:
     load_best: true
     load_last: false
     load_custom_index: -1
-    training_steps: 25_000_000
-    test_steps: 500_000
+    training_steps: 10_000
+    test_steps: 5_000
     seed: 0
     log_level: 40
     num_checkpoints: 10
-    learning_starts: 1
   DQN:
     batch_size: 32
-    update_frequency: 20
+    rollout_length: 20
+    mini_batch_per_epoch: 8
     target_update_frequency: 1_000
     gamma: 0.99
     n_step: 4
+    epoch: 3
     prioritized_replay: true
-    buffer_size: 1_000
+    buffer_size: 50_000
     grad_clip_norm: 0.5
     load_best: true
     load_last: false
@@ -144,21 +145,20 @@ algorithm:
     v_min: -10
     v_max: 10
     num_atoms: 51
-    learning_starts: 100
-    training_steps: 25_000_000
-    test_steps: 500_000
+    training_steps: 10_000
+    test_steps: 5_000
   SVDD:
     test_size: 0.2
     seed: 0
-    train_rollout_len: 4096
+    rollout_len: 50_000
     test_steps: 5_000
   KDE:
     test_size: 0.2
     seed: 0
-    train_rollout_len: 4096
+    rollout_len: 50_000
     test_steps: 5_000
   NonParam:
-    rollout_len: 4096
+    rollout_len: 50_000
     test_steps: 500
   Random:
     test_steps: 500

@@ -131,24 +131,24 @@ def merge(config: ConfigDict, args: Dict) -> ConfigDict:
         config.algorithm.PPO.save_dir = logdir
         config.algorithm.PPO.rollout_length = int(config.algorithm.PPO.rollout_length)
         config.algorithm.PPO.mini_batch_size = int(config.algorithm.PPO.mini_batch_size)
-        config.algorithm.PPO.learning_starts = int(config.algorithm.PPO.learning_starts)
         config.algorithm.PPO.training_steps = int(config.algorithm.PPO.training_steps)
         config.algorithm.PPO.test_steps = int(config.algorithm.PPO.test_steps)
     elif config.algorithm.cls == "DQN":
         config.algorithm.DQN.save_dir = logdir
         config.algorithm.DQN.batch_size = int(config.algorithm.DQN.batch_size)
+        config.algorithm.DQN.rollout_length = int(config.algorithm.DQN.rollout_length)
         config.algorithm.DQN.target_update_frequency = int(config.algorithm.DQN.target_update_frequency)
-        config.algorithm.DQN.learning_starts = int(config.algorithm.DQN.learning_starts)
         config.algorithm.DQN.training_steps = int(config.algorithm.DQN.training_steps)
         config.algorithm.DQN.test_steps = int(config.algorithm.DQN.test_steps)
+        config.algorithm.DQN.buffer_size = int(config.algorithm.DQN.buffer_size)
     elif config.algorithm.cls == "SVDD":
         config.algorithm.SVDD.save_dir = logdir
         config.algorithm.SVDD.test_steps = int(config.algorithm.SVDD.test_steps)
-        config.algorithm.SVDD.train_rollout_len = int(config.algorithm.SVDD.train_rollout_len)
+        config.algorithm.SVDD.rollout_len = int(config.algorithm.SVDD.rollout_len)
     elif config.algorithm.cls == "KDE":
         config.algorithm.KDE.save_dir = logdir
         config.algorithm.KDE.test_steps = int(config.algorithm.KDE.test_steps)
-        config.algorithm.KDE.train_rollout_len = int(config.algorithm.KDE.train_rollout_len)
+        config.algorithm.KDE.rollout_len = int(config.algorithm.KDE.rollout_len)
     elif config.algorithm.cls == "NonParam":
         config.algorithm.NonParam.save_dir = logdir
         config.algorithm.NonParam.rollout_len = int(config.algorithm.NonParam.rollout_len)
