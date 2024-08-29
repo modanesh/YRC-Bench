@@ -2,16 +2,17 @@ import csv
 import time
 from collections import deque
 
+import wandb
 import numpy as np
 import pandas as pd
 
 
 class Logger:
-    def __init__(self, n_envs, logdir, benchmark):
+    def __init__(self, n_envs, logdir, config):
         self.start_time = time.time()
         self.n_envs = n_envs
         self.logdir = logdir
-        self.benchmark = benchmark
+        self.benchmark = config.general.benchmark
 
         self.train_data = self._initialize_data()
         self.val_id_data = self._initialize_data()
@@ -26,12 +27,17 @@ class Logger:
         self.log = self._create_dataframe(time_metrics, episode_metrics)
         self.log_v = self._create_dataframe(time_metrics, episode_metrics, suffix="_val")
 
+        run_name = config.algorithm.run_name
+        print(f'Logging to {logdir}')
+        vars_config = config.to_dict()
+        wandb.init(config=vars_config, resume="allow", project="YRC", name=run_name, settings=wandb.Settings(code_dir="."))
+
     def _initialize_data(self):
         return {
             "episode_rewards": [[] for _ in range(self.n_envs)],
             "episode_lengths": [0 for _ in range(self.n_envs)],
-            "episode_len_buffer": deque(maxlen=100),
-            "episode_reward_buffer": deque(maxlen=100),
+            "episode_len_buffer": deque(maxlen=100000),
+            "episode_reward_buffer": deque(maxlen=100000),
             "timesteps": 0,
             "num_episodes": 0
         }
@@ -103,7 +109,8 @@ class Logger:
 
         log_df.loc[len(log_df)] = log_entry
         self._write_to_csv(log_entry, is_val)
-        self._print_log(log_df, is_val, is_id)
+        # self._print_log(log_df, is_val, is_id)
+        self._wandb_log(log_entry, is_val, is_id)
 
     def _write_to_csv(self, log_entry, is_val):
         with open(f"{self.logdir}/log-append.csv", 'a') as f:
@@ -121,6 +128,19 @@ class Logger:
             else:
                 print(":::::::::::::VALIDATION OOD LOG:::::::::::::")
         print(log_df.loc[len(log_df) - 1])
+
+    def _wandb_log(self, log_entry, is_val=False, is_id=False):
+        if not is_val:
+            category = "Training"
+        else:
+            if is_id:
+                category = "Val_ID"
+            else:
+                category = "Val_OOD"
+        wandb.log({f"{category}/{k}": v for k, v in zip(self.log.columns, log_entry)})
+
+    def wandb_log_loss(self, log_entry):
+        wandb.log({k: v for k, v in log_entry.items()})
 
     def _get_episode_statistics(self, data, is_val):
         suffix = "_val" if is_val else ""
