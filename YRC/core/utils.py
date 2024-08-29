@@ -4,7 +4,6 @@ import random
 
 import numpy as np
 import torch
-import wandb
 from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
 
 from YRC.core.configs import get_global_variable
@@ -13,15 +12,10 @@ from cliport.utils import utils as cliport_utils
 from .logger import Logger
 
 
-def logger_setup(config, is_test=False):
+def logger_setup(config):
     save_dir = getattr(config.algorithm, config.algorithm.cls).save_dir
-    run_name = config.algorithm.run_name
-    print(f'Logging to {save_dir}')
-    vars_config = config.to_dict()
-    if not is_test:
-        wandb.init(config=vars_config, resume="allow", project="YRC", name=run_name, settings=wandb.Settings(code_dir="."))
     num_envs = int(config.environments.procgen.common.num_envs if config.general.benchmark == 'procgen' else 1)
-    writer = Logger(num_envs, save_dir, config.general.benchmark)
+    writer = Logger(num_envs, save_dir, config)
     return writer
 
 
