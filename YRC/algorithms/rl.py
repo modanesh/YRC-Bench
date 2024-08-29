@@ -270,7 +270,12 @@ class RainbowDQN(nn.Module):
         return F.softmax(q_dist, dim=-1)
 
     def compute_loss(self, current_q, target_q):
-        return -(target_q * current_q.log()).sum(1).mean()
+        # Add a small epsilon to avoid taking log of zero
+        epsilon = 1e-8
+        current_q_clamped = torch.clamp(current_q, epsilon, 1.0)
+        # Compute cross-entropy loss
+        loss = -(target_q * torch.log(current_q_clamped)).sum(1)
+        return loss.mean()
 
     def update_target_network(self):
         for target_param, param in zip(self.target_network.parameters(), self.parameters()):
