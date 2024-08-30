@@ -2,6 +2,7 @@ from PIL import Image, ImageDraw, ImageFont
 import numpy as np
 import pickle
 import os
+import torch
 import argparse
 
 
@@ -28,16 +29,19 @@ def create_frame(image, frame_number, probs, action_taken):
 
 def create_gif(env_data, env_index, save_dir):
     frames = []
-    for step in range(len(env_data["observations"])):
-        obs = env_data["observations"][step].permute(1, 2, 0)
-        obs = (obs * 255).cpu().numpy().astype(np.uint8)
-        image = Image.fromarray(obs)
+    try:
+        for step in range(len(env_data["observations"])):
+            obs = torch.from_numpy(env_data["observations"][step]).permute(1, 2, 0)
+            obs = (obs * 255).cpu().numpy().astype(np.uint8)
+            image = Image.fromarray(obs)
 
-        probs = env_data["probs"][step]
-        action_taken = env_data["actions"][step]
+            probs = env_data["probs"][step]
+            action_taken = env_data["actions"][step]
         
-        image = create_frame(image, step, probs, action_taken)
-        frames.append(image)
+            image = create_frame(image, step, probs, action_taken)
+            frames.append(image)
+    except IndexError:
+        pass
     gif_path = os.path.join(save_dir, f"env_{env_index}_trajectory.gif")
     frames[0].save(gif_path, save_all = True, append_images = frames[1:], duration = 250, loop = 0)
     print(f"GIF {env_index} saved at {gif_path}")
