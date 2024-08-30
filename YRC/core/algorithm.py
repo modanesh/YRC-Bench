@@ -55,14 +55,15 @@ class Algorithm(ABC):
         policy = self.load_fresh_model(policy, best_model_index, id_evaluated)
 
         num_envs = test_env.base_env.num_envs
-        reward_batch, done_batch = self._run_test_episodes(policy, test_env)
+        action_batch, reward_batch, done_batch = self._run_test_episodes(policy, test_env)
 
-        episode_stats = self._calculate_episode_stats(reward_batch, done_batch, num_envs)
+        episode_stats = self._calculate_episode_stats(action_batch, reward_batch, done_batch, num_envs)
         self._print_test_performance(episode_stats)
 
         test_env.close()
 
     def _run_test_episodes(self, policy, test_env):
+        action_batch = np.zeros((self.test_steps, test_env.base_env.num_envs))
         reward_batch = np.zeros((self.test_steps, test_env.base_env.num_envs))
         done_batch = np.zeros((self.test_steps, test_env.base_env.num_envs), dtype=bool)
 
@@ -73,7 +74,7 @@ class Algorithm(ABC):
             for i in range(self.test_steps):
                 action, _, _ = policy.predict(obs, pi_w_hidden)
                 obs, reward, done, info, pi_w_hidden = test_env.step(action)
-                reward_batch[i], done_batch[i] = reward, done
+                action_batch[i], reward_batch[i], done_batch[i] = action, reward, done
                 ep_steps += 1
 
                 if self._should_reset_environment(done, ep_steps, test_env):
@@ -81,7 +82,7 @@ class Algorithm(ABC):
                     obs, pi_w_hidden = self._reset_environment(test_env)
                     ep_steps = 0
 
-        return reward_batch, done_batch
+        return action_batch, reward_batch, done_batch
 
     def _should_reset_environment(self, done, ep_steps, env):
         return (get_global_variable('benchmark') == 'cliport' and (done or ep_steps == env.base_env.task.max_steps))
@@ -90,7 +91,7 @@ class Algorithm(ABC):
         env.base_env.seed(env.base_env._seed + 1)
         return env.reset()
 
-    def _calculate_episode_stats(self, reward_batch, done_batch, num_envs):
+    def _calculate_episode_stats(self, action_batch, reward_batch, done_batch, num_envs):
         episode_ends = np.where(done_batch)[0]
         if len(episode_ends) == 0 or episode_ends[-1] != self.test_steps - 1:
             episode_ends = np.append(episode_ends, self.test_steps - 1)
@@ -110,6 +111,7 @@ class Algorithm(ABC):
         return {
             'total_reward': total_reward,
             'num_episodes': num_episodes,
+            'action_ratio': np.mean(action_batch),
             'mean_episode_reward': np.mean(episode_rewards) if num_episodes > 0 else total_reward,
             'mean_episode_length': np.mean(episode_lengths),
             'max_episode_reward': np.max(episode_rewards) if num_episodes > 0 else total_reward,
