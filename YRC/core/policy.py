@@ -1,3 +1,4 @@
+import importlib
 import numpy as np
 
 from YRC.algorithms.ood import OODKDE, OODDeepSVDD
@@ -5,6 +6,34 @@ from YRC.algorithms.non_parametric import RandomPolicy, NonParamPolicy
 from YRC.algorithms.rl import ProcgenPPO, ProcgenDQN, CliportPPO, CliportDQN
 from cliport.utils import utils as cliport_utils
 from .configs.global_configs import get_global_variable
+
+
+def make(config, coord_env):
+    coord_policy_cls = getattr(
+        importlib.import_module(f"YRC.policies"),
+        config.coord_policy.cls
+    )
+    coord_policy = coord_policy_cls(config, coord_env)
+    return coord_policy
+
+
+class Policy:
+
+    # get output distribution
+    def predict(self, obs):
+        pass
+
+    # sample an action
+    def act(self, obs):
+        pass
+
+    # update model parameters
+    def update_params(self):
+        pass
+
+    # get pre-softmax hidden features
+    def get_hidden_features(self):
+        pass
 
 
 class HelpPolicy:

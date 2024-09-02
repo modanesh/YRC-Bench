@@ -30,7 +30,7 @@ class Logger:
         run_name = config.algorithm.run_name
         print(f'Logging to {logdir}')
         vars_config = config.to_dict()
-        wandb.init(config=vars_config, resume="allow", project="YRC", name=run_name, settings=wandb.Settings(code_dir="."))
+        #wandb.init(config=vars_config, resume="allow", project="YRC", name=run_name, settings=wandb.Settings(code_dir="."))
 
     def _initialize_data(self):
         return {

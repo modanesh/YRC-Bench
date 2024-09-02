@@ -1,3 +1,5 @@
+import logging
+
 import numpy as np
 import torch
 from pyod.utils.data import evaluate_print
@@ -5,6 +7,56 @@ from .configs.global_configs import get_global_variable
 
 
 class Evaluator:
+
+    def __init__(self, config):
+        self.n_rounds = config.eval.n_rounds
+
+    def eval(self, policy, envs, eval_splits):
+        policy.eval()
+
+        result = {}
+        for split in eval_splits:
+
+            assert envs[split].num_envs == 1
+
+            rewards = []
+            for _ in range(self.n_rounds):
+                rewards.extend(self._eval_once(policy, envs[split]))
+            result[split] = {
+                "reward_mean": np.mean(rewards),
+                "reward_std": np.std(rewards)
+            }
+
+            log_str = f"Evaluation on {split}\n"
+            log_str += "   Reward: "
+            log_str += f"mean {result[split]['reward_mean']:.2f}  "
+            log_str += f"std {result[split]['reward_std']:.2f}"
+
+            logging.info(log_str)
+
+            # close env
+            try:
+                envs[split].close()
+            except:
+                pass
+
+        return result
+
+    def _eval_once(self, policy, env):
+        obs = env.reset()
+        has_done = np.array([False] * env.num_envs)
+        tot_rew = np.array([0.] * env.num_envs)
+
+        while not has_done.all():
+            a = policy.act(obs)
+            obs, reward, done, info = env.step(a)
+            tot_rew += reward
+            has_done |= done
+
+        return tot_rew.tolist()
+
+
+class OldEvaluator:
     def __init__(self, config, logger, eval_id_env, eval_ood_env):
         self.validation_steps = config.validation_steps
         self.logger = logger
@@ -12,18 +64,20 @@ class Evaluator:
         self.eval_ood_env = eval_ood_env
         self.best_id_index = -1
         self.best_ood_index = -1
-        self.best_rewards = {'id': float('-inf'), 'ood': float('-inf')}
-        self.model_improved = {'id': False, 'ood': False}
+        self.best_rewards = {"id": float("-inf"), "ood": float("-inf")}
+        self.model_improved = {"id": False, "ood": False}
 
     def evaluate_policy(self, policy):
         rewards = {
-            'id': self._run_validation_episodes(policy, self.eval_id_env),
-            'ood': self._run_validation_episodes(policy, self.eval_ood_env)
+            "id": self._run_validation_episodes(policy, self.eval_id_env),
+            "ood": self._run_validation_episodes(policy, self.eval_ood_env),
         }
 
         for env_type, (reward_batch, done_batch) in rewards.items():
-            val_reward = self.logger.feed(reward_batch, done_batch, is_val=True, is_id=(env_type == 'id'))
-            self.logger.dump(is_val=True, is_id=(env_type == 'id'))
+            val_reward = self.logger.feed(
+                reward_batch, done_batch, is_val=True, is_id=(env_type == "id")
+            )
+            self.logger.dump(is_val=True, is_id=(env_type == "id"))
             self._update_best_reward(env_type, val_reward)
 
         self._close_environments()
@@ -49,11 +103,14 @@ class Evaluator:
         return reward_batch, done_batch
 
     def _should_reset_environment(self, done, ep_steps, eval_env):
-        return (get_global_variable('benchmark') == 'cliport' and
-                (done or ep_steps == eval_env.base_env.task.max_steps))
+        return get_global_variable("benchmark") == "cliport" and (
+            done or ep_steps == eval_env.base_env.task.max_steps
+        )
 
     def _reset_environment(self, eval_env):
-        eval_env.base_env.seed(eval_env.base_env._seed + 1)  # todo: check if the seed actually changes for the eval_env (id and ood)
+        eval_env.base_env.seed(
+            eval_env.base_env._seed + 1
+        )  # todo: check if the seed actually changes for the eval_env (id and ood)
         return eval_env.reset()
 
     def _update_best_reward(self, env_type, val_reward):
@@ -67,13 +124,26 @@ class Evaluator:
     def evaluate_detector(self, policy, classifier, train_env):
         eval_rollout_len = self.validation_steps // 10
         data = {
-            'train': (policy.gather_rollouts(self.validation_steps, train_env), np.zeros(self.validation_steps)),
-            'id': (policy.gather_rollouts(eval_rollout_len, self.eval_id_env), np.ones(eval_rollout_len)),
-            'ood': (policy.gather_rollouts(eval_rollout_len, self.eval_ood_env), np.ones(eval_rollout_len))
+            "train": (
+                policy.gather_rollouts(self.validation_steps, train_env),
+                np.zeros(self.validation_steps),
+            ),
+            "id": (
+                policy.gather_rollouts(eval_rollout_len, self.eval_id_env),
+                np.ones(eval_rollout_len),
+            ),
+            "ood": (
+                policy.gather_rollouts(eval_rollout_len, self.eval_ood_env),
+                np.ones(eval_rollout_len),
+            ),
         }
 
-        x_id, y_id = np.concatenate([data['train'][0], data['id'][0]]), np.concatenate([data['train'][1], data['id'][1]])
-        x_ood, y_ood = np.concatenate([data['train'][0], data['ood'][0]]), np.concatenate([data['train'][1], data['ood'][1]])
+        x_id, y_id = np.concatenate([data["train"][0], data["id"][0]]), np.concatenate(
+            [data["train"][1], data["id"][1]]
+        )
+        x_ood, y_ood = np.concatenate(
+            [data["train"][0], data["ood"][0]]
+        ), np.concatenate([data["train"][1], data["ood"][1]])
 
         for name, (x, y) in zip(["ID", "OOD"], [(x_id, y_id), (x_ood, y_ood)]):
             y_pred, y_scores = self.get_predictions(classifier, x)
@@ -87,13 +157,15 @@ class Evaluator:
 
     def evaluate_nonparam(self, policy):
         rewards = {
-            'id': self._run_validation_episodes_nonparam(policy, self.eval_id_env),
-            'ood': self._run_validation_episodes_nonparam(policy, self.eval_ood_env)
+            "id": self._run_validation_episodes_nonparam(policy, self.eval_id_env),
+            "ood": self._run_validation_episodes_nonparam(policy, self.eval_ood_env),
         }
 
         for env_type, (reward_batch, done_batch) in rewards.items():
-            val_reward = self.logger.feed(reward_batch, done_batch, is_val=True, is_id=(env_type == 'id'))
-            self.logger.dump(is_val=True, is_id=(env_type == 'id'))
+            val_reward = self.logger.feed(
+                reward_batch, done_batch, is_val=True, is_id=(env_type == "id")
+            )
+            self.logger.dump(is_val=True, is_id=(env_type == "id"))
             self._update_best_reward(env_type, val_reward)
 
         self._close_environments()
@@ -107,8 +179,17 @@ class Evaluator:
             obs, pi_w_hidden = eval_env.reset()
             ep_steps = 0
             for i in range(self.validation_steps):
-                sampled_logits, max_logits, sampled_probs, max_probs, entropy = eval_env.weak_policy.get_logits_probs(obs)
-                actions = self._get_actions(policy, sampled_logits, max_logits, sampled_probs, max_probs, entropy)
+                sampled_logits, max_logits, sampled_probs, max_probs, entropy = (
+                    eval_env.weak_policy.get_logits_probs(obs)
+                )
+                actions = self._get_actions(
+                    policy,
+                    sampled_logits,
+                    max_logits,
+                    sampled_probs,
+                    max_probs,
+                    entropy,
+                )
                 obs, reward, done, info, pi_w_hidden = eval_env.step(actions)
                 reward_batch[i], done_batch[i] = reward, done
                 ep_steps += 1
@@ -119,7 +200,9 @@ class Evaluator:
 
         return reward_batch, done_batch
 
-    def _get_actions(self, policy, sampled_logits, max_logits, sampled_probs, max_probs, entropy):
+    def _get_actions(
+        self, policy, sampled_logits, max_logits, sampled_probs, max_probs, entropy
+    ):
         policy_type = policy.policy.type
         threshold = policy.policy.threshold
         if policy_type == "sampled_logit":

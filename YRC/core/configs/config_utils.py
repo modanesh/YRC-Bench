@@ -169,6 +169,8 @@ def merge(config: ConfigDict, args: Dict) -> ConfigDict:
 def parse_args():
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument('--config', type=str, default="YRC/core/configs/config.yaml", help='Path to the config file')
+    parser.add_argument('--general.skyline', type=int, default=0, help='Train skyline')
+
     args, unknown = parser.parse_known_args()
 
     with open(args.config, 'r') as f:

@@ -7,18 +7,78 @@ import torch
 from tqdm import trange
 from cliport.utils import utils as cliport_utils
 from .configs.global_configs import get_global_variable
-from .utils import ProcgenReplayBufferOnPolicy, CliportReplayBufferOnPolicy, ProcgenReplayBufferOffPolicy, CliportReplayBufferOffPolicy, \
-    ReplayBufferOffPolicy
+from .utils import (
+    ProcgenReplayBufferOnPolicy,
+    CliportReplayBufferOnPolicy,
+    ProcgenReplayBufferOffPolicy,
+    CliportReplayBufferOffPolicy,
+    ReplayBufferOffPolicy,
+)
+
+import YRC.algorithms as algorithms
+
+
+def make(config, env):
+    algo_config = getattr(config.algorithm, config.algorithm.name)
+    algo_config.save_dir = config.experiment_dir
+    algorithm = getattr(algorithms, algo_config.cls)(algo_config, env)
+    return algorithm
+
+
+class Algorithm(ABC):
+
+    def train(
+        self,
+        policy,
+        envs,
+        evaluator=None,
+        train_split=None,
+        eval_splits=None,
+        dataset=None,
+    ):
+
+        best_result = {}
+        for split in eval_splits:
+            best_result[split] = {}
+            best_result[split]["reward_mean"] = -1e9
+            best_result[split]["reward_std"] = -1e9
+
+        for i in trange(self.training_steps):
+
+            # evaluate the first model as well
+            if i % self.log_freq == 0:
+
+                """
+                result = evaluator.eval(policy, envs, eval_splits)
+
+                for split in eval_splits:
+                    if result[split]["reward_mean"] > best_result[split]["reward_mean"]:
+                        best_result[split] = result[split]
+                        policy.save_model(f"best_{split}", self.save_dir)
+                """
+
+                policy.save_model("last", self.save_dir)
+
+            self.train_one_iteration(
+                policy, train_env=envs[train_split], dataset=dataset
+            )
+
+        # close env after training
+        if train_split:
+            try:
+                envs[train_split].close()
+            except:
+                pass
 
 
 def adjust_lr(optimizer, init_lr, timesteps, max_timesteps):
     lr = init_lr * (1 - (timesteps / max_timesteps))
     for param_group in optimizer.param_groups:
-        param_group['lr'] = lr
+        param_group["lr"] = lr
     return optimizer
 
 
-class Algorithm(ABC):
+class OldAlgorithm(ABC):
     def __init__(self, config, logger):
         self.training_steps = config.training_steps
         self.test_steps = config.test_steps
@@ -38,14 +98,16 @@ class Algorithm(ABC):
             elif train_env is not None:
                 self.train_one_iteration_online(policy, train_env)
             else:
-                raise ValueError("Either train_env or dataset should be provided for training")
+                raise ValueError(
+                    "Either train_env or dataset should be provided for training"
+                )
 
             if (i + 1) % self.log_freq == 0:
                 evaluator.evaluate_policy(policy)
-                if (i + 1) % self.save_freq == 0 or evaluator.model_improved['id']:
+                if (i + 1) % self.save_freq == 0 or evaluator.model_improved["id"]:
                     evaluator.best_id_index = i
                     policy.save_model(os.path.join(self.save_dir, f"id_model_{i}.pt"))
-                if (i + 1) % self.save_freq == 0 or evaluator.model_improved['ood']:
+                if (i + 1) % self.save_freq == 0 or evaluator.model_improved["ood"]:
                     evaluator.best_ood_index = i
                     policy.save_model(os.path.join(self.save_dir, f"ood_model_{i}.pt"))
 
@@ -55,9 +117,13 @@ class Algorithm(ABC):
         policy = self.load_fresh_model(policy, best_model_index, id_evaluated)
 
         num_envs = test_env.base_env.num_envs
-        action_batch, reward_batch, done_batch = self._run_test_episodes(policy, test_env)
+        action_batch, reward_batch, done_batch = self._run_test_episodes(
+            policy, test_env
+        )
 
-        episode_stats = self._calculate_episode_stats(action_batch, reward_batch, done_batch, num_envs)
+        episode_stats = self._calculate_episode_stats(
+            action_batch, reward_batch, done_batch, num_envs
+        )
         self._print_test_performance(episode_stats)
 
         test_env.close()
@@ -85,13 +151,17 @@ class Algorithm(ABC):
         return action_batch, reward_batch, done_batch
 
     def _should_reset_environment(self, done, ep_steps, env):
-        return (get_global_variable('benchmark') == 'cliport' and (done or ep_steps == env.base_env.task.max_steps))
+        return get_global_variable("benchmark") == "cliport" and (
+            done or ep_steps == env.base_env.task.max_steps
+        )
 
     def _reset_environment(self, env):
         env.base_env.seed(env.base_env._seed + 1)
         return env.reset()
 
-    def _calculate_episode_stats(self, action_batch, reward_batch, done_batch, num_envs):
+    def _calculate_episode_stats(
+        self, action_batch, reward_batch, done_batch, num_envs
+    ):
         episode_ends = np.where(done_batch)[0]
         if len(episode_ends) == 0 or episode_ends[-1] != self.test_steps - 1:
             episode_ends = np.append(episode_ends, self.test_steps - 1)
@@ -99,7 +169,7 @@ class Algorithm(ABC):
         episode_starts = np.concatenate(([0], episode_ends[:-1] + 1))
 
         episode_rewards = [
-            reward_batch[start:end + 1, env_idx].sum()
+            reward_batch[start : end + 1, env_idx].sum()
             for start, end in zip(episode_starts, episode_ends)
             for env_idx in range(num_envs)
         ]
@@ -109,13 +179,19 @@ class Algorithm(ABC):
         num_episodes = len(episode_rewards)
 
         return {
-            'total_reward': total_reward,
-            'num_episodes': num_episodes,
-            'action_ratio': np.mean(action_batch),
-            'mean_episode_reward': np.mean(episode_rewards) if num_episodes > 0 else total_reward,
-            'mean_episode_length': np.mean(episode_lengths),
-            'max_episode_reward': np.max(episode_rewards) if num_episodes > 0 else total_reward,
-            'min_episode_reward': np.min(episode_rewards) if num_episodes > 0 else total_reward
+            "total_reward": total_reward,
+            "num_episodes": num_episodes,
+            "action_ratio": np.mean(action_batch),
+            "mean_episode_reward": (
+                np.mean(episode_rewards) if num_episodes > 0 else total_reward
+            ),
+            "mean_episode_length": np.mean(episode_lengths),
+            "max_episode_reward": (
+                np.max(episode_rewards) if num_episodes > 0 else total_reward
+            ),
+            "min_episode_reward": (
+                np.min(episode_rewards) if num_episodes > 0 else total_reward
+            ),
         }
 
     def _print_test_performance(self, stats):
@@ -126,11 +202,15 @@ class Algorithm(ABC):
     def load_fresh_model(self, policy, best_index, id_evaluated):
         model_name = "id_model" if id_evaluated else "ood_model"
         if self.load_best:
-            model_path = os.path.join(self.save_dir, f'{model_name}_{best_index}.pt')
+            model_path = os.path.join(self.save_dir, f"{model_name}_{best_index}.pt")
         elif self.load_custom_index != -1:
-            model_path = os.path.join(self.save_dir, f'{model_name}_{self.load_custom_index}.pt')
+            model_path = os.path.join(
+                self.save_dir, f"{model_name}_{self.load_custom_index}.pt"
+            )
         elif self.load_last:
-            model_path = str(sorted(Path(self.save_dir).iterdir(), key=os.path.getmtime)[0])
+            model_path = str(
+                sorted(Path(self.save_dir).iterdir(), key=os.path.getmtime)[0]
+            )
         checkpoint = torch.load(model_path)
         policy.load_state_dict(checkpoint["model_state_dict"])
         return policy
@@ -157,15 +237,25 @@ class PPOAlgorithm(Algorithm):
         self.lmbda = config.lmbda
         self.use_gae = config.use_gae
         self.normalize_adv = config.normalize_adv
-        obs_shape = env.observation_space.shape if get_global_variable("benchmark") == 'procgen' else (320, 160, 6)
+        obs_shape = (
+            env.observation_space.shape
+            if get_global_variable("benchmark") == "procgen"
+            else (320, 160, 6)
+        )
         num_envs = env.base_env.num_envs
-        self.rb = (ProcgenReplayBufferOnPolicy if get_global_variable("benchmark") == 'procgen' else CliportReplayBufferOnPolicy)(self.gamma,
-                                                                                                                                  self.lmbda,
-                                                                                                                                  self.use_gae,
-                                                                                                                                  self.normalize_adv,
-                                                                                                                                  obs_shape,
-                                                                                                                                  config.rollout_length,
-                                                                                                                                  num_envs)
+        self.rb = (
+            ProcgenReplayBufferOnPolicy
+            if get_global_variable("benchmark") == "procgen"
+            else CliportReplayBufferOnPolicy
+        )(
+            self.gamma,
+            self.lmbda,
+            self.use_gae,
+            self.normalize_adv,
+            obs_shape,
+            config.rollout_length,
+            num_envs,
+        )
 
     def train_one_iteration_online(self, help_policy, train_env):
         obs, pi_w_hidden = train_env.reset()
@@ -175,7 +265,9 @@ class PPOAlgorithm(Algorithm):
             act, log_prob_act, value = help_policy.predict(obs, pi_w_hidden)
             next_obs, rew, done, info, pi_w_hidden = train_env.step(act)
 
-            self.rb.add_transition(obs, act, log_prob_act, rew, next_obs, done, value, info)
+            self.rb.add_transition(
+                obs, act, log_prob_act, rew, next_obs, done, value, info
+            )
 
             obs = next_obs
             ep_steps += 1
@@ -200,7 +292,7 @@ class PPOAlgorithm(Algorithm):
         for i in range(dataset.n_demos):
             demonstrations, seed = dataset.load(i)
             batch_obs, batch_act, batch_reward, batch_info = zip(*demonstrations)
-            batch_done = [0.] * (len(batch_obs) - 1) + [1.]
+            batch_done = [0.0] * (len(batch_obs) - 1) + [1.0]
             img_batch = []
             for obs in batch_obs:
                 img = dataset.get_image(obs)
@@ -211,7 +303,9 @@ class PPOAlgorithm(Algorithm):
             all_infos.extend(batch_info)
             all_dones.extend(batch_done)
 
-        summary = self.update_policy_offline(policy, all_obs, all_acts, all_rewards, all_dones, all_infos)
+        summary = self.update_policy_offline(
+            policy, all_obs, all_acts, all_rewards, all_dones, all_infos
+        )
         self._update_training_progress(policy)
 
         return summary
@@ -227,7 +321,9 @@ class PPOAlgorithm(Algorithm):
     def _update_training_progress(self, policy):
         self.t += self.rollout_length * self.rb.num_envs
         self.log_training_progress()
-        policy.optimizer = adjust_lr(policy.optimizer, policy.learning_rate, self.t, self.training_steps)
+        policy.optimizer = adjust_lr(
+            policy.optimizer, policy.learning_rate, self.t, self.training_steps
+        )
 
     def update_policy_online(self, policy, train_env):
         pi_loss_list, value_loss_list, entropy_loss_list = [], [], []
@@ -237,22 +333,47 @@ class PPOAlgorithm(Algorithm):
         grad_accumulation_cnt = 1
 
         for _ in range(self.epoch):
-            generator = self.rb.fetch_train_generator(mini_batch_size=self.mini_batch_size)
+            generator = self.rb.fetch_train_generator(
+                mini_batch_size=self.mini_batch_size
+            )
             for sample in generator:
-                obs_batch, act_batch, done_batch, old_log_prob_act_batch, old_value_batch, return_batch, adv_batch, info_batch = sample
-                pi_w_hidden_batch = train_env.get_weak_policy_features(obs_batch, info_batch)
-                if get_global_variable("benchmark") == 'cliport':
+                (
+                    obs_batch,
+                    act_batch,
+                    done_batch,
+                    old_log_prob_act_batch,
+                    old_value_batch,
+                    return_batch,
+                    adv_batch,
+                    info_batch,
+                ) = sample
+                pi_w_hidden_batch = train_env.get_weak_policy_features(
+                    obs_batch, info_batch
+                )
+                if get_global_variable("benchmark") == "cliport":
                     obs_batch = obs_batch.permute(0, 3, 1, 2)
                 dist_batch, value_batch = policy(obs_batch, pi_w_hidden_batch)
 
-                pi_loss, value_loss, entropy_loss = policy.compute_losses(dist_batch, value_batch, act_batch,
-                                                                          old_log_prob_act_batch, old_value_batch,
-                                                                          return_batch, adv_batch)
+                pi_loss, value_loss, entropy_loss = policy.compute_losses(
+                    dist_batch,
+                    value_batch,
+                    act_batch,
+                    old_log_prob_act_batch,
+                    old_value_batch,
+                    return_batch,
+                    adv_batch,
+                )
 
-                loss = pi_loss + self.value_coef * value_loss - self.entropy_coef * entropy_loss
+                loss = (
+                    pi_loss
+                    + self.value_coef * value_loss
+                    - self.entropy_coef * entropy_loss
+                )
                 loss.backward()
                 if grad_accumulation_cnt % grad_accumulation_steps == 0:
-                    torch.nn.utils.clip_grad_norm_(policy.parameters(), self.grad_clip_norm)
+                    torch.nn.utils.clip_grad_norm_(
+                        policy.parameters(), self.grad_clip_norm
+                    )
                     policy.optimizer.step()
                     policy.optimizer.zero_grad()
                 grad_accumulation_cnt += 1
@@ -262,12 +383,21 @@ class PPOAlgorithm(Algorithm):
                 entropy_loss_list.append(entropy_loss.item())
 
         return {
-            'Loss/pi': np.mean(pi_loss_list),
-            'Loss/v': np.mean(value_loss_list),
-            'Loss/entropy': np.mean(entropy_loss_list)
+            "Loss/pi": np.mean(pi_loss_list),
+            "Loss/v": np.mean(value_loss_list),
+            "Loss/entropy": np.mean(entropy_loss_list),
         }
 
-    def update_policy_offline(self, policy, obs_batch, act_batch, reward_batch, done_batch, info_batch, weak_policy):
+    def update_policy_offline(
+        self,
+        policy,
+        obs_batch,
+        act_batch,
+        reward_batch,
+        done_batch,
+        info_batch,
+        weak_policy,
+    ):
         pi_loss_list, value_loss_list, entropy_loss_list = [], [], []
         batch_size = len(obs_batch)
         self.mini_batch_size = min(self.mini_batch_size, batch_size)
@@ -277,20 +407,38 @@ class PPOAlgorithm(Algorithm):
         # Compute features and values
         if policy.type != "T1":
             with torch.no_grad():
-                pi_w_pick_hidden, pi_w_place_hidden = weak_policy.extract_features(obs_batch, info_batch)
-                pi_w_pick_hidden = torch.stack(pi_w_pick_hidden) if isinstance(pi_w_pick_hidden, list) else pi_w_pick_hidden
-                pi_w_place_hidden = torch.stack(pi_w_place_hidden) if isinstance(pi_w_place_hidden, list) else pi_w_place_hidden
+                pi_w_pick_hidden, pi_w_place_hidden = weak_policy.extract_features(
+                    obs_batch, info_batch
+                )
+                pi_w_pick_hidden = (
+                    torch.stack(pi_w_pick_hidden)
+                    if isinstance(pi_w_pick_hidden, list)
+                    else pi_w_pick_hidden
+                )
+                pi_w_place_hidden = (
+                    torch.stack(pi_w_place_hidden)
+                    if isinstance(pi_w_place_hidden, list)
+                    else pi_w_place_hidden
+                )
                 if pi_w_pick_hidden.dim() != 2:
                     pi_w_pick_hidden = pi_w_pick_hidden.unsqueeze(0)
                     pi_w_place_hidden = pi_w_place_hidden.unsqueeze(0)
-                pi_w_hidden_batch = torch.cat([pi_w_pick_hidden, pi_w_place_hidden], dim=-1)
+                pi_w_hidden_batch = torch.cat(
+                    [pi_w_pick_hidden, pi_w_place_hidden], dim=-1
+                )
         else:
             pi_w_hidden_batch = None
 
-        obs_batch = torch.FloatTensor(obs_batch).to(device=get_global_variable("device"))
+        obs_batch = torch.FloatTensor(obs_batch).to(
+            device=get_global_variable("device")
+        )
         obs_batch = obs_batch.permute(0, 3, 1, 2)
-        reward_batch = torch.FloatTensor(reward_batch).to(device=get_global_variable("device"))
-        done_batch = torch.FloatTensor(done_batch).to(device=get_global_variable("device"))
+        reward_batch = torch.FloatTensor(reward_batch).to(
+            device=get_global_variable("device")
+        )
+        done_batch = torch.FloatTensor(done_batch).to(
+            device=get_global_variable("device")
+        )
 
         with torch.no_grad():
             _, value_batch = policy(obs_batch, pi_w_hidden_batch)
@@ -308,11 +456,20 @@ class PPOAlgorithm(Algorithm):
                     running_advantage = 0
                     last_value = 0
 
-                running_return = reward_batch[t] + self.gamma * (1 - done_batch[t]) * running_return
+                running_return = (
+                    reward_batch[t] + self.gamma * (1 - done_batch[t]) * running_return
+                )
                 returns[t] = running_return
 
-                td_error = reward_batch[t] + self.gamma * (1 - done_batch[t]) * last_value - value_batch[t]
-                running_advantage = td_error + self.gamma * self.lmbda * (1 - done_batch[t]) * running_advantage
+                td_error = (
+                    reward_batch[t]
+                    + self.gamma * (1 - done_batch[t]) * last_value
+                    - value_batch[t]
+                )
+                running_advantage = (
+                    td_error
+                    + self.gamma * self.lmbda * (1 - done_batch[t]) * running_advantage
+                )
                 advantages[t] = running_advantage
 
                 last_value = value_batch[t]
@@ -338,7 +495,11 @@ class PPOAlgorithm(Algorithm):
                 mb_returns = returns[start_idx:end_idx]
                 mb_advantages = advantages[start_idx:end_idx]
                 mb_old_value = old_value_batch[start_idx:end_idx]
-                mb_pi_w_hidden = pi_w_hidden_batch[start_idx:end_idx] if pi_w_hidden_batch is not None else None
+                mb_pi_w_hidden = (
+                    pi_w_hidden_batch[start_idx:end_idx]
+                    if pi_w_hidden_batch is not None
+                    else None
+                )
 
                 dist_batch, value_batch = policy(mb_obs, mb_pi_w_hidden)
 
@@ -346,9 +507,15 @@ class PPOAlgorithm(Algorithm):
                 log_probs = self.calculate_action_log_probs(dist_batch, mb_act)
 
                 # Compute policy loss
-                ratio = torch.exp(log_probs - self.calculate_action_log_probs(dist_batch.detach(), mb_act))
+                ratio = torch.exp(
+                    log_probs
+                    - self.calculate_action_log_probs(dist_batch.detach(), mb_act)
+                )
                 surr1 = ratio * mb_advantages
-                surr2 = torch.clamp(ratio, 1.0 - self.eps_clip, 1.0 + self.eps_clip) * mb_advantages
+                surr2 = (
+                    torch.clamp(ratio, 1.0 - self.eps_clip, 1.0 + self.eps_clip)
+                    * mb_advantages
+                )
                 pi_loss = -torch.min(surr1, surr2).mean()
 
                 # Compute value loss
@@ -357,11 +524,17 @@ class PPOAlgorithm(Algorithm):
                 # Compute entropy loss
                 entropy_loss = dist_batch.entropy().mean()
 
-                loss = pi_loss + self.value_coef * value_loss - self.entropy_coef * entropy_loss
+                loss = (
+                    pi_loss
+                    + self.value_coef * value_loss
+                    - self.entropy_coef * entropy_loss
+                )
                 loss.backward()
 
                 if grad_accumulation_cnt % grad_accumulation_steps == 0:
-                    torch.nn.utils.clip_grad_norm_(policy.parameters(), self.grad_clip_norm)
+                    torch.nn.utils.clip_grad_norm_(
+                        policy.parameters(), self.grad_clip_norm
+                    )
                     policy.optimizer.step()
                     policy.optimizer.zero_grad()
                 grad_accumulation_cnt += 1
@@ -371,17 +544,21 @@ class PPOAlgorithm(Algorithm):
                 entropy_loss_list.append(entropy_loss.item())
 
         return {
-            'Loss/pi': np.mean(pi_loss_list),
-            'Loss/v': np.mean(value_loss_list),
-            'Loss/entropy': np.mean(entropy_loss_list)
+            "Loss/pi": np.mean(pi_loss_list),
+            "Loss/v": np.mean(value_loss_list),
+            "Loss/entropy": np.mean(entropy_loss_list),
         }
 
     def calculate_action_log_probs(self, dist_batch, actions):
         log_probs = []
         for dist, action in zip(dist_batch, actions):
-            pose0, pose1 = action['pose0'], action['pose1']
-            pick_log_prob = dist.log_prob(torch.tensor(pose0[0] + pose0[1]).to(dist.loc.device))
-            place_log_prob = dist.log_prob(torch.tensor(pose1[0] + pose1[1]).to(dist.loc.device))
+            pose0, pose1 = action["pose0"], action["pose1"]
+            pick_log_prob = dist.log_prob(
+                torch.tensor(pose0[0] + pose0[1]).to(dist.loc.device)
+            )
+            place_log_prob = dist.log_prob(
+                torch.tensor(pose1[0] + pose1[1]).to(dist.loc.device)
+            )
             log_probs.append(pick_log_prob + place_log_prob)
         return torch.stack(log_probs)
 
@@ -403,14 +580,28 @@ class DQNAlgorithm(Algorithm):
         self.n_step = config.n_step
         self.epoch = config.epoch
         self.prioritized_replay = config.prioritized_replay
-        self.obs_shape = env.observation_space.shape if get_global_variable("benchmark") == 'procgen' else (320, 160, 6)
+        self.obs_shape = (
+            env.observation_space.shape
+            if get_global_variable("benchmark") == "procgen"
+            else (320, 160, 6)
+        )
         self.num_actions = env.action_space.n
         self.num_envs = env.base_env.num_envs
         self.grad_clip_norm = config.grad_clip_norm
 
-        ReplayBufferClass = ProcgenReplayBufferOffPolicy if get_global_variable("benchmark") == 'procgen' else CliportReplayBufferOffPolicy
-        self.rb = ReplayBufferClass(capacity=config.buffer_size, obs_shape=self.obs_shape, action_size=self.num_actions, num_envs=self.num_envs,
-                                    n_step=self.n_step, gamma=self.gamma)
+        ReplayBufferClass = (
+            ProcgenReplayBufferOffPolicy
+            if get_global_variable("benchmark") == "procgen"
+            else CliportReplayBufferOffPolicy
+        )
+        self.rb = ReplayBufferClass(
+            capacity=config.buffer_size,
+            obs_shape=self.obs_shape,
+            action_size=self.num_actions,
+            num_envs=self.num_envs,
+            n_step=self.n_step,
+            gamma=self.gamma,
+        )
 
     def train_one_iteration_online(self, help_policy, train_env):
         obs, pi_w_hidden = train_env.reset()
@@ -422,24 +613,34 @@ class DQNAlgorithm(Algorithm):
             next_obs, reward, done, info, pi_w_hidden = train_env.step(action)
 
             for env_idx in range(self.num_envs):
-                episode_buffers[env_idx].append((
-                    obs[env_idx] if self.num_envs > 1 else obs,
-                    action[env_idx] if self.num_envs > 1 else action,
-                    reward[env_idx] if self.num_envs > 1 else reward,
-                    next_obs[env_idx] if self.num_envs > 1 else next_obs,
-                    done[env_idx] if self.num_envs > 1 else done,
-                    info[env_idx] if self.num_envs > 1 else (info[0] if isinstance(info, list) else info)
-                ))
+                episode_buffers[env_idx].append(
+                    (
+                        obs[env_idx] if self.num_envs > 1 else obs,
+                        action[env_idx] if self.num_envs > 1 else action,
+                        reward[env_idx] if self.num_envs > 1 else reward,
+                        next_obs[env_idx] if self.num_envs > 1 else next_obs,
+                        done[env_idx] if self.num_envs > 1 else done,
+                        (
+                            info[env_idx]
+                            if self.num_envs > 1
+                            else (info[0] if isinstance(info, list) else info)
+                        ),
+                    )
+                )
 
             if self._should_reset_environment(done, ep_steps, train_env):
                 # only come here for Cliport
                 idx = 0
                 if self.num_envs > 1:
-                    raise NotImplementedError("Resetting environment is not implemented for multiple environments for Cliport")
+                    raise NotImplementedError(
+                        "Resetting environment is not implemented for multiple environments for Cliport"
+                    )
                 else:
                     last_step = list(episode_buffers[idx][-1])
                     last_step[4] = True
-                    episode_buffers[idx][-1] = tuple(last_step)  # setting the last step as done
+                    episode_buffers[idx][-1] = tuple(
+                        last_step
+                    )  # setting the last step as done
                 for i, transition in enumerate(episode_buffers[idx]):
                     completed_episodes.append(transition)
                 episode_buffers[idx] = []
@@ -476,24 +677,49 @@ class DQNAlgorithm(Algorithm):
         batch_size = len(self.rb) // self.mini_batch_per_epoch
         for _ in range(self.epoch):
             for batch in range(self.mini_batch_per_epoch):
-                obs_batch, act_batch, raw_reward_batch, reward_batch, next_obs_batch, done_batch, info_batch, next_info_batch = self.rb.sample(batch_size)
-                next_info_batch_nones = [i for i, v in enumerate(next_info_batch) if v is None]
+                (
+                    obs_batch,
+                    act_batch,
+                    raw_reward_batch,
+                    reward_batch,
+                    next_obs_batch,
+                    done_batch,
+                    info_batch,
+                    next_info_batch,
+                ) = self.rb.sample(batch_size)
+                next_info_batch_nones = [
+                    i for i, v in enumerate(next_info_batch) if v is None
+                ]
 
-                pi_w_hidden_batch = train_env.get_weak_policy_features(obs_batch, info_batch)
-                next_pi_w_hidden_batch = train_env.get_weak_policy_features(next_obs_batch, next_info_batch)
-                if get_global_variable("benchmark") == 'cliport':
+                pi_w_hidden_batch = train_env.get_weak_policy_features(
+                    obs_batch, info_batch
+                )
+                next_pi_w_hidden_batch = train_env.get_weak_policy_features(
+                    next_obs_batch, next_info_batch
+                )
+                if get_global_variable("benchmark") == "cliport":
                     obs_batch = obs_batch.permute(0, 3, 1, 2)
                     next_obs_batch = next_obs_batch.permute(0, 3, 1, 2)
 
                 current_q_dist = policy(obs_batch, pi_w_hidden_batch)
-                next_q_dist = policy.target_network(next_obs_batch, next_pi_w_hidden_batch)
+                next_q_dist = policy.target_network(
+                    next_obs_batch, next_pi_w_hidden_batch
+                )
 
                 # Select the distributional Q-value for the taken action
                 current_q_action = current_q_dist[range(batch_size), act_batch.long()]
 
                 # Compute the target distribution
-                next_q_dist_max = next_q_dist[range(batch_size), next_q_dist.mean(dim=2).argmax(dim=1)]
-                target_q_dist = self.compute_target_distribution(next_q_dist_max, reward_batch, done_batch, policy, next_info_batch_nones)
+                next_q_dist_max = next_q_dist[
+                    range(batch_size), next_q_dist.mean(dim=2).argmax(dim=1)
+                ]
+                target_q_dist = self.compute_target_distribution(
+                    next_q_dist_max,
+                    reward_batch,
+                    done_batch,
+                    policy,
+                    next_info_batch_nones,
+                )
 
                 loss = policy.compute_loss(current_q_action, target_q_dist)
                 policy.optimizer.zero_grad()
@@ -501,35 +727,66 @@ class DQNAlgorithm(Algorithm):
                 torch.nn.utils.clip_grad_norm_(policy.parameters(), self.grad_clip_norm)
                 policy.optimizer.step()
                 value_loss_list.append(loss.item())
-        return {'Loss/q': np.mean(value_loss_list)}
+        return {"Loss/q": np.mean(value_loss_list)}
 
-    def compute_target_distribution(self, next_q_dist, rewards, dones, policy, terminal_indices):
+    def compute_target_distribution(
+        self, next_q_dist, rewards, dones, policy, terminal_indices
+    ):
         # Compute the projected distribution
-        target_z = rewards.unsqueeze(-1) + (1 - dones.unsqueeze(-1)) * self.gamma ** self.n_step * policy.support.unsqueeze(0)
+        target_z = rewards.unsqueeze(-1) + (
+            1 - dones.unsqueeze(-1)
+        ) * self.gamma**self.n_step * policy.support.unsqueeze(0)
         target_z = target_z.clamp(policy.v_min, policy.v_max)
 
         # Compute the projected probabilities
-        b = (target_z - policy.v_min) / ((policy.v_max - policy.v_min) / (policy.num_atoms - 1))
+        b = (target_z - policy.v_min) / (
+            (policy.v_max - policy.v_min) / (policy.num_atoms - 1)
+        )
         l = b.floor().long()
         u = b.ceil().long()
 
         target_dist = torch.zeros_like(next_q_dist)
-        offset = torch.linspace(0, (next_q_dist.shape[0] - 1) * policy.num_atoms, next_q_dist.shape[0]).unsqueeze(1).expand(next_q_dist.shape[0], policy.num_atoms).long().to(get_global_variable('device'))
-        target_dist.view(-1).index_add_(0, (l + offset).view(-1), (next_q_dist * (u.float() - b)).view(-1))
-        target_dist.view(-1).index_add_(0, (u + offset).view(-1), (next_q_dist * (b - l.float())).view(-1))
+        offset = (
+            torch.linspace(
+                0, (next_q_dist.shape[0] - 1) * policy.num_atoms, next_q_dist.shape[0]
+            )
+            .unsqueeze(1)
+            .expand(next_q_dist.shape[0], policy.num_atoms)
+            .long()
+            .to(get_global_variable("device"))
+        )
+        target_dist.view(-1).index_add_(
+            0, (l + offset).view(-1), (next_q_dist * (u.float() - b)).view(-1)
+        )
+        target_dist.view(-1).index_add_(
+            0, (u + offset).view(-1), (next_q_dist * (b - l.float())).view(-1)
+        )
 
         # For terminal states, directly assign the reward to the target distribution (used only for Cliport)
-        if terminal_indices and get_global_variable("benchmark") == 'cliport':
-            target_dist[terminal_indices] = rewards[terminal_indices].unsqueeze(-1).expand(-1, policy.num_atoms)
+        if terminal_indices and get_global_variable("benchmark") == "cliport":
+            target_dist[terminal_indices] = (
+                rewards[terminal_indices].unsqueeze(-1).expand(-1, policy.num_atoms)
+            )
 
         return target_dist
 
-    def update_policy_offline(self, policy, obs_batch, act_batch, reward_batch, done_batch, info_batch, weak_policy):
+    def update_policy_offline(
+        self,
+        policy,
+        obs_batch,
+        act_batch,
+        reward_batch,
+        done_batch,
+        info_batch,
+        weak_policy,
+    ):
         NotImplementedError("Offline training is not implemented for DQN")
 
     def _update_training_progress(self, policy):
         self.log_training_progress()
-        policy.optimizer = adjust_lr(policy.optimizer, policy.learning_rate, self.t, self.training_steps)
+        policy.optimizer = adjust_lr(
+            policy.optimizer, policy.learning_rate, self.t, self.training_steps
+        )
 
     def log_training_progress(self):
         raw_rew_batch, rew_batch, done_batch = self.rb.fetch_log_data()
@@ -561,7 +818,9 @@ class OODAlgorithm(Algorithm):
         num_envs = test_env.base_env.num_envs
         reward_batch, done_batch = self._run_test_episodes(ood_detector, test_env)
 
-        episode_stats = self._calculate_episode_stats(reward_batch, done_batch, num_envs)
+        episode_stats = self._calculate_episode_stats(
+            reward_batch, done_batch, num_envs
+        )
         self._print_test_performance(episode_stats)
 
         test_env.close()
@@ -576,7 +835,7 @@ class OODAlgorithm(Algorithm):
             ep_steps = 0
 
             for i in range(self.test_steps):
-                if get_global_variable("benchmark") == 'cliport':
+                if get_global_variable("benchmark") == "cliport":
                     obs = cliport_utils.get_image(obs)
                 obs = obs.reshape(num_envs, -1)
                 action = ood_detector.predict(obs, pi_w_hidden)
@@ -628,7 +887,9 @@ class NonParametricAlgorithm(Algorithm):
         num_envs = test_env.base_env.num_envs
         reward_batch, done_batch = self._run_test_episodes(help_policy, test_env)
 
-        episode_stats = self._calculate_episode_stats(reward_batch, done_batch, num_envs)
+        episode_stats = self._calculate_episode_stats(
+            reward_batch, done_batch, num_envs
+        )
         self._print_test_performance(episode_stats)
 
         test_env.close()
@@ -642,8 +903,12 @@ class NonParametricAlgorithm(Algorithm):
             obs, pi_w_hidden = test_env.reset()
             ep_steps = 0
             for i in range(self.test_steps):
-                sampled_logits, max_logits, sampled_probs, max_probs, entropy = test_env.weak_policy.get_logits_probs(obs)
-                actions = self._get_actions(model, sampled_logits, max_logits, sampled_probs, max_probs, entropy)
+                sampled_logits, max_logits, sampled_probs, max_probs, entropy = (
+                    test_env.weak_policy.get_logits_probs(obs)
+                )
+                actions = self._get_actions(
+                    model, sampled_logits, max_logits, sampled_probs, max_probs, entropy
+                )
                 obs, reward, done, info, pi_w_hidden = test_env.step(actions)
                 reward_batch[i] = reward
                 done_batch[i] = done
@@ -655,7 +920,9 @@ class NonParametricAlgorithm(Algorithm):
 
         return reward_batch, done_batch
 
-    def _get_actions(self, policy, sampled_logits, max_logits, sampled_probs, max_probs, entropy):
+    def _get_actions(
+        self, policy, sampled_logits, max_logits, sampled_probs, max_probs, entropy
+    ):
         policy_type = policy.type
         threshold = policy.threshold
         if policy_type == "sampled_logit":
@@ -686,7 +953,9 @@ class RandomAlgorithm(Algorithm):
         num_envs = test_env.base_env.num_envs
         reward_batch, done_batch = self._run_test_episodes(policy, test_env)
 
-        episode_stats = self._calculate_episode_stats(reward_batch, done_batch, num_envs)
+        episode_stats = self._calculate_episode_stats(
+            reward_batch, done_batch, num_envs
+        )
         self._print_test_performance(episode_stats)
 
         test_env.close()
@@ -699,7 +968,9 @@ class RandomAlgorithm(Algorithm):
             obs, pi_w_hidden = test_env.reset()
             ep_steps = 0
             for i in range(self.test_steps):
-                actions = np.where(np.random.rand(obs.shape[0]) < self.help_percentage, 0, 1)
+                actions = np.where(
+                    np.random.rand(obs.shape[0]) < self.help_percentage, 0, 1
+                )
                 _, reward, done, _, _ = test_env.step(actions)
                 reward_batch[i], done_batch[i] = reward, done
                 ep_steps += 1

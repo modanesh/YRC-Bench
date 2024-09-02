@@ -116,8 +116,8 @@ tensorboard-data-server==0.7.2
 threadpoolctl==3.5.0
 tifffile==2023.7.10
 tokenizers==0.10.3
-torch==2.1.2+cu118
-torchvision==0.16.2+cu118
+torch==2.1.2
+torchvision==0.16.2
 tornado==6.4
 tqdm==4.66.4
 transformers==4.3.2

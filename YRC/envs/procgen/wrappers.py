@@ -374,3 +374,14 @@ class ScaledFloatFrame(VecEnvWrapper):
     def reset(self):
         obs = self.venv.reset()
         return obs / 255.0
+
+
+# this only works with Procgen
+class HardResetWrapper(VecEnvWrapper):
+
+    def step_wait(self):
+        return self.venv.step_wait()
+
+    def reset(self):
+        obs, _, _, _ = self.venv.step(np.array([-1] * self.venv.num_envs))
+        return obs
