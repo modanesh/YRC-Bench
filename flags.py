@@ -6,6 +6,7 @@ def make():
 
     parser.add_argument("--config", type=str, help="path to YAML config file")
     parser.add_argument("--name", type=str, help="name of this run")
+    parser.add_argument("--overwrite", action="store_true", help="overwrite experiment folder (if exists")
 
     # always policy
     parser.add_argument(

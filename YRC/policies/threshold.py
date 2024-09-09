@@ -17,7 +17,7 @@ class ThresholdPolicy(Policy):
     def act(self, obs, greedy=False):
         score = self._compute_score(obs["weak_logit"])
         # NOTE: higher score = more certain
-        action = (score <= self.params["threshold"]).int()
+        action = (score < self.params["threshold"]).int()
         return action.cpu().numpy()
 
     def generate_scores(self, env, num_rollouts):
@@ -78,6 +78,7 @@ class ThresholdPolicy(Policy):
     def save_model(self, name, save_dir):
         save_path = os.path.join(save_dir, f"{name}.ckpt")
         torch.save(self.params, save_path)
+        logging.info(f"Saved model to {save_path}")
 
     def load_model(self, load_path):
         self.params = torch.load(load_path)

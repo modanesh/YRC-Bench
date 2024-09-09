@@ -34,11 +34,13 @@ def load(yaml_file_or_str, flags=None):
     output_dir = os.getenv("SM_OUTPUT_DIR", "experiments")
     config.experiment_dir = "%s/%s" % (output_dir, config.name)
 
-    try:
-        os.makedirs(config.experiment_dir)
-    except:
-        # raise FileExistsError('Experiment directory %s probably exists!' % config.experiment_dir)
-        pass
+    if not config.eval_mode and (config.overwrite is None or not config.overwrite):
+        try:
+            os.makedirs(config.experiment_dir)
+        except:
+            raise FileExistsError(
+                "Experiment directory %s probably exists!" % config.experiment_dir
+            )
 
     seed = config.general.seed
     torch.manual_seed(seed)

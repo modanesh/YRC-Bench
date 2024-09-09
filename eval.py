@@ -17,6 +17,6 @@ if __name__ == "__main__":
         policy.load_model(os.join.path(config.experiment_dir, "best_val_id.ckpt"))
     evaluator = Evaluator(config.evaluation)
 
-    evaluator.eval(policy, envs, ["val_id", "val_ood", "test"])
+    evaluator.eval(policy, envs, ["test"])
 
 

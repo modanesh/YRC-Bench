@@ -19,10 +19,9 @@ def make(config):
     coord_envs = {}
     for name in base_envs:
         # simulated model selection
-        if name in ["train", "val_id"]:
+        if name in ["train", "val_sim"]:
             # use weak agent as strong agent
             # use sim_weak agent as weak agent
-            worse_weak_agent = ExploreWrapper(config, base_envs[name], dc(weak_agent))
             coord_envs[name] = CoordEnv(
                 config.coord_env, base_envs[name], sim_weak_agent, weak_agent
             )
@@ -103,7 +102,7 @@ def make_raw_envs(config):
     create_fn = getattr(module, "create_env")
 
     envs = {}
-    for name in ["train", "val_id", "val_ood", "test"]:
+    for name in ["train", "val_sim", "val_true", "test"]:
         env = create_fn(name, config.environment)
         # some extra information
         env.name = config.environment.common.env_name

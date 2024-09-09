@@ -1,4 +1,4 @@
-import random
+import logging
 import numpy as np
 
 import torch
@@ -74,10 +74,12 @@ class AlwaysPolicy(Policy):
 class RandomPolicy(Policy):
     def __init__(self, config, env):
         self.prob = 0.5
-        self.random = random.Random(config.general.seed)
+        self.device = get_global_variable("device")
 
     def act(self, obs, greedy=False):
-        return [self.random.random() < self.prob for _ in range(len(obs.shape[0]))]
+        action = torch.rand((obs["env_obs"].shape[0],)).to(self.device) < self.prob
+        action = action.int()
+        return action.cpu().numpy()
 
     def update_params(self, prob):
         self.prob = prob
@@ -85,6 +87,7 @@ class RandomPolicy(Policy):
     def save_model(self, name, save_dir):
         save_path = os.path.join(save_dir, f"{name}.ckpt")
         torch.save({"prob": self.prob}, save_path)
+        logging.info(f"Saved model to {save_path}")
 
     def load_model(self, load_path):
         ckpt = torch.load(load_path)

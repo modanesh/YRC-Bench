@@ -1,7 +1,7 @@
-name: 'procgen_always'
+name: 'procgen_random'
 general:
     benchmark: 'procgen'
-    algorithm: 'always'
+    algorithm: 'random'
     device: 0
     skyline: 0
     seed: 10
@@ -21,6 +21,8 @@ coord_policy:
     always:
         cls: AlwaysPolicy
         agent: 'weak'
+    random:
+        cls: RandomPolicy
     threshold:
         cls: ThresholdPolicy
         metric: 'logit'
@@ -55,7 +57,7 @@ algorithm:
     always:
         dummy: null
     random:
-        dummy: null
+        cls: RandomAlgorithm
     threshold:
         cls: ThresholdAlgorithm
         min_pct: 0

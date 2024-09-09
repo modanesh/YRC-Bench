@@ -25,7 +25,7 @@ class ThresholdAlgorithm(Algorithm):
         for split in eval_splits:
             best_summary[split] = {"reward_mean": -1e9}
 
-        best_params = None
+        best_params = {}
         scores = policy.generate_scores(envs["train"], args.num_rollouts)
         cand_thresholds = [
             np.percentile(scores, pct)
@@ -52,13 +52,15 @@ class ThresholdAlgorithm(Algorithm):
                         split_summary[split]["reward_mean"]
                         > best_summary[split]["reward_mean"]
                     ):
-                        best_params = params
+                        best_params[split] = params
                         best_summary[split] = split_summary[split]
                         policy.save_model(f"best_{split}", save_dir)
 
                     # log best result so far
                     logging.info(f"Best {split} so far")
-                    logging.info("Parameters: " + pprint.pformat(best_params, indent=2))
+                    logging.info(
+                        "Parameters: " + pprint.pformat(best_params[split], indent=2)
+                    )
                     evaluator.write_summary(f"best_{split}", best_summary[split])
 
         policy.update_params(best_params)
