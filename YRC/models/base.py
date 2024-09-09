@@ -13,7 +13,7 @@ class BaseCoordModel(nn.Module):
         super().__init__()
 
         self.device = get_global_variable("device")
-        self.embedder = ImpalaModel(coord_env.base_env.obs_size)
+        self.embedder = ImpalaModel(coord_env.base_env.obs_shape)
 
         self.feature_type = config.coord_policy.feature_type
         if self.feature_type == "T1":

@@ -1,27 +1,29 @@
 import inspect
 import importlib
+import logging
 import gym
 import numpy as np
-import torch
+import pprint
+import json
 
-from YRC.algorithms.rl import PPO, PPOFrozen
+from copy import deepcopy as dc
+
+from YRC.core import Evaluator
+from YRC.policies.wrappers import ExploreWrapper
 from YRC.core.configs import get_global_variable
 from cliport import tasks, agents
 from cliport.environments import environment as cliport_environment
-from cliport.utils import utils as cliport_utils
-from procgen import ProcgenEnv
 
 # from . import procgen_wrappers
 
-from .utils import load_dataset
 
 """
 def make_help_envs(config):
     benchmark = get_global_variable("benchmark")
     base_envs = make_raw_envs(benchmark, config.environments)
-    obs_shape, action_size = get_env_specs(benchmark, base_envs)
+    obs_shape, n_actions = get_env_specs(benchmark, base_envs)
 
-    weak_agent, strong_agent = load_agents(benchmark, config.acting_policy, obs_shape, action_size)
+    weak_agent, strong_agent = load_agents(benchmark, config.acting_policy, obs_shape, n_actions)
 
     envs = {}
     env_set = ["val_id", "val_ood", "test"] if config.general.offline else ["train", "val_id", "val_ood", "test"]
@@ -35,24 +37,6 @@ def make_help_envs(config):
             config.help_env.timeout = current_env.task.max_steps
         envs[name] = HelpEnvironment(config.help_env, current_env, weak_agent, strong_agent)
     return tuple(envs.values()) if not config.general.offline else (tuple(envs.values()), weak_agent, strong_agent)
-"""
-
-
-def make(config):
-    base_envs = make_raw_envs(config)
-    weak_agent, strong_agent = load_agents(config, base_envs["train"])
-
-    help_envs = {}
-    for name in ["train", "val_id", "val_ood", "test"]:
-        help_envs[name] = CoordEnv(
-            config.help_env, base_envs[name], weak_agent, strong_agent
-        )
-
-    if config.general.skyline:
-        help_envs["train"] = help_envs["test"]
-
-    return help_envs
-
 
 def get_env_specs(benchmark, base_envs):
     if benchmark == "procgen":
@@ -65,23 +49,117 @@ def get_env_specs(benchmark, base_envs):
     else:
         raise ValueError(f"Unknown benchmark: {benchmark}")
 
+"""
+
+
+def make(config):
+    base_envs = make_raw_envs(config)
+    weak_agent, strong_agent = load_agents(config, base_envs["train"])
+
+    coord_envs = {}
+    for name in base_envs:
+        # simulated model selection
+        if name == "val_id" and config.evaluation.simulation is not None:
+            # use weak agent as strong agent
+            # use worsened version of weak agent as weak agent
+            worse_weak_agent = ExploreWrapper(config, base_envs[name], dc(weak_agent))
+            coord_envs[name] = CoordEnv(
+                config.coord_env,
+                base_envs[name],
+                worse_weak_agent,
+                weak_agent
+            )
+        else:
+            coord_envs[name] = CoordEnv(
+                config.coord_env, base_envs[name], weak_agent, strong_agent
+            )
+
+    # skyline is trained on test environments
+    if config.general.skyline:
+        coord_envs["train"] = dc(coord_envs["test"])
+
+    # set costs for getting help from strong agent
+    test_eval_info = get_test_eval_info(config, coord_envs)
+    for name in coord_envs:
+        coord_envs[name].set_costs(test_eval_info)
+
+    logging.info(
+        f"Strong query cost per action: {coord_envs['train'].strong_query_cost_per_action}"
+    )
+    logging.info(
+        f"Switch agent cost per action: {coord_envs['train'].switch_agent_cost_per_action}"
+    )
+
+    check_coord_envs(coord_envs)
+
+    return coord_envs
+
+
+def check_coord_envs(envs):
+    for name in envs:
+        assert (
+            envs[name].strong_query_cost_per_action
+            == envs["train"].strong_query_cost_per_action
+        )
+        assert (
+            envs[name].switch_agent_cost_per_action
+            == envs["train"].switch_agent_cost_per_action
+        )
+
+
+def get_test_eval_info(config, coord_envs):
+    with open("YRC/core/test_eval_info.json") as f:
+        data = json.load(f)
+
+    backup_data = dc(data)
+
+    benchmark = config.general.benchmark
+    env_name = config.environment.common.env_name
+
+    if env_name not in data[benchmark]:
+        logging.info(f"Missing info about {benchmark}-{env_name}!")
+        logging.info("Calculating missing info (taking a few minutes)...")
+        evaluator = Evaluator(config.evaluation)
+        # eval strong agent on test environment to get statistics
+        summary = evaluator.eval(
+            coord_envs["test"].strong_agent,
+            {"test": coord_envs["test"].base_env},
+            ["test"],
+            num_episodes=coord_envs["test"].num_envs,
+        )["test"]
+        data[benchmark][env_name] = summary
+
+        with open("YRC/core/backup_test_eval_info.json", "w") as f:
+            json.dump(backup_data, f, indent=2)
+        with open("YRC/core/test_eval_info.json", "w") as f:
+            json.dump(data, f, indent=2)
+        logging.info("Saved info!")
+
+    ret = data[benchmark][env_name]
+
+    logging.info(f"{pprint.pformat(ret, indent=2)}")
+    return ret
+
 
 def make_raw_envs(config):
-
-    benchmark = get_global_variable("benchmark")
-    module = importlib.import_module(f"YRC.envs.{benchmark}")
+    module = importlib.import_module(f"YRC.envs.{get_global_variable('benchmark')}")
     create_fn = getattr(module, "create_env")
 
     envs = {}
     for name in ["train", "val_id", "val_ood", "test"]:
-        env_config = getattr(config.environments, benchmark)
-        envs[name] = create_fn(name, env_config)
+        env = create_fn(name, config.environment)
+        # some extra information
+        env.name = config.environment.common.env_name
+        env.obs_shape = env.observation_space.shape
+        env.action_shape = env.action_space.shape
+        env.num_actions = env.action_space.n
+
+        envs[name] = env
 
     return envs
 
 
 def load_agents(config, env):
-
     module = importlib.import_module(f"YRC.envs.{get_global_variable('benchmark')}")
     load_fn = getattr(module, "load_policy")
 
@@ -147,11 +225,12 @@ def create_cliport_env(env_mode, common_config, specific_config):
 
 
 class CoordEnv(gym.Env):
-
     WEAK = 0
     STRONG = 1
 
     def __init__(self, config, base_env, weak_agent, strong_agent):
+        self.args = config
+
         self.base_env = base_env
         self.weak_agent = weak_agent
         self.strong_agent = strong_agent
@@ -161,80 +240,93 @@ class CoordEnv(gym.Env):
             {
                 "env_obs": base_env.observation_space,
                 "weak_features": gym.spaces.Box(
-                    -100, 100, shape=(weak_agent.hidden_size,)
+                    -100, 100, shape=(weak_agent.hidden_dim,)
                 ),
-                "weak_dist": gym.spaces.Box(-100, 100, shape=(base_env.action_size,)),
+                "weak_logit": gym.spaces.Box(-100, 100, shape=(base_env.num_actions,)),
             }
         )
 
-        self.timeout = config.timeout
-        self.strong_query_cost = float(config.strong_query_cost)
-        self.switching_cost = float(config.switching_cost)
-        self.strong_query_cost_per_action = (
-            config.reward_max / config.timeout
-        ) * self.strong_query_cost
-        self.switching_agent_cost_per_action = (
-            config.reward_max / config.timeout
-        ) * self.switching_cost
+    def set_costs(self, test_eval_info):
+        length = test_eval_info["episode_length_mean"]
+        reward = test_eval_info["reward_mean"]
+        reward_per_action = reward / length
 
-        self.prev_action = None
-
-        # self.feature_type = config.feature_type
-        # self.device = get_global_variable("device")
-        # self.benchmark = get_global_variable("benchmark")
+        self.strong_query_cost_per_action = round(
+            reward_per_action * self.args.strong_query_cost_ratio, 2
+        )
+        self.switch_agent_cost_per_action = round(
+            reward_per_action * self.args.switch_agent_cost_ratio, 2
+        )
 
     @property
     def num_envs(self):
         return self.base_env.num_envs
 
     @property
-    def action_size(self):
+    def num_actions(self):
         return self.action_space.n
 
     @property
-    def obs_size(self):
+    def action_shape(self):
+        return self.action_space.shape
+
+    @property
+    def obs_shape(self):
         return {
-            "env_obs": self.base_env.obs_size,
-            "weak_features": (self.weak_agent.hidden_size,),
-            "weak_dist": (self.base_env.action_size,),
+            "env_obs": self.base_env.obs_shape,
+            "weak_features": (self.weak_agent.hidden_dim,),
+            "weak_logit": (self.base_env.num_actions,),
         }
 
     def reset(self):
-        env_obs = self.base_env.reset()
+        self.prev_action = None
+        self.env_obs = self.base_env.reset()
+        self._reset_agents(np.array([True] * self.num_envs))
+        return self._get_obs()
 
-        self.weak_action = self.weak_agent.act(env_obs)
-        self.strong_action = self.strong_agent.act(env_obs)
-
-        return self._get_obs(env_obs)
+    def _reset_agents(self, done):
+        self.weak_agent.reset(done)
+        self.strong_agent.reset(done)
 
     def step(self, action):
+        env_action = self._compute_env_action(action)
+        self.env_obs, env_reward, done, env_info = self.base_env.step(env_action)
+        info = {
+            "env_info": env_info,
+            "env_reward": env_reward,
+            "env_action": env_action,
+        }
+        reward = self._get_reward(env_reward, action, done)
+        self._reset_agents(done)
+        self.prev_action = action
+
+        return self._get_obs(), reward, done, info
+
+    def _compute_env_action(self, action):
+        # NOTE: this method only works with non-recurrent agent models
+        greedy = self.args.act_greedy
         env_action = np.zeros_like(action)
         is_weak = action == self.WEAK
-        if np.any(is_weak):
-            env_action[is_weak] = self.weak_action[is_weak]
-        if np.any(~is_weak):
-            env_action[~is_weak] = self.strong_action[~is_weak]
+        if is_weak.sum() > 0:
+            env_action[is_weak] = self.weak_agent.act(
+                self.env_obs[is_weak], greedy=greedy, mask=is_weak
+            )
+        is_strong = ~is_weak
+        if is_strong.sum() > 0:
+            env_action[is_strong] = self.strong_agent.act(
+                self.env_obs[is_strong], greedy=greedy, mask=is_strong
+            )
+        return env_action
 
-        env_obs, env_reward, done, info = self.base_env.step(env_action)
-        reward = self._get_reward(env_reward, action, done)
-
-        # update these variables
-        self.prev_action = action
-        self.weak_action = self.weak_agent.act(env_obs)
-        self.strong_action = self.strong_agent.act(env_obs)
-
-        return self._get_obs(env_obs), reward, done, info
-
-    def _get_obs(self, env_obs):
+    def _get_obs(self):
         obs = {
-            "env_obs": env_obs,
-            "weak_features": self.weak_agent.get_hidden_features(env_obs).detach(),
-            "weak_dist": self.weak_agent.predict(env_obs).probs.detach(),
+            "env_obs": self.env_obs,
+            "weak_features": self.weak_agent.get_hidden(self.env_obs).detach(),
+            "weak_logit": self.weak_agent.forward(self.env_obs).detach(),
         }
         return obs
 
     def _get_reward(self, env_reward, action, done):
-
         # cost of querying strong agent
         reward = np.where(
             action == self.STRONG,
@@ -244,9 +336,9 @@ class CoordEnv(gym.Env):
 
         # cost of switching
         if self.prev_action is not None:
-            switch_idx = np.where((action != self.prev_action) & (~done))
-            if np.any(switch_idx):
-                reward[switch_idx] -= self.switching_agent_cost_per_action
+            switch_indices = ((action != self.prev_action) & (~done)).nonzero()[0]
+            if switch_indices.size > 1:
+                reward[switch_indices] -= self.switch_agent_cost_per_action
 
         return reward
 

@@ -1,4 +1,5 @@
 import os
+import jsonargparse
 import sys
 import logging
 import time
@@ -24,10 +25,15 @@ def load(yaml_file_or_str, flags=None):
     else:
         config_dict = yaml.safe_load(yaml_file_or_str)
 
-    if flags is not None:
-        update_config(flags, config_dict)
-
     config = ConfigDict(**config_dict)
+    config.algorithm = getattr(config.algorithm, config.general.algorithm)
+    config.environment = getattr(config.environment, config.general.benchmark)
+    config.coord_policy = getattr(config.coord_policy, config.general.algorithm)
+
+    if flags is not None:
+        config_dict = config.as_dict()
+        update_config(flags.as_dict(), config_dict)
+        config = ConfigDict(**config_dict)
 
     config.data_dir = os.getenv('SM_DATA_DIR', config.data_dir)
     output_dir = os.getenv('SM_OUTPUT_DIR', 'experiments')
@@ -42,21 +48,29 @@ def load(yaml_file_or_str, flags=None):
     seed = config.general.seed
     torch.manual_seed(seed)
     np.random.seed(seed)
-    config.random = random.Random(seed)
+    #config.random = random.Random(seed)
 
     config.general.device = torch.device('cuda', config.general.device)
-
     set_global_variable("device", config.general.device)
     set_global_variable("benchmark", config.general.benchmark)
+    set_global_variable("experiment_dir", config.experiment_dir)
+    set_global_variable("seed", config.general.seed)
 
     config.start_time = time.time()
-    log_file = os.path.join(config.experiment_dir, 'run.log')
+    if config.eval_mode:
+        log_file = os.path.join(config.experiment_dir, 'eval.log')
+    else:
+        log_file = os.path.join(config.experiment_dir, 'run.log')
+    if os.path.isfile(log_file):
+        os.remove(log_file)
     _config_logging(log_file)
     logging.info(str(datetime.now()))
+    logging.info("python -u " + " ".join(sys.argv[1:]))
     logging.info('Write log to %s' % log_file)
     logging.info(str(config))
 
     return config
+
 
 def update_config(source, target):
     for k in source.keys():

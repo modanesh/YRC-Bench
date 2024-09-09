@@ -15,14 +15,11 @@ from YRC.core.configs.global_configs import get_global_variable
 
 class BasePolicy(Policy):
 
-    def __init__(self, config, coord_env):
+    def __init__(self, config, env):
         self.model_cls = getattr(models, config.coord_policy.model_cls)
-        self.model = self.model_cls(config, coord_env)
+        self.model = self.model_cls(config, env)
         self.model.to(get_global_variable("device"))
-
-        self.optimizer = optim.Adam(
-            self.model.parameters(), lr=config.coord_policy.lr, eps=1e-5
-        )
+        self.optimizer = optim.Adam(self.model.parameters(), lr=1e-4, eps=1e-5)
 
     def train(self):
         self.model.train()
@@ -35,9 +32,13 @@ class BasePolicy(Policy):
         log_prob = F.log_softmax(logit, dim=-1)
         return Categorical(logits=log_prob)
 
-    def act(self, obs):
-        a = self.predict(obs).probs.argmax(dim=-1)
-        return a.cpu().numpy()
+    def act(self, obs, greedy=False):
+        dist = self.predict(obs)
+        if greedy:
+            action = dist.probs.argmax(dim=-1)
+        else:
+            action = dist.sample()
+        return action.cpu().numpy()
 
     def update_params(self, grad_clip_norm=None):
         if grad_clip_norm is not None:
@@ -55,8 +56,7 @@ class BasePolicy(Policy):
             save_path,
         )
 
-    def load_model(self, name, load_dir):
-        load_path = os.path.join(save_dir, f"{name}.ckpt")
+    def load_model(self, load_path):
         ckpt = torch.load(load_path)
         self.model.load_state_dict(ckpt["model_state_dict"])
         self.optimizer.load_state_dict(ckpt["optimizer_state_dict"])
@@ -65,17 +65,33 @@ class BasePolicy(Policy):
 
 class AlwaysPolicy(Policy):
 
-    WEAK = 0
-    STRONG = 1
+    def __init__(self, config, env):
+        agent = config.coord_policy.agent
+        assert agent in ["weak", "strong"], f"Unrecognized agent: {agent}!"
+        self.choice = env.WEAK if agent == "weak" else env.STRONG
 
-    def __init__(self, config, coord_env):
-        if config.coord_policy.which == "weak":
-            self.choice = self.WEAK
-        elif config.coord_policy.which == "strong":
-            self.choice = self.STRONG
-        else:
-            raise NotImplementedError
-
-    def act(self, obs):
+    def act(self, obs, greedy=False):
         return np.ones((obs["env_obs"].shape[0],), dtype=np.int64) * self.choice
+
+
+class RandomPolicy(Policy):
+
+    def __init__(self, config, env):
+        self.prob = 0.5
+        self.random = random.Random(config.general.seed)
+
+    def act(self, obs, greedy=False):
+        return [self.random.random() < self.prob for _ in range(len(obs.shape[0]))]
+
+    def update_params(self, prob):
+        self.prob = prob
+
+    def save_model(self, name, save_dir):
+        save_path = os.path.join(save_dir, f"{name}.ckpt")
+        torch.save({ "prob": self.prob}, save_path)
+
+    def load_model(self, load_path):
+        ckpt = torch.load(load_path)
+        self.prob = ckpt["prob"]
+
 

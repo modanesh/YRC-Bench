@@ -1,5 +1,7 @@
 import os
-from abc import ABC, abstractmethod
+import logging
+import importlib
+from abc import ABC
 from pathlib import Path
 
 import numpy as np
@@ -12,21 +14,17 @@ from .utils import (
     CliportReplayBufferOnPolicy,
     ProcgenReplayBufferOffPolicy,
     CliportReplayBufferOffPolicy,
-    ReplayBufferOffPolicy,
 )
-
-import YRC.algorithms as algorithms
 
 
 def make(config, env):
-    algo_config = getattr(config.algorithm, config.algorithm.name)
-    algo_config.save_dir = config.experiment_dir
-    algorithm = getattr(algorithms, algo_config.cls)(algo_config, env)
+    algorithm = getattr(
+        importlib.import_module("YRC.algorithms"), config.algorithm.cls
+    )(config.algorithm, env)
     return algorithm
 
 
 class Algorithm(ABC):
-
     def train(
         self,
         policy,
@@ -36,39 +34,44 @@ class Algorithm(ABC):
         eval_splits=None,
         dataset=None,
     ):
+        self.init(policy, envs)
 
-        best_result = {}
+        args = self.args
+
+        best_summary = {}
         for split in eval_splits:
-            best_result[split] = {}
-            best_result[split]["reward_mean"] = -1e9
-            best_result[split]["reward_std"] = -1e9
+            best_summary[split] = {"reward_mean": -1e9}
 
-        for i in trange(self.training_steps):
-
+        for iteration in trange(args.num_iterations):
+            logging.info(f"Iteration {iteration}")
             # evaluate the first model as well
-            if i % self.log_freq == 0:
-
-                """
-                result = evaluator.eval(policy, envs, eval_splits)
+            if iteration % args.log_freq == 0:
+                split_summary = evaluator.eval(policy, envs, eval_splits)
 
                 for split in eval_splits:
-                    if result[split]["reward_mean"] > best_result[split]["reward_mean"]:
-                        best_result[split] = result[split]
+                    if (
+                        split_summary[split]["reward_mean"]
+                        > best_summary[split]["reward_mean"]
+                    ):
+                        best_summary[split] = split_summary[split]
                         policy.save_model(f"best_{split}", self.save_dir)
-                """
+                        policy.save_model(f"best_{iteration}", self.save_dir)
 
-                policy.save_model("last", self.save_dir)
+                policy.save_model("last", args.save_dir)
 
-            self.train_one_iteration(
-                policy, train_env=envs[train_split], dataset=dataset
+                for split in eval_splits:
+                    evaluator.write_summary(f"best_{split}", best_summary[split])
+
+            train_summary = self.train_one_iteration(
+                iteration, policy, train_env=envs[train_split], dataset=dataset
             )
+            self.write_summary(train_summary)
 
         # close env after training
-        if train_split:
-            try:
-                envs[train_split].close()
-            except:
-                pass
+        envs[train_split].close()
+
+    def init(self, policy, envs):
+        pass
 
 
 def adjust_lr(optimizer, init_lr, timesteps, max_timesteps):

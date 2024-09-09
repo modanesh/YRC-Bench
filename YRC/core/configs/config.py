@@ -38,12 +38,21 @@ class ConfigDict:
         except KeyError:
             return None
 
-    def to_dict(self):
+    def __getitem__(self, name):
+        try:
+            return self.__dict__[name]
+        except KeyError:
+            return None
+
+    def __contains__(self, name):
+        return name in self._entries
+
+    def as_dict(self):
         ret = {}
         for k in self._entries:
             v = getattr(self, k)
             if isinstance(v, ConfigDict):
-                rv = v.to_dict()
+                rv = v.as_dict()
             else:
                 rv = v
             ret[k] = rv

@@ -19,12 +19,16 @@ def make(config, coord_env):
 
 class Policy:
 
-    # get output distribution
+    # get logit
+    def forward(self, obs):
+        pass
+
+    # get action distribution
     def predict(self, obs):
         pass
 
-    # sample an action
-    def act(self, obs):
+    # draw an action
+    def act(self, obs, greedy=False):
         pass
 
     # update model parameters
@@ -32,7 +36,23 @@ class Policy:
         pass
 
     # get pre-softmax hidden features
-    def get_hidden_features(self):
+    def get_hidden(self):
+        pass
+
+    def train(self):
+        pass
+
+    def eval(self):
+        pass
+
+    # initialization at the beginning of an episode
+    def reset(self, should_reset):
+        pass
+
+    def save_model(self, name, save_dir):
+        pass
+
+    def load_model(self, load_path):
         pass
 
 

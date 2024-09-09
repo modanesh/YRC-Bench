@@ -1,0 +1,17 @@
+{
+  "procgen": {
+    "coinrun": {
+      "steps": 10622,
+      "episode_length_mean": 82.984375,
+      "episode_length_min": 20,
+      "episode_length_max": 320,
+      "reward_mean": 9.0625,
+      "reward_std": 2.9148059540902547,
+      "env_reward_mean": 0.0,
+      "env_reward_std": 0.0,
+      "action_1_frac": 0.019958576539258144
+    }
+  },
+  "cliport": {},
+  "mp3d": {}
+}

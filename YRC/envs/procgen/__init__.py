@@ -16,11 +16,11 @@ def create_env(name, config):
 
     env = ProcgenEnv(
         env_name=common_config.env_name,
-        num_envs=specific_config.num_envs,
+        num_envs=common_config.num_envs,
+        num_threads=common_config.num_threads,
         num_levels=specific_config.num_levels,
         start_level=specific_config.start_level,
         distribution_mode=specific_config.distribution_mode,
-        num_threads=specific_config.num_threads,
         rand_seed=specific_config.seed,
     )
 
@@ -32,9 +32,6 @@ def create_env(name, config):
         )  # normalizing returns, but not the img frames
     env = wrappers.TransposeFrame(env)
     env = wrappers.ScaledFloatFrame(env)
-
-    env.obs_size = env.observation_space.shape
-    env.action_size = env.action_space.n
 
     return env
 

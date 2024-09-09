@@ -1,0 +1,87 @@
+name: 'procgen_always'
+general:
+    benchmark: 'procgen'
+    algorithm: 'always'
+    device: 0
+    skyline: 0
+    seed: 10
+evaluation:
+    simulation:
+        type: 'temp'
+        dist: 'uniform'
+        min_val: 0
+        max_val: 10
+    validation_episodes: 128
+    test_episodes: 256
+    act_greedy: False
+agents:
+    weak: 'YRC/checkpoints/procgen/coinrun/PPO-procgen-coinrun-easy-200-2fc595d8/model_80019456.pth'
+    strong: 'YRC/checkpoints/procgen/coinrun/PPO-procgen-coinrun-hard-500-bde01d68/model_80019456.pth'
+coord_env:
+    strong_query_cost_ratio: 0.2
+    switch_agent_cost_ratio: 0.1
+    act_greedy: False
+coord_policy:
+    always:
+        cls: AlwaysPolicy
+        agent: 'weak'  # use `--coord_policy.which strong` to evaluate weak agent
+    threshold:
+        cls: ThresholdPolicy
+        metric: 'logit'
+environment:
+    procgen:
+        common:
+            env_name: 'coinrun'
+            normalize_rew: False
+            num_envs: 64
+            num_threads: 8
+        train:
+            distribution_mode: 'easy'
+            seed: 0
+            start_level: 0
+            num_levels: 0
+        val_id:
+            distribution_mode: 'easy'
+            seed: 1000
+            start_level: 0
+            num_levels: 64
+        val_ood:
+            distribution_mode: 'hard'
+            seed: 1000
+            start_level: 0
+            num_levels: 64
+        test:
+            distribution_mode: 'hard'
+            seed: 1000000
+            start_level: 1000000
+            num_levels: 0
+algorithm:
+    always:
+        dummy: null
+    random:
+        test_steps: 500
+        seed: 0
+        help_percentage: 0.5
+    threshold:
+        cls: ThresholdAlgorithm
+        min_pct: 0
+        max_pct: 101
+        pct_step: 10
+        num_rollouts: 64
+    ppo:
+        cls: PPOAlgorithm
+        log_freq: 10
+        num_steps: 128
+        total_timesteps: 100000
+        update_epochs: 3
+        gamma: 0.999
+        gae_lambda: 0.95
+        num_minibatches: 8
+        clip_coef: 0.2
+        norm_adv: True
+        clip_vloss: True
+        vf_coef: 0.5
+        ent_coef: 0.01
+        max_grad_norm: 0.5
+        learning_rate: 0.0005
+

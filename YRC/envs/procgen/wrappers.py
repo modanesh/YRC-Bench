@@ -385,3 +385,4 @@ class HardResetWrapper(VecEnvWrapper):
     def reset(self):
         obs, _, _, _ = self.venv.step(np.array([-1] * self.venv.num_envs))
         return obs
+
