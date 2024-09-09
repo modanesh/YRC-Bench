@@ -6,15 +6,11 @@ general:
     skyline: 0
     seed: 10
 evaluation:
-    simulation:
-        type: 'temp'
-        dist: 'uniform'
-        min_val: 0
-        max_val: 10
     validation_episodes: 128
     test_episodes: 256
     act_greedy: False
 agents:
+    sim_weak: 'YRC/checkpoints/procgen/coinrun/PPO-procgen-coinrun-easy-200-2fc595d8/model_80019456.pth'
     weak: 'YRC/checkpoints/procgen/coinrun/PPO-procgen-coinrun-easy-200-2fc595d8/model_80019456.pth'
     strong: 'YRC/checkpoints/procgen/coinrun/PPO-procgen-coinrun-hard-500-bde01d68/model_80019456.pth'
 coord_env:
@@ -24,7 +20,7 @@ coord_env:
 coord_policy:
     always:
         cls: AlwaysPolicy
-        agent: 'weak'  # use `--coord_policy.which strong` to evaluate weak agent
+        agent: 'weak'
     threshold:
         cls: ThresholdPolicy
         metric: 'logit'
@@ -40,12 +36,12 @@ environment:
             seed: 0
             start_level: 0
             num_levels: 0
-        val_id:
+        val_sim:
             distribution_mode: 'easy'
             seed: 1000
             start_level: 0
             num_levels: 64
-        val_ood:
+        val_true:
             distribution_mode: 'hard'
             seed: 1000
             start_level: 0
@@ -59,9 +55,7 @@ algorithm:
     always:
         dummy: null
     random:
-        test_steps: 500
-        seed: 0
-        help_percentage: 0.5
+        dummy: null
     threshold:
         cls: ThresholdAlgorithm
         min_pct: 0

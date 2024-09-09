@@ -10,7 +10,6 @@ from YRC.core.configs.global_configs import get_global_variable
 
 
 def create_env(name, config):
-
     common_config = config.common
     specific_config = getattr(config, name)
 

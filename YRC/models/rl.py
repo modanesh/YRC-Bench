@@ -6,7 +6,6 @@ from YRC.models.utils import orthogonal_init
 
 
 class PPOModel(nn.Module):
-
     def __init__(self, model):
         super().__init__()
         self.model = model

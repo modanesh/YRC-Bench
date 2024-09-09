@@ -48,7 +48,10 @@ class ThresholdAlgorithm(Algorithm):
                 split_summary = evaluator.eval(policy, envs, eval_splits)
 
                 for split in eval_splits:
-                    if split_summary[split]["reward_mean"] > best_summary[split]["reward_mean"]:
+                    if (
+                        split_summary[split]["reward_mean"]
+                        > best_summary[split]["reward_mean"]
+                    ):
                         best_params = params
                         best_summary[split] = split_summary[split]
                         policy.save_model(f"best_{split}", save_dir)

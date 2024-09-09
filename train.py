@@ -14,7 +14,7 @@ if __name__ == "__main__":
     evaluator = Evaluator(config.evaluation)
 
     if config.general.algorithm == "always":
-        evaluator.eval(policy, envs, ["val_id", "val_ood"])
+        evaluator.eval(policy, envs, ["val_sim", "val_true"])
     else:
         algorithm = algo_factory.make(config, envs["train"])
         algorithm.train(
@@ -22,5 +22,5 @@ if __name__ == "__main__":
             envs,
             evaluator,
             train_split="train",
-            eval_splits=["val_id", "val_ood"],
+            eval_splits=["val_sim", "val_true"],
         )

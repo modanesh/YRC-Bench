@@ -12,7 +12,7 @@ class ThresholdPolicy(Policy):
     def __init__(self, config, env):
         self.args = config.coord_policy
         self.agent = env.weak_agent
-        self.params = {"threshold": 0., "explore_temp": 1., "score_temp": 1.}
+        self.params = {"threshold": 0.0, "explore_temp": 1.0, "score_temp": 1.0}
 
     def act(self, obs, greedy=False):
         score = self._compute_score(obs["weak_logit"])
@@ -22,14 +22,12 @@ class ThresholdPolicy(Policy):
 
     def generate_scores(self, env, num_rollouts):
         assert num_rollouts % env.num_envs == 0
-        args = self.args
         scores = []
         for i in range(num_rollouts // env.num_envs):
             scores.extend(self._rollout_once(env))
         return scores
 
     def _rollout_once(self, env):
-
         def sample_action(logit):
             dist = Categorical(logits=logit / self.params["explore_temp"])
             return dist.sample().cpu().numpy()

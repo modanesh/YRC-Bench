@@ -19,7 +19,6 @@ def xavier_uniform_init(module, gain=1.0):
 
 
 class ImpalaModel(nn.Module):
-
     def __init__(self, input_size, scale=1):
         super(ImpalaModel, self).__init__()
         self.block1 = ImpalaBlock(in_channels=input_size[0], out_channels=16 * scale)
@@ -102,4 +101,3 @@ class ResidualBlock(nn.Module):
 class Flatten(nn.Module):
     def forward(self, x):
         return torch.flatten(x, start_dim=1)
-

@@ -1,14 +1,12 @@
 import torch
 import torch.nn as nn
 
-from cliport.utils import utils as cliport_utils
 
 from YRC.models.utils import orthogonal_init, ImpalaModel
 from YRC.core.configs.global_configs import get_global_variable
 
 
 class BaseCoordModel(nn.Module):
-
     def __init__(self, config, coord_env):
         super().__init__()
 
@@ -19,9 +17,9 @@ class BaseCoordModel(nn.Module):
         if self.feature_type == "T1":
             self.hidden_dim = self.embedder.output_dim
         elif self.feature_type == "T2":
-            self.hidden_dim = weak_agent.hidden_size
+            self.hidden_dim = coord_env.weak_agent.hidden_dim
         elif self.feature_type == "T3":
-            self.hidden_dim = self.embedder.output_dim + coord_env.weak_agent.hidden_size
+            self.hidden_dim = self.embedder.output_dim + coord_env.weak_agent.hidden_dim
         else:
             raise NotImplementedError
 
@@ -30,7 +28,6 @@ class BaseCoordModel(nn.Module):
         )
 
     def forward(self, obs, ret_hidden=False):
-
         env_obs = obs["env_obs"]
         if not torch.is_tensor(env_obs):
             env_obs = torch.FloatTensor(env_obs).to(self.device)
@@ -51,5 +48,3 @@ class BaseCoordModel(nn.Module):
             return logit, hidden
 
         return logit
-
-

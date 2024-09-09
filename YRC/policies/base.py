@@ -1,3 +1,4 @@
+import random
 import numpy as np
 
 import torch
@@ -7,14 +8,12 @@ import torch.optim as optim
 
 import os
 
-import importlib
 from YRC.core.policy import Policy
 import YRC.models as models
 from YRC.core.configs.global_configs import get_global_variable
 
 
 class BasePolicy(Policy):
-
     def __init__(self, config, env):
         self.model_cls = getattr(models, config.coord_policy.model_cls)
         self.model = self.model_cls(config, env)
@@ -62,9 +61,7 @@ class BasePolicy(Policy):
         self.optimizer.load_state_dict(ckpt["optimizer_state_dict"])
 
 
-
 class AlwaysPolicy(Policy):
-
     def __init__(self, config, env):
         agent = config.coord_policy.agent
         assert agent in ["weak", "strong"], f"Unrecognized agent: {agent}!"
@@ -75,7 +72,6 @@ class AlwaysPolicy(Policy):
 
 
 class RandomPolicy(Policy):
-
     def __init__(self, config, env):
         self.prob = 0.5
         self.random = random.Random(config.general.seed)
@@ -88,10 +84,8 @@ class RandomPolicy(Policy):
 
     def save_model(self, name, save_dir):
         save_path = os.path.join(save_dir, f"{name}.ckpt")
-        torch.save({ "prob": self.prob}, save_path)
+        torch.save({"prob": self.prob}, save_path)
 
     def load_model(self, load_path):
         ckpt = torch.load(load_path)
         self.prob = ckpt["prob"]
-
-

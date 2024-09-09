@@ -1,12 +1,8 @@
 import os
-import jsonargparse
 import sys
 import logging
 import time
-import shutil
-import random
 import yaml
-import errno
 from datetime import datetime
 
 import torch
@@ -18,8 +14,7 @@ from YRC.core.configs.global_configs import set_global_variable
 
 
 def load(yaml_file_or_str, flags=None):
-
-    if yaml_file_or_str.endswith('.yaml'):
+    if yaml_file_or_str.endswith(".yaml"):
         with open(yaml_file_or_str) as f:
             config_dict = yaml.safe_load(f)
     else:
@@ -35,22 +30,22 @@ def load(yaml_file_or_str, flags=None):
         update_config(flags.as_dict(), config_dict)
         config = ConfigDict(**config_dict)
 
-    config.data_dir = os.getenv('SM_DATA_DIR', config.data_dir)
-    output_dir = os.getenv('SM_OUTPUT_DIR', 'experiments')
+    config.data_dir = os.getenv("SM_DATA_DIR", config.data_dir)
+    output_dir = os.getenv("SM_OUTPUT_DIR", "experiments")
     config.experiment_dir = "%s/%s" % (output_dir, config.name)
 
     try:
         os.makedirs(config.experiment_dir)
     except:
-        #raise FileExistsError('Experiment directory %s probably exists!' % config.experiment_dir)
+        # raise FileExistsError('Experiment directory %s probably exists!' % config.experiment_dir)
         pass
 
     seed = config.general.seed
     torch.manual_seed(seed)
     np.random.seed(seed)
-    #config.random = random.Random(seed)
+    # config.random = random.Random(seed)
 
-    config.general.device = torch.device('cuda', config.general.device)
+    config.general.device = torch.device("cuda", config.general.device)
     set_global_variable("device", config.general.device)
     set_global_variable("benchmark", config.general.benchmark)
     set_global_variable("experiment_dir", config.experiment_dir)
@@ -58,15 +53,15 @@ def load(yaml_file_or_str, flags=None):
 
     config.start_time = time.time()
     if config.eval_mode:
-        log_file = os.path.join(config.experiment_dir, 'eval.log')
+        log_file = os.path.join(config.experiment_dir, "eval.log")
     else:
-        log_file = os.path.join(config.experiment_dir, 'run.log')
+        log_file = os.path.join(config.experiment_dir, "run.log")
     if os.path.isfile(log_file):
         os.remove(log_file)
     _config_logging(log_file)
     logging.info(str(datetime.now()))
     logging.info("python -u " + " ".join(sys.argv[1:]))
-    logging.info('Write log to %s' % log_file)
+    logging.info("Write log to %s" % log_file)
     logging.info(str(config))
 
     return config
@@ -81,17 +76,17 @@ def update_config(source, target):
         elif source[k] is not None:
             target[k] = source[k]
 
-def _config_logging(log_file):
 
+def _config_logging(log_file):
     stream_handler = logging.StreamHandler()
     stream_handler.setFormatter(ElapsedFormatter())
 
     file_handler = logging.FileHandler(log_file)
     file_handler.setFormatter(ElapsedFormatter())
 
-    logging.basicConfig(level=logging.INFO,
-                        handlers=[stream_handler, file_handler],
-                        force=True)
+    logging.basicConfig(
+        level=logging.INFO, handlers=[stream_handler, file_handler], force=True
+    )
 
     def handler(type, value, tb):
         logging.exception("Uncaught exception: %s", str(value))
@@ -100,8 +95,7 @@ def _config_logging(log_file):
     sys.excepthook = handler
 
 
-class ElapsedFormatter():
-
+class ElapsedFormatter:
     def __init__(self):
         self.start_time = datetime.now()
 
@@ -110,7 +104,5 @@ class ElapsedFormatter():
 
     def format(self, record):
         elapsed_time = self.format_time(datetime.now() - self.start_time)
-        log_str = "[%s %s]: %s" % (elapsed_time,
-                                record.levelname,
-                                record.getMessage())
+        log_str = "[%s %s]: %s" % (elapsed_time, record.levelname, record.getMessage())
         return log_str

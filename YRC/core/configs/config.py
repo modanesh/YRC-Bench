@@ -1,6 +1,4 @@
-
 class ConfigDict:
-
     def __init__(self, **entries):
         self._entries = []
         rec_entries = {}
