@@ -29,8 +29,8 @@ environment:
             num_levels: 100000
         val_sim:
             distribution_mode: 'easy'
-            seed: 1000
-            start_level: 0
+            seed: 0
+            start_level: 100000
             num_levels: 64
         val_true:
             distribution_mode: 'hard'
