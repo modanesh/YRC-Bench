@@ -34,13 +34,13 @@ environment:
             num_levels: 64
         val_true:
             distribution_mode: 'hard'
-            seed: 1000
-            start_level: 0
+            seed: 0
+            start_level: 50000
             num_levels: 64
         test:
             distribution_mode: 'hard'
-            seed: 1000000
-            start_level: 1000000
+            seed: 0
+            start_level: 0
             num_levels: 100000
 algorithm:
     always:
