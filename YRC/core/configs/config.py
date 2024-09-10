@@ -36,6 +36,13 @@ class ConfigDict:
         except KeyError:
             return None
 
+    def __setattr__(self, name, value):
+        if isinstance(value, ConfigDict):
+            self._entries.append(name)
+            self.__dict__[name] = value
+        else:
+            super().__setattr__(name, value)
+
     def __getitem__(self, name):
         try:
             return self.__dict__[name]

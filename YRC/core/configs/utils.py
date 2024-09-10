@@ -20,10 +20,18 @@ def load(yaml_file_or_str, flags=None):
     else:
         config_dict = yaml.safe_load(yaml_file_or_str)
 
+    with open("configs/common.yaml") as f:
+        common_config = yaml.safe_load(f)
+        common_config = ConfigDict(**common_config)
+
     config = ConfigDict(**config_dict)
-    config.algorithm = getattr(config.algorithm, config.general.algorithm)
-    config.environment = getattr(config.environment, config.general.benchmark)
-    config.coord_policy = getattr(config.coord_policy, config.general.algorithm)
+    algorithm = config.general.algorithm
+    benchmark = config.general.benchmark
+    config.coord_policy = getattr(common_config.coord_policy, algorithm)
+    config.coord_env = getattr(common_config.coord_env, benchmark)
+    config.evaluation = getattr(common_config.evaluation, benchmark)
+    config.algorithm = getattr(common_config.algorithm, algorithm)
+    config.environment = getattr(common_config.environment, benchmark)
 
     if flags is not None:
         config_dict = config.as_dict()
