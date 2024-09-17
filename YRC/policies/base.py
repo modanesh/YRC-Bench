@@ -68,6 +68,8 @@ class AlwaysPolicy(Policy):
         self.choice = env.WEAK if agent == "weak" else env.STRONG
 
     def act(self, obs, greedy=False):
+        if type(obs["env_obs"]) is dict:
+            return np.ones((1,), dtype=np.int64) * self.choice
         return np.ones((obs["env_obs"].shape[0],), dtype=np.int64) * self.choice
 
 

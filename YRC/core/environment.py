@@ -14,7 +14,7 @@ from YRC.core.configs import get_global_variable
 
 def make(config):
     base_envs = make_raw_envs(config)
-    sim_weak_agent, weak_agent, strong_agent = load_agents(config, base_envs["train"])
+    sim_weak_agent, weak_agent, strong_agent = load_agents(config, base_envs["val_true"], base_envs["test"])
 
     coord_envs = {}
     for name in base_envs:
@@ -22,13 +22,12 @@ def make(config):
         if name in ["train", "val_sim"]:
             # use weak agent as strong agent
             # use sim_weak agent as weak agent
-            coord_envs[name] = CoordEnv(
-                config.coord_env, base_envs[name], sim_weak_agent, weak_agent
-            )
+            coord_envs[name] = CoordEnv(config.coord_env, base_envs[name], sim_weak_agent, weak_agent)
         else:
-            coord_envs[name] = CoordEnv(
-                config.coord_env, base_envs[name], weak_agent, strong_agent
-            )
+            if type(strong_agent) is dict:
+                coord_envs[name] = CoordEnv(config.coord_env, base_envs[name], weak_agent, strong_agent[name])
+            else:
+                coord_envs[name] = CoordEnv(config.coord_env, base_envs[name], weak_agent, strong_agent)
 
     # skyline is trained on test environments
     if config.general.skyline:
@@ -107,21 +106,22 @@ def make_raw_envs(config):
         # some extra information
         env.name = config.environment.common.env_name
         env.obs_shape = env.observation_space.shape
-        env.action_shape = env.action_space.shape
-        env.num_actions = env.action_space.n
+        if get_global_variable("benchmark") == "procgen":
+            env.action_shape = env.action_space.shape
+            env.num_actions = env.action_space.n
 
         envs[name] = env
 
     return envs
 
 
-def load_agents(config, env):
+def load_agents(config, env, test_env):
     module = importlib.import_module(f"YRC.envs.{get_global_variable('benchmark')}")
     load_fn = getattr(module, "load_policy")
 
-    sim_weak_agent = load_fn(config.agents.sim_weak, env)
-    weak_agent = load_fn(config.agents.weak, env)
-    strong_agent = load_fn(config.agents.strong, env)
+    sim_weak_agent = load_fn(config.agents.sim_weak, env, test_env)
+    weak_agent = load_fn(config.agents.weak, env, test_env)
+    strong_agent = load_fn(config.agents.strong, env, test_env)
 
     return sim_weak_agent, weak_agent, strong_agent
 
@@ -136,6 +136,13 @@ class CoordEnv(gym.Env):
         self.base_env = base_env
         self.weak_agent = weak_agent
         self.strong_agent = strong_agent
+        
+        if hasattr(base_env, "num_actions"):
+            logit_dim = base_env.num_actions
+        else:
+            dummy_image = np.ones(self.base_env.obs_shape, dtype=np.float32)
+            dummy_info = {'lang_goal': 'put the red block on the lightest brown block'}
+            logit_dim = weak_agent.forward({'img': dummy_image, 'info': dummy_info}).shape[0]
 
         self.action_space = gym.spaces.Discrete(2)
         self.observation_space = gym.spaces.Dict(
@@ -144,7 +151,7 @@ class CoordEnv(gym.Env):
                 "weak_features": gym.spaces.Box(
                     -100, 100, shape=(weak_agent.hidden_dim,)
                 ),
-                "weak_logit": gym.spaces.Box(-100, 100, shape=(base_env.num_actions,)),
+                "weak_logit": gym.spaces.Box(-100, 100, shape=(logit_dim,)),
             }
         )
 
@@ -215,9 +222,10 @@ class CoordEnv(gym.Env):
             )
         is_strong = ~is_weak
         if is_strong.sum() > 0:
-            env_action[is_strong] = self.strong_agent.act(
-                self.env_obs[is_strong], greedy=greedy
-            )
+            if type(self.env_obs) is dict:
+                env_action = self.strong_agent.act(self.env_obs, greedy=greedy)
+            else:
+                env_action[is_strong] = self.strong_agent.act(self.env_obs[is_strong], greedy=greedy)
         return env_action
 
     def _get_obs(self):
