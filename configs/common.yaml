@@ -10,8 +10,16 @@ coord_env:
         strong_query_cost_ratio: 0.4
         switch_agent_cost_ratio: 0.1
         act_greedy: False
+    cliport:
+        strong_query_cost_ratio: 0.4
+        switch_agent_cost_ratio: 0.1
+        act_greedy: False
 evaluation:
     procgen:
+        validation_episodes: 128
+        test_episodes: 256
+        act_greedy: False
+    cliport:
         validation_episodes: 128
         test_episodes: 256
         act_greedy: False
@@ -22,6 +30,35 @@ environment:
             normalize_rew: False
             num_envs: 64
             num_threads: 8
+        train:
+            distribution_mode: 'easy'
+            seed: 0
+            start_level: 0
+            num_levels: 100000
+        val_sim:
+            distribution_mode: 'easy'
+            seed: 0
+            start_level: 50000
+            num_levels: 64
+        val_true:
+            distribution_mode: 'hard'
+            seed: 0
+            start_level: 50000
+            num_levels: 64
+        test:
+            distribution_mode: 'hard'
+            seed: 0
+            start_level: 0
+            num_levels: 100000
+    cliport:
+        common:
+            env_name: 'stack-block-pyramid-seq'
+            normalize_rew: False
+            num_envs: 1
+            num_threads: 1
+            assets_root: './cliport/cliport/environments/assets'
+            disp: False
+            shared_memory: False
         train:
             distribution_mode: 'easy'
             seed: 0
