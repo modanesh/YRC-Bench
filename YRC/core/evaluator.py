@@ -10,7 +10,6 @@ class Evaluator:
 
     def eval(self, policy, envs, eval_splits, num_episodes=None):
         args = self.args
-        policy.eval()
 
         summary = {}
         for split in eval_splits:

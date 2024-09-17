@@ -35,7 +35,7 @@ def create_env(name, config):
     return env
 
 
-def load_policy(path, env):
+def load_policy(path, env, test_env):
     model = ProcgenModel(env)
     model.to(get_global_variable("device"))
     model.eval()
@@ -44,5 +44,5 @@ def load_policy(path, env):
     logging.info(f"Loaded model from {path}")
 
     policy = ProcgenPolicy(model)
-
+    policy.eval()
     return policy
