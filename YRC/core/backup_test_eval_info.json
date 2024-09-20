@@ -166,17 +166,6 @@
       "env_reward_mean": 0.0,
       "env_reward_std": 0.0,
       "action_1_frac": 1.0
-    },
-    "assembling-kits-seq": {
-      "steps": 10,
-      "episode_length_mean": 5.0,
-      "episode_length_min": 5,
-      "episode_length_max": 5,
-      "reward_mean": 1.0,
-      "reward_std": 0.0,
-      "env_reward_mean": 0.0,
-      "env_reward_std": 0.0,
-      "action_1_frac": 1.0
     }
   },
   "mp3d": {}
