@@ -217,12 +217,13 @@ class CoordEnv(gym.Env):
         env_action = np.zeros_like(action)
         is_weak = action == self.WEAK
         if is_weak.sum() > 0:
-            env_action[is_weak] = self.weak_agent.act(
-                self.env_obs[is_weak], greedy=greedy
-            )
+            if isinstance(self.env_obs, dict):
+                env_action = self.weak_agent.act(self.env_obs, greedy=greedy)
+            else:
+                env_action[is_weak] = self.weak_agent.act(self.env_obs[is_weak], greedy=greedy)
         is_strong = ~is_weak
         if is_strong.sum() > 0:
-            if type(self.env_obs) is dict:
+            if isinstance(self.env_obs, dict):
                 env_action = self.strong_agent.act(self.env_obs, greedy=greedy)
             else:
                 env_action[is_strong] = self.strong_agent.act(self.env_obs[is_strong], greedy=greedy)

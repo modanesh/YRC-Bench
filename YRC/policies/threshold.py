@@ -42,9 +42,12 @@ class ThresholdPolicy(Policy):
             logit = agent.forward(obs["env_obs"])
             score = self._compute_score(logit)
 
-            for i in range(env.num_envs):
-                if not has_done[i]:
-                    scores.append(score[i].item())
+            if env.num_envs == 1:
+                scores.append(score.item())
+            else:
+                for i in range(env.num_envs):
+                    if not has_done[i]:
+                        scores.append(score[i].item())
 
             action = sample_action(logit)
             obs, reward, done, info = env.step(action)

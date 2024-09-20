@@ -79,7 +79,10 @@ class RandomPolicy(Policy):
         self.device = get_global_variable("device")
 
     def act(self, obs, greedy=False):
-        action = torch.rand((obs["env_obs"].shape[0],)).to(self.device) < self.prob
+        if isinstance(obs['env_obs'], dict):
+            action = torch.rand((1,)).to(self.device) < self.prob
+        else:
+            action = torch.rand((obs["env_obs"].shape[0],)).to(self.device) < self.prob
         action = action.int()
         return action.cpu().numpy()
 
