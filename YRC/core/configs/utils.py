@@ -76,6 +76,12 @@ def load(yaml_file_or_str, flags=None):
     logging.info("Write log to %s" % log_file)
     logging.info(str(config))
 
+    config.environment.common.env_name = config.env_name
+    config.agents.sim_weak = f"YRC/checkpoints/{config.general.benchmark}/{config.agent_sim_weak}"
+    config.agents.weak = f"YRC/checkpoints/{config.general.benchmark}/{config.agent_weak}"
+    if config.agent_strong is not None:
+        config.agents.strong = f"YRC/checkpoints/{config.general.benchmark}/{config.agent_strong}"
+
     return config
 
 
