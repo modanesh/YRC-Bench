@@ -24,6 +24,10 @@ def make():
         help="metric for computing scores"
     )
 
+    parser.add_argument('--env_name', required=True, type=str, help='name of the environment')
+    parser.add_argument('--agent_sim_weak', required=True, type=str, help='path to the sim weak agent')
+    parser.add_argument('--agent_weak', required=True, type=str, help='path to the weak agent')
+    parser.add_argument('--agent_strong', required=False, type=str, help='path to the strong agent')
 
     args = parser.parse_args()
 
