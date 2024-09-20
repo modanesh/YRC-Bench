@@ -2,7 +2,7 @@ experiments/*
 *swp
 .hydra/
 demos.log
-venv/
+venv_*/
 .idea
 tmp*
 wandb/
