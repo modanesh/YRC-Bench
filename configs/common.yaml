@@ -5,6 +5,8 @@ coord_policy:
     threshold:
         cls: ThresholdPolicy
         metric: 'logit'
+    random:
+        cls: RandomPolicy
 coord_env:
     procgen:
         strong_query_cost_ratio: 0.4

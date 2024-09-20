@@ -16,8 +16,8 @@ coord_policy:
   feature_type: "T1"
   which: "weak"
 agents:
-    weak: 'YRC/checkpoints/procgen/coinrun/PPO-procgen-coinrun-easy-200-2fc595d8/model_80019456.pth'
-    strong: 'YRC/checkpoints/procgen/coinrun/PPO-procgen-coinrun-hard-500-bde01d68/model_80019456.pth'
+    weak: 'YRC/checkpoints/procgen/coinrun/PPO-easy-200-weak/model_80019456.pth'
+    strong: 'YRC/checkpoints/procgen/coinrun/PPO-hard-500-strong/model_200015872.pth'
 coord_env:
     timeout: 1000.0
     reward_max: 1.0
