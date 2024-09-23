@@ -62,7 +62,9 @@ class Evaluator:
         while not has_done.all():
             action = policy.act(obs, greedy=args.act_greedy)
             obs, reward, done, info = env.step(action)
-
+            if action.ndim == 0:
+                action = action.reshape(1)
+                reward = reward.reshape(1)
             log["reward"] += reward * (1 - has_done)
             if "env_reward" in info:
                 log["env_reward"] += info["env_reward"] * (1 - has_done)

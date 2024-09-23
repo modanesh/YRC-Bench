@@ -65,6 +65,8 @@ class ThresholdPolicy(Policy):
             score = logit.softmax(dim=-1).max(dim=-1)[0]
         elif metric == "margin":
             top2 = logit.softmax(dim=-1).topk(2, dim=-1)[0]
+            if len(top2.shape) == 1:
+                top2 = top2.unsqueeze(0)
             score = top2[:, 0] - top2[:, 1]
         elif metric == "neg_entropy":
             score = -Categorical(logits=logit).entropy()

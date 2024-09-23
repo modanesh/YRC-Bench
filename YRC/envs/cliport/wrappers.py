@@ -22,7 +22,6 @@ class HardResetWrapper(gym.Wrapper):
 
     def reset(self):
         new_seed = random.randint(self.start_level, self.start_level + self.num_levels - 1)
-        print(f"Setting seed to {new_seed}")
         self.env.seed(new_seed)
         obs = self.env.reset()
         obs = utils.get_image(obs)
