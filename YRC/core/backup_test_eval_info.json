@@ -153,6 +153,17 @@
       "env_reward_mean": 0.0,
       "env_reward_std": 0.0,
       "action_1_frac": 0.08050811811222344
+    },
+    "maze": {
+      "steps": 9842,
+      "episode_length_mean": 76.890625,
+      "episode_length_min": 2,
+      "episode_length_max": 500,
+      "reward_mean": 9.375,
+      "reward_std": 2.4206145913796355,
+      "env_reward_mean": 0.0,
+      "env_reward_std": 0.0,
+      "action_1_frac": 0.08087787035155457
     }
   },
   "cliport": {
@@ -162,6 +173,17 @@
       "episode_length_min": 7,
       "episode_length_max": 7,
       "reward_mean": 0.9999999999999999,
+      "reward_std": 0.0,
+      "env_reward_mean": 0.0,
+      "env_reward_std": 0.0,
+      "action_1_frac": 1.0
+    },
+    "assembling-kits-seq": {
+      "steps": 10,
+      "episode_length_mean": 5.0,
+      "episode_length_min": 5,
+      "episode_length_max": 5,
+      "reward_mean": 1.0,
       "reward_std": 0.0,
       "env_reward_mean": 0.0,
       "env_reward_std": 0.0,
