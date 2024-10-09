@@ -106,10 +106,6 @@ def make_raw_envs(config):
         # some extra information
         env.name = config.environment.common.env_name
         env.obs_shape = env.observation_space.shape
-        if get_global_variable("benchmark") == "procgen":
-            env.action_shape = env.action_space.shape
-            env.num_actions = env.action_space.n
-
         envs[name] = env
 
     return envs

@@ -20,6 +20,14 @@ class HardResetWrapper(gym.Wrapper):
             dtype=sample_obs.dtype
         )
 
+        self.action_space = env.action_space
+        total_dim = 0
+        for space in env.action_space.spaces.values():
+            for subspace in space.spaces:
+                total_dim += subspace.shape[0]
+        self.action_space.shape = ()
+        self.action_space.n = total_dim
+
     def reset(self):
         new_seed = random.randint(self.start_level, self.start_level + self.num_levels - 1)
         self.env.seed(new_seed)
