@@ -14,7 +14,7 @@ if __name__ == "__main__":
     envs = env_factory.make(config)
     policy = policy_factory.make(config, envs["train"])
     if config.general.algorithm != "always":
-        policy.load_model(os.join.path(config.experiment_dir, "best_val_id.ckpt"))
+        policy.load_model(os.path.join(config.experiment_dir, config.file_name))
     evaluator = Evaluator(config.evaluation)
 
     evaluator.eval(policy, envs, ["test"])

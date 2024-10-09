@@ -29,6 +29,8 @@ def make():
     parser.add_argument('--agent_weak', required=True, type=str, help='path to the weak agent')
     parser.add_argument('--agent_strong', required=False, type=str, help='path to the strong agent')
 
+    parser.add_argument('--file_name', required=False, type=str, help='file name for evaluation')
+
     args = parser.parse_args()
 
     return args

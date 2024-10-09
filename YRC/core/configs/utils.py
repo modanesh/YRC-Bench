@@ -51,6 +51,8 @@ def load(yaml_file_or_str, flags=None):
             raise FileExistsError(
                 "Experiment directory %s probably exists!" % config.experiment_dir
             )
+    if not os.path.exists(config.experiment_dir):
+        os.makedirs(config.experiment_dir)
 
     seed = config.general.seed
     torch.manual_seed(seed)
@@ -64,8 +66,14 @@ def load(yaml_file_or_str, flags=None):
     set_global_variable("seed", config.general.seed)
 
     config.start_time = time.time()
+
     if config.eval_mode:
-        log_file = os.path.join(config.experiment_dir, "eval.log")
+        if config.file_name is None:
+            log_file = os.path.join(config.experiment_dir, "eval.log")
+        elif config.file_name.__contains__("sim"):
+            log_file = os.path.join(config.experiment_dir, "eval_sim.log")
+        elif config.file_name.__contains__("true"):
+            log_file = os.path.join(config.experiment_dir, "eval_true.log")
     else:
         log_file = os.path.join(config.experiment_dir, "run.log")
     if os.path.isfile(log_file):

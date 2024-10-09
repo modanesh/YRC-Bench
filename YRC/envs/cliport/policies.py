@@ -56,5 +56,4 @@ class CliportPolicyOracle(Policy):
             np_action = np.array([None] * 14)[np.newaxis, :]
         else:
             np_action = np.concatenate([array for key in action for array in action[key]])[np.newaxis, :]
-        print(f"goal is: {info['lang_goal']}")
         return np_action
