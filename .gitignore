@@ -11,6 +11,7 @@ __pycache__/
 .DS_Store
 slurm
 logs/
+.scripts
 
 
 # Created by .ignore support plugin (hsz.mobi)
