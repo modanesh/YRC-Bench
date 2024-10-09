@@ -18,6 +18,7 @@ class ProcgenModel(nn.Module):
             nn.Linear(self.hidden_dim, env.num_actions), gain=0.01
         )
         self.fc_value = orthogonal_init(nn.Linear(self.hidden_dim, 1), gain=1.0)
+        self.logit_dim = env.num_actions
 
     def forward(self, obs):
         hidden = self.get_hidden(obs)

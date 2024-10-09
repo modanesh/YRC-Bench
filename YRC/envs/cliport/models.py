@@ -13,6 +13,7 @@ class CliportModel(TwoStreamClipLingUNetLatTransporterAgent):
         self.to(get_global_variable("device"))
         dummy_pick_features, dummy_place_features = self.extract_features(dummy_image, dummy_info)
         self.hidden_dim = torch.cat((dummy_pick_features[0], dummy_place_features[0]), dim=0).shape[0]
+        self.logit_dim = self.get_logit({"img": dummy_image[0], "info": dummy_info[0]}).shape[0]
 
     def get_hidden(self, obs):
         img, info = obs["img"], obs["info"]

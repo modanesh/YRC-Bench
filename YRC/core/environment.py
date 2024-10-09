@@ -137,13 +137,6 @@ class CoordEnv(gym.Env):
         self.weak_agent = weak_agent
         self.strong_agent = strong_agent
         
-        if hasattr(base_env, "num_actions"):
-            logit_dim = base_env.num_actions
-        else:
-            dummy_image = np.ones(self.base_env.obs_shape, dtype=np.float32)
-            dummy_info = {'lang_goal': 'put the red block on the lightest brown block'}
-            logit_dim = weak_agent.forward({'img': dummy_image, 'info': dummy_info}).shape[0]
-
         self.action_space = gym.spaces.Discrete(2)
         self.observation_space = gym.spaces.Dict(
             {
@@ -151,7 +144,7 @@ class CoordEnv(gym.Env):
                 "weak_features": gym.spaces.Box(
                     -100, 100, shape=(weak_agent.hidden_dim,)
                 ),
-                "weak_logit": gym.spaces.Box(-100, 100, shape=(logit_dim,)),
+                "weak_logit": gym.spaces.Box(-100, 100, shape=(weak_agent.model.logit_dim,)),
             }
         )
 
