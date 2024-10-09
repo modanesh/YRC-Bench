@@ -24,16 +24,10 @@ class PPOAlgorithm(Algorithm):
         if isinstance(self.obs_shape, dict):
             self.obs = {}
             for k, shape in self.obs_shape.items():
-                self.obs[k] = torch.zeros((args.num_steps, args.num_envs) + shape).to(
-                    device
-                )
+                self.obs[k] = torch.zeros((args.num_steps, args.num_envs) + shape).to(device)
         else:
-            self.obs = torch.zeros((args.num_steps, args.num_envs) + self.obs_shape).to(
-                device
-            )
-        self.actions = torch.zeros(
-            (args.num_steps, args.num_envs) + self.action_shape
-        ).to(device)
+            self.obs = torch.zeros((args.num_steps, args.num_envs) + self.obs_shape).to(device)
+        self.actions = torch.zeros((args.num_steps, args.num_envs) + self.action_shape).to(device)
         self.logprobs = torch.zeros((args.num_steps, args.num_envs)).to(device)
         self.rewards = torch.zeros((args.num_steps, args.num_envs)).to(device)
         self.dones = torch.zeros((args.num_steps, args.num_envs)).to(device)
