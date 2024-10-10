@@ -221,7 +221,7 @@ class CoordEnv(gym.Env):
     def _get_obs(self):
         obs = {
             "env_obs": self.env_obs,
-            "weak_features": self.weak_agent.get_hidden(self.env_obs).detach(),
+            "weak_features": self.weak_agent.get_hidden(self.env_obs),
             "weak_logit": self.weak_agent.forward(self.env_obs).detach(),
         }
         return obs

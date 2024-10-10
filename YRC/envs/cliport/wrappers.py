@@ -25,7 +25,7 @@ class HardResetWrapper(gym.Wrapper):
         for space in env.action_space.spaces.values():
             for subspace in space.spaces:
                 total_dim += subspace.shape[0]
-        self.action_space.shape = ()
+        self.action_space.shape = ()  # placeholder for the moment
         self.action_space.n = total_dim
 
     def reset(self):
