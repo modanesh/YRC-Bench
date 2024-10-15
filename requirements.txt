@@ -86,7 +86,6 @@ pyasn1-modules==0.4.0
 pybullet==3.0.4
 pycparser==2.22
 pyglet==1.5.0
-pyod==2.0.1
 pyparsing==3.1.2
 PySocks==1.7.1
 python-dateutil==2.9.0.post0

@@ -4,3 +4,6 @@
 [submodule "cliport"]
 	path = cliport
 	url = https://github.com/modanesh/cliport.git
+[submodule "pyod"]
+	path = pyod
+	url = https://github.com/yzhao062/pyod.git
