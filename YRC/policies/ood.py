@@ -20,6 +20,7 @@ class OODPolicy(Policy):
         self.params = {"threshold": 0.0, "explore_temp": 1.0}
         self.clf = None
         self.clf_name = None
+        self.cnn = None
 
     def gather_rollouts(self, env, num_rollouts):
         assert num_rollouts % env.num_envs == 0
@@ -69,6 +70,8 @@ class OODPolicy(Policy):
             obs_features = self.feature_extractor(obs["env_obs"])
         score = self.clf.decision_function(obs_features)
         action = (score < self.params["threshold"]).astype(int)
+        if 0 not in action and 1 not in action:
+            print("No action is selected as OOD")
         return action
 
     def initialize_ood_detector(self, args):
@@ -98,6 +101,8 @@ class OODPolicy(Policy):
         if type(self.clf) == deep_svdd.DeepSVDD:
             state_dict['config']['use_ae'] = self.clf.use_ae
         dump(state_dict, save_path)
+        if not os.path.exists(f"{save_dir}/cnn.ckpt"):
+            torch.save(self.cnn.state_dict(), f"{save_dir}/cnn.ckpt")
         logging.info(f"Saved model to {save_path}")
 
     def feature_extractor(self, obs):
@@ -151,7 +156,7 @@ class OODPolicy(Policy):
         if get_global_variable("benchmark") == "cliport":
             obs = obs.unsqueeze(0)
             obs = obs.permute(0, 3, 1, 2)
-        cnn = SimpleCNN(obs.shape)
-        features = cnn(obs)
+        self.cnn = SimpleCNN(obs.shape)
+        features = self.cnn(obs)
         return features.detach().numpy()
 
