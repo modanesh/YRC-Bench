@@ -6,6 +6,7 @@ import torch
 import logging
 from torch.distributions.categorical import Categorical
 from YRC.core import Policy
+from YRC.core.configs.global_configs import get_global_variable
 
 
 class ThresholdPolicy(Policy):
@@ -15,7 +16,15 @@ class ThresholdPolicy(Policy):
         self.params = {"threshold": 0.0, "explore_temp": 1.0, "score_temp": 1.0}
 
     def act(self, obs, greedy=False):
-        score = self._compute_score(obs["weak_logit"])
+        if get_global_variable("benchmark") == "cliport":
+            attention_size = 320 * 160  # todo: get this shape automatically
+            attention_flat = obs["weak_logit"][:attention_size]
+            transport_flat = obs["weak_logit"][attention_size:]
+            attention_score = self._compute_score(attention_flat)
+            transport_score = self._compute_score(transport_flat)
+            score = torch.mean(torch.stack([attention_score, transport_score]))
+        else:
+            score = self._compute_score(obs["weak_logit"])
         # NOTE: higher score = more certain
         action = (score < self.params["threshold"]).int()
         return action.cpu().numpy()
