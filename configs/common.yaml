@@ -114,5 +114,5 @@ algorithm:
         cls: OODAlgorithm
         contamination: 0.1
         use_ae: False
-        num_rollouts: 2
+        num_rollouts: 64
         num_thresholds: 10
