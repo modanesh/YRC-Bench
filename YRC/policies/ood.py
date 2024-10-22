@@ -10,6 +10,7 @@ from pyod.models import kde, deep_svdd
 from joblib import dump, load
 import torch.nn as nn
 import torch.nn.functional as F
+from YRC.core.configs.global_configs import get_global_variable
 
 
 class OODPolicy(Policy):
@@ -23,7 +24,7 @@ class OODPolicy(Policy):
     def gather_rollouts(self, env, num_rollouts):
         assert num_rollouts % env.num_envs == 0
         observations = []
-        for i in range(num_rollouts // env.num_envs):
+        for i in range(2):
             observations.extend(self._rollout_once(env))
         if self.args.method == "DeepSVDD":
             self.clf.n_features = observations[0].shape[0]
@@ -43,14 +44,14 @@ class OODPolicy(Policy):
         while not has_done.all():
             logit = agent.forward(obs["env_obs"])
 
-            if env.num_envs == 1:
-                # todo: check for cliport
-                observations.append(obs["env_obs"].item())
+            if get_global_variable("benchmark") == "cliport":
+                obs_features = self.feature_extractor(obs["env_obs"]['img'])
+                observations.extend(obs_features)
             else:
                 for i in range(env.num_envs):
                     if not has_done[i]:
                         obs_features = self.feature_extractor(obs["env_obs"])
-                        observations.extend(obs_features.detach().numpy())
+                        observations.extend(obs_features)
 
             action = sample_action(logit)
             obs, reward, done, info = env.step(action)
@@ -62,7 +63,10 @@ class OODPolicy(Policy):
         self.params = dc(params)
 
     def act(self, obs, greedy=False):
-        obs_features = self.feature_extractor(obs["env_obs"]).detach().numpy()
+        if get_global_variable("benchmark") == "cliport":
+            obs_features = self.feature_extractor(obs["env_obs"]['img'])
+        else:
+            obs_features = self.feature_extractor(obs["env_obs"])
         score = self.clf.decision_function(obs_features)
         action = (score < self.params["threshold"]).astype(int)
         return action
@@ -107,29 +111,47 @@ class OODPolicy(Policy):
         """
 
         class SimpleCNN(nn.Module):
-            def __init__(self):
+            def __init__(self, input_shape):
                 super(SimpleCNN, self).__init__()
-                self.conv1 = nn.Conv2d(in_channels=3, out_channels=16, kernel_size=3, stride=1, padding=1)
-                self.conv2 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=3, stride=1, padding=1)
-                self.conv3 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=1, padding=1)
-                self.fc1 = nn.Linear(64 * 8 * 8, 128)  # Fully connected layer
-                self.fc2 = nn.Linear(128, 64)  # Output layer for feature extraction
+                self.input_shape = input_shape  # shape as (batch_size, channels, height, width, [depth])
+                channels = self.input_shape[1]
+
+                # Define layers dynamically
+                self.conv1 = nn.Conv2d(channels, 32, kernel_size=3, stride=1, padding=1)  # 32 filters
+                self.conv2 = nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1)  # 64 filters
+                self.pool = nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
+
+                # Compute output size after convolutional layers to flatten properly
+                self.flattened_size = self._get_flattened_size()
+
+                # Fully connected layer after the flattening
+                self.fc1 = nn.Linear(self.flattened_size, 128)  # Adjust output size based on your needs
+
+            def _get_flattened_size(self):
+                # Pass a dummy input to calculate the size after convolution
+                with torch.no_grad():
+                    dummy_input = torch.zeros(1, *self.input_shape[1:])  # Shape without batch size
+                    x = self.pool(F.relu(self.conv1(dummy_input)))
+                    x = self.pool(F.relu(self.conv2(x)))
+                    return x.numel()  # Flattened size
 
             def forward(self, x):
-                x = F.relu(self.conv1(x))
-                x = F.max_pool2d(x, 2)  # Max pooling layer, reduces size to 32x32
-                x = F.relu(self.conv2(x))
-                x = F.max_pool2d(x, 2)  # Reduces size to 16x16
-                x = F.relu(self.conv3(x))
-                x = F.max_pool2d(x, 2)  # Reduces size to 8x8
-                x = x.reshape(x.size(0), -1)  # (batch_size, 64 * 8 * 8)
+                # Forward pass through conv and pooling layers
+                x = self.pool(F.relu(self.conv1(x)))
+                x = self.pool(F.relu(self.conv2(x)))
+
+                # Flatten before fully connected layers
+                x = x.reshape(x.size(0), -1)  # Flatten the output from conv layers
                 x = F.relu(self.fc1(x))
-                x = self.fc2(x)  # Extracted feature vector of size 64
+
                 return x
 
-        cnn = SimpleCNN()
         if not isinstance(obs, torch.Tensor):
             obs = torch.tensor(obs, dtype=torch.float32)
+        if get_global_variable("benchmark") == "cliport":
+            obs = obs.unsqueeze(0)
+            obs = obs.permute(0, 3, 1, 2)
+        cnn = SimpleCNN(obs.shape)
         features = cnn(obs)
-        return features
+        return features.detach().numpy()
 
