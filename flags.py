@@ -28,7 +28,7 @@ def make():
     parser.add_argument(
         "--coord_policy.method",
         type=str,
-        choices=["KDE", "DeepSVDD"],
+        choices=["DeepSVDD"],
         help="method for detecting OOD samples"
     )
 

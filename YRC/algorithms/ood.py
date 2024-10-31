@@ -26,7 +26,7 @@ class OODAlgorithm(Algorithm):
         best_params = {}
 
         # Initialize OOD detector
-        policy.initialize_ood_detector(args)
+        policy.initialize_ood_detector(args, envs["train"])
 
         # Generate rollouts for training OOD detector
         rollout_obs = policy.gather_rollouts(envs["train"], args.num_rollouts)
