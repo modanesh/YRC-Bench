@@ -23,7 +23,6 @@ def create_env(name, config):
         rand_seed=specific_config.seed,
     )
 
-    env = wrappers.HardResetWrapper(env)
     env = wrappers.VecExtractDictObs(env, "rgb")
     if common_config.normalize_rew:
         env = wrappers.VecNormalize(
@@ -31,9 +30,17 @@ def create_env(name, config):
         )  # normalizing returns, but not the img frames
     env = wrappers.TransposeFrame(env)
     env = wrappers.ScaledFloatFrame(env)
+    # NOTE: this must be done last
+    env = wrappers.HardResetWrapper(env)
 
     return env
 
+
+def create_policy(env):
+    model = ProcgenModel(env)
+    model.to(get_global_variable("device"))
+    policy = ProcgenPolicy(model)
+    return policy
 
 def load_policy(path, env, test_env):
     model = ProcgenModel(env)

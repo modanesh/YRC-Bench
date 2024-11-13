@@ -1,3 +1,6 @@
+import logging
+import torch
+
 from YRC.policies.base import BasePolicy
 from YRC.models.rl import PPOModel
 
@@ -6,6 +9,7 @@ class PPOPolicy(BasePolicy):
     def __init__(self, config, env):
         super().__init__(config, env)
         self.model = PPOModel(self.model)
+        self.model.to(self.model.device)
 
     def forward(self, obs):
         return self.model(obs)
@@ -25,4 +29,4 @@ class PPOPolicy(BasePolicy):
         return value
 
     def set_learning_rate(self, learning_rate):
-        self.optimizer.param_groups[0]["lr"] = learning_rate
+        self.optim.param_groups[0]["lr"] = learning_rate

@@ -7,24 +7,26 @@ coord_policy:
         metric: 'logit'
     random:
         cls: RandomPolicy
+    ppo:
+        cls: PPOPolicy
     ood:
         cls: OODPolicy
 coord_env:
     procgen:
         strong_query_cost_ratio: 0.4
-        switch_agent_cost_ratio: 0.1
+        switch_agent_cost_ratio: 0.0
         act_greedy: False
     cliport:
         strong_query_cost_ratio: 0.4
-        switch_agent_cost_ratio: 0.1
+        switch_agent_cost_ratio: 0.0
         act_greedy: False
 evaluation:
     procgen:
-        validation_episodes: 128
+        validation_episodes: 256
         test_episodes: 256
         act_greedy: False
     cliport:
-        validation_episodes: 128
+        validation_episodes: 256
         test_episodes: 256
         act_greedy: False
 environment:
@@ -32,7 +34,7 @@ environment:
         common:
             env_name: 'coinrun'
             normalize_rew: False
-            num_envs: 64
+            num_envs: 256
             num_threads: 8
         train:
             distribution_mode: 'easy'
@@ -43,12 +45,12 @@ environment:
             distribution_mode: 'easy'
             seed: 0
             start_level: 50000
-            num_levels: 64
+            num_levels: 256
         val_true:
             distribution_mode: 'hard'
             seed: 0
             start_level: 50000
-            num_levels: 64
+            num_levels: 256
         test:
             distribution_mode: 'hard'
             seed: 0
@@ -98,7 +100,7 @@ algorithm:
         cls: PPOAlgorithm
         log_freq: 10
         num_steps: 128
-        total_timesteps: 100000
+        total_timesteps: 25000000
         update_epochs: 3
         gamma: 0.999
         gae_lambda: 0.95

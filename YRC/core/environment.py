@@ -18,25 +18,25 @@ def make(config):
 
     coord_envs = {}
     for name in base_envs:
-        # simulated model selection
-        if name in ["train", "val_sim"]:
-            # use weak agent as strong agent
-            # use sim_weak agent as weak agent
-            coord_envs[name] = CoordEnv(config.coord_env, base_envs[name], sim_weak_agent, weak_agent)
-        else:
+        if config.general.skyline or name not in ["train", "val_sim"]:
             if type(strong_agent) is dict:
                 coord_envs[name] = CoordEnv(config.coord_env, base_envs[name], weak_agent, strong_agent[name])
             else:
                 coord_envs[name] = CoordEnv(config.coord_env, base_envs[name], weak_agent, strong_agent)
-
-    # skyline is trained on test environments
-    if config.general.skyline:
-        coord_envs["train"] = dc(coord_envs["test"])
+        else:
+            # NOTE: not skyline and name in ["train", "val_sim"]
+            # use weak agent as strong agent
+            # use sim_weak agent as weak agent
+            coord_envs[name] = CoordEnv(config.coord_env, base_envs[name], sim_weak_agent, weak_agent)
 
     # set costs for getting help from strong agent
     test_eval_info = get_test_eval_info(config, coord_envs)
     for name in coord_envs:
         coord_envs[name].set_costs(test_eval_info)
+
+    # reset
+    for name in coord_envs:
+        coord_envs[name].reset()
 
     logging.info(
         f"Strong query cost per action: {coord_envs['train'].strong_query_cost_per_action}"
@@ -102,7 +102,10 @@ def make_raw_envs(config):
 
     envs = {}
     for name in ["train", "val_sim", "val_true", "test"]:
-        env = create_fn(name, config.environment)
+        if name == "train" and config.general.skyline:
+            env = create_fn("test", config.environment)
+        else:
+            env = create_fn(name, config.environment)
         # some extra information
         env.name = config.environment.common.env_name
         env.obs_shape = env.observation_space.shape
@@ -171,16 +174,16 @@ class CoordEnv(gym.Env):
     @property
     def obs_shape(self):
         return {
-            "env_obs": self.base_env.obs_shape,
+            "env_obs": self.base_env.observation_space.shape,
             "weak_features": (self.weak_agent.hidden_dim,),
-            "weak_logit": (self.base_env.num_actions,),
+            "weak_logit": (self.base_env.action_space.n,),
         }
 
     def reset(self):
         self.prev_action = None
         self.env_obs = self.base_env.reset()
         self._reset_agents(np.array([True] * self.num_envs))
-        return self._get_obs()
+        return self.get_obs()
 
     def _reset_agents(self, done):
         self.weak_agent.reset(done)
@@ -189,22 +192,24 @@ class CoordEnv(gym.Env):
     def step(self, action):
         env_action = self._compute_env_action(action)
         self.env_obs, env_reward, done, env_info = self.base_env.step(env_action)
-        info = {
-            "env_info": env_info,
-            "env_reward": env_reward,
-            "env_action": env_action,
-        }
+
+        info = dc(env_info)
+        for i, item in enumerate(info):
+            if "env_reward" not in item:
+                item["env_reward"] = env_reward[i]
+            item["env_action"] = env_action[i]
+
         reward = self._get_reward(env_reward, action, done)
         self._reset_agents(done)
         self.prev_action = action
 
-        return self._get_obs(), reward, done, info
+        return self.get_obs(), reward, done, info
 
     def _compute_env_action(self, action):
         # NOTE: this method only works with non-recurrent agent models
         greedy = self.args.act_greedy
         env_action = np.zeros_like(action)
-        is_weak = action == self.WEAK
+        is_weak = (action == self.WEAK)
         if is_weak.sum() > 0:
             if isinstance(self.env_obs, dict):
                 env_action = self.weak_agent.act(self.env_obs, greedy=greedy)
@@ -218,11 +223,11 @@ class CoordEnv(gym.Env):
                 env_action[is_strong] = self.strong_agent.act(self.env_obs[is_strong], greedy=greedy)
         return env_action
 
-    def _get_obs(self):
+    def get_obs(self):
         obs = {
             "env_obs": self.env_obs,
-            "weak_features": self.weak_agent.get_hidden(self.env_obs),
-            "weak_logit": self.weak_agent.forward(self.env_obs).detach(),
+            "weak_features": self.weak_agent.get_hidden(self.env_obs).detach().cpu().numpy(),
+            "weak_logit": self.weak_agent.forward(self.env_obs).detach().cpu().numpy(),
         }
         return obs
 

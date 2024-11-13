@@ -412,7 +412,7 @@ class ScaledFloatFrame(VecEnvWrapper):
         return obs / 255.0
 
 
-# this only works with Procgen
+# NOTE: this only works with Procgen, assuming venv is a baselines environment
 class HardResetWrapper(VecEnvWrapper):
     def step_wait(self):
         return self.venv.step_wait()
@@ -420,3 +420,6 @@ class HardResetWrapper(VecEnvWrapper):
     def reset(self):
         obs, _, _, _ = self.venv.step(np.array([-1] * self.venv.num_envs))
         return obs
+
+    def get_obs(self):
+        return self.venv.reset()

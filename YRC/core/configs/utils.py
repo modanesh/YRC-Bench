@@ -3,6 +3,7 @@ import sys
 import logging
 import time
 import traceback
+import wandb
 
 import yaml
 from datetime import datetime
@@ -29,11 +30,16 @@ def load(yaml_file_or_str, flags=None):
     config = ConfigDict(**config_dict)
     algorithm = config.general.algorithm
     benchmark = config.general.benchmark
-    config.coord_policy = getattr(common_config.coord_policy, algorithm)
-    config.coord_env = getattr(common_config.coord_env, benchmark)
-    config.evaluation = getattr(common_config.evaluation, benchmark)
-    config.algorithm = getattr(common_config.algorithm, algorithm)
-    config.environment = getattr(common_config.environment, benchmark)
+    if config.coord_policy is None:
+        config.coord_policy = getattr(common_config.coord_policy, algorithm)
+    if config.coord_env is None:
+        config.coord_env = getattr(common_config.coord_env, benchmark)
+    if config.evaluation is None:
+        config.evaluation = getattr(common_config.evaluation, benchmark)
+    if config.algorithm is None:
+        config.algorithm = getattr(common_config.algorithm, algorithm)
+    if config.environment is None:
+        config.environment = getattr(common_config.environment, benchmark)
 
     if flags is not None:
         config_dict = config.as_dict()
@@ -76,19 +82,33 @@ def load(yaml_file_or_str, flags=None):
             log_file = os.path.join(config.experiment_dir, "eval_true.log")
     else:
         log_file = os.path.join(config.experiment_dir, "run.log")
+
+    set_global_variable("log_file", log_file)
+
     if os.path.isfile(log_file):
         os.remove(log_file)
-    _config_logging(log_file)
+    config_logging(log_file)
     logging.info(str(datetime.now()))
-    logging.info("python -u " + " ".join(sys.argv[1:]))
+    logging.info("python -u " + " ".join(sys.argv))
     logging.info("Write log to %s" % log_file)
     logging.info(str(config))
 
-    config.environment.common.env_name = config.env_name
-    config.agents.sim_weak = f"YRC/checkpoints/{config.general.benchmark}/{config.agent_sim_weak}"
-    config.agents.weak = f"YRC/checkpoints/{config.general.benchmark}/{config.agent_weak}"
-    if config.agent_strong is not None:
+    wandb.init(
+        project="YRC",
+        name=f"{config.name}_{str(int(time.time()))}",
+        mode="online" if config.use_wandb else "disabled",
+    )
+    wandb.config.update(config)
+
+
+    """
+    if config.agents.sim_weak is not None:
+        config.agents.sim_weak = f"YRC/checkpoints/{config.general.benchmark}/{config.agent_sim_weak}"
+    if config.agents.weak is not None:
+        config.agents.weak = f"YRC/checkpoints/{config.general.benchmark}/{config.agent_weak}"
+    if config.agents.strong is not None:
         config.agents.strong = f"YRC/checkpoints/{config.general.benchmark}/{config.agent_strong}"
+    """
 
     return config
 
@@ -103,7 +123,7 @@ def update_config(source, target):
             target[k] = source[k]
 
 
-def _config_logging(log_file):
+def config_logging(log_file):
     stream_handler = logging.StreamHandler()
     stream_handler.setFormatter(ElapsedFormatter())
 
@@ -111,7 +131,7 @@ def _config_logging(log_file):
     file_handler.setFormatter(ElapsedFormatter())
 
     logging.basicConfig(
-        level=logging.INFO, handlers=[stream_handler, file_handler], force=True
+        level=logging.INFO, handlers=[file_handler, stream_handler], force=True
     )
 
     def handler(type, value, tb):

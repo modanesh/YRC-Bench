@@ -9,6 +9,7 @@ class PPOModel(nn.Module):
     def __init__(self, model):
         super().__init__()
         self.model = model
+        self.device = model.device
         self.fc_value = orthogonal_init(nn.Linear(self.model.hidden_dim, 1), gain=1.0)
 
     def forward(self, obs):

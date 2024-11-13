@@ -1,5 +1,5 @@
+import logging
 import numpy as np
-
 import torch
 
 from YRC.core.configs.global_configs import get_global_variable
@@ -18,6 +18,10 @@ class PPOAlgorithm(Algorithm):
         args.batch_size = int(args.num_envs * args.num_steps)
         args.minibatch_size = int(args.batch_size // args.num_minibatches)
         args.num_iterations = args.total_timesteps // args.batch_size
+        self.total_reward = {
+            "reward": [0.] * args.num_envs,
+            "env_reward": [0.] * args.num_envs
+        }
 
         device = get_global_variable("device")
         # Initialize all tensors
@@ -40,9 +44,9 @@ class PPOAlgorithm(Algorithm):
         if isinstance(self.obs_shape, dict):
             ret = {}
             for k, shape in self.obs_shape.items():
-                ret[k] = torch.Tensor(obs[k]).to(device)
+                ret[k] = torch.from_numpy(obs[k]).to(device).float()
             return ret
-        return torch.Tensor(obs).to(device)
+        return torch.from_numpy(obs).to(device).float()
 
     def _add_obs(self, step, next_obs):
         if isinstance(self.obs_shape, dict):
@@ -70,15 +74,27 @@ class PPOAlgorithm(Algorithm):
     def train_one_iteration(self, iteration, policy, train_env=None, dataset=None):
         args = self.args
         device = get_global_variable("device")
+        log = {}
+
+        pc_steps = self.args.pretrain_critic_steps
+        pretrain_critic = pc_steps is not None and pc_steps > 0 and self.global_step < pc_steps
 
         # Annealing the rate if instructed to do so.
+        lrnow = args.learning_rate
         if args.anneal_lr:
-            frac = 1.0 - (iteration - 1.0) / args.num_iterations
-            lrnow = frac * args.learning_rate
-            policy.set_learning_rate(lrnow)
+            lrnow *= 1 - self.global_step / args.total_timesteps
+        policy.set_learning_rate(lrnow)
+        log["lr"] = lrnow
 
-        next_obs = self._wrap_obs(train_env.reset())
+        next_obs = self._wrap_obs(train_env.get_obs())
         next_done = torch.zeros(args.num_envs).to(device)
+
+        log["reward"], log["env_reward"] = [], []
+        log["action_1"] = []
+        log["action_prob"] = []
+
+        # NOTE: set policy to eval mode when collecting trajectories
+        policy.eval()
 
         for step in range(0, args.num_steps):
             self.global_step += args.num_envs
@@ -92,12 +108,30 @@ class PPOAlgorithm(Algorithm):
             self.actions[step] = action
             self.logprobs[step] = logprob
 
+            log["action_1"].extend((action == 1).long().tolist())
+            log["action_prob"].extend(logprob.exp().tolist())
+
+            #action = torch.ones_like(action)
+
             # TRY NOT TO MODIFY: execute the game and log data.
             next_obs, reward, next_done, info = train_env.step(action.cpu().numpy())
-            self.rewards[step] = torch.tensor(reward).to(device).view(-1)
+
+            # keep track of episode reward
+            for i in range(args.num_envs):
+                self.total_reward["reward"][i] += reward[i]
+                if "env_reward" in info[i]:
+                    self.total_reward["env_reward"][i] += info[i]["env_reward"]
+                if next_done[i]:
+                    #print("===>", step, reward[i], np.mean(log["reward"]))
+                    log["reward"].append(self.total_reward["reward"][i])
+                    log["env_reward"].append(self.total_reward["env_reward"][i])
+                    self.total_reward["reward"][i] = 0
+                    self.total_reward["env_reward"][i] = 0
+
+            self.rewards[step] = torch.from_numpy(reward).to(device).float().view(-1)
             next_obs, next_done = (
                 self._wrap_obs(next_obs),
-                torch.Tensor(next_done).to(device),
+                torch.from_numpy(next_done).to(device).float(),
             )
 
         # bootstrap value if not done
@@ -132,7 +166,15 @@ class PPOAlgorithm(Algorithm):
 
         # Optimizing the policy and value network
         b_inds = np.arange(args.batch_size)
-        clipfracs = []
+        log["pg_loss"] = []
+        log["v_loss"] = []
+        log["ent_loss"] = []
+        log["loss"] = []
+        log["advantage"] = []
+        log["value"] = []
+
+        policy.train()
+
         for epoch in range(args.update_epochs):
             np.random.shuffle(b_inds)
             for start in range(0, args.batch_size, args.minibatch_size):
@@ -142,18 +184,13 @@ class PPOAlgorithm(Algorithm):
                 _, newlogprob, entropy, newvalue = policy.get_action_and_value(
                     self._slice_obs(b_obs, mb_inds), b_actions.long()[mb_inds]
                 )
+                log["value"].extend(newvalue.tolist())
+
                 logratio = newlogprob - b_logprobs[mb_inds]
                 ratio = logratio.exp()
 
-                with torch.no_grad():
-                    # calculate approx_kl http://joschu.net/blog/kl-approx.html
-                    # old_approx_kl = (-logratio).mean()
-                    approx_kl = ((ratio - 1) - logratio).mean()
-                    clipfracs += [
-                        ((ratio - 1.0).abs() > args.clip_coef).float().mean().item()
-                    ]
-
                 mb_advantages = b_advantages[mb_inds]
+                log["advantage"].extend(mb_advantages.tolist())
                 if args.norm_adv:
                     mb_advantages = (mb_advantages - mb_advantages.mean()) / (
                         mb_advantages.std() + 1e-8
@@ -182,11 +219,76 @@ class PPOAlgorithm(Algorithm):
                     v_loss = 0.5 * ((newvalue - b_returns[mb_inds]) ** 2).mean()
 
                 entropy_loss = entropy.mean()
-                loss = pg_loss - args.ent_coef * entropy_loss + v_loss * args.vf_coef
+
+                if pretrain_critic:
+                    loss = v_loss
+                else:
+                    loss = pg_loss - args.ent_coef * entropy_loss + v_loss * args.vf_coef
                 loss.backward()
-                print(loss)
 
                 policy.update_params(args.max_grad_norm)
 
-            if args.target_kl is not None and approx_kl > args.target_kl:
-                break
+                # log
+                log["pg_loss"].append(pg_loss.item())
+                log["v_loss"].append(v_loss.item())
+                log["ent_loss"].append(entropy_loss.item())
+                log["loss"].append(loss.item())
+
+        return log
+
+    def aggregate_log(self, log, new_log):
+        for k, v in new_log.items():
+            if isinstance(v, list):
+                if k not in log:
+                    log[k] = v
+                else:
+                    log[k].extend(v)
+            elif isinstance(v, float) or isinstance(v, int):
+                log[k] = v
+            else:
+                raise NotImplementedError
+
+    def summarize(self, log):
+        return {
+            "lr": log["lr"],
+            "reward_mean": float(np.mean(log["reward"])),
+            "reward_std": float(np.std(log["reward"])),
+            "env_reward_mean": float(np.mean(log["env_reward"])),
+            "env_reward_std": float(np.std(log["env_reward"])),
+            "pg_loss": float(np.mean(log["pg_loss"])),
+            "v_loss": float(np.mean(log["v_loss"])),
+            "ent_loss": float(np.mean(log["ent_loss"])),
+            "loss": float(np.mean(log["loss"])),
+            "advantage_mean": float(np.mean(log["advantage"])),
+            "advantage_std": float(np.std(log["advantage"])),
+            "value_mean": float(np.mean(log["value"])),
+            "value_std": float(np.std(log["value"])),
+            "action_1": float(np.mean(log["action_1"])),
+            "action_prob": float(np.mean(log["action_prob"]))
+        }
+
+    def write_summary(self, summary):
+
+        log_str = "\n"
+        log_str += "   Reward:     "
+        log_str += f"mean {summary['reward_mean']:7.2f} ± {summary['reward_std']:7.2f}\n"
+        log_str += "   Env Reward: "
+        log_str += f"mean {summary['env_reward_mean']:7.2f} ± {summary['env_reward_std']:7.2f}\n"
+
+        log_str += "   Loss:       "
+        log_str += f"pg_loss {summary['pg_loss']:7.4f}  "
+        log_str += f"v_loss {summary['v_loss']:7.4f}  "
+        log_str += f"ent_loss {summary['ent_loss']:7.4f}  "
+        log_str += f"loss {summary['loss']:7.4f}\n"
+
+        log_str += "   Others:     "
+        log_str += f"advantage {summary['advantage_mean']:7.4f} ± {summary['advantage_std']:7.4f}  "
+        log_str += f"value {summary['value_mean']:7.4f} ± {summary['value_std']:7.4f}\n"
+
+        log_str += f"   Action 1 frac: {summary['action_1']:7.2f}\n"
+        log_str += f"   Action prob: {summary['action_prob']:7.2f}"
+
+
+        logging.info(log_str)
+
+        return summary

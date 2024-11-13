@@ -41,7 +41,6 @@ class ImpalaModel(nn.Module):
         x = self.block2(x)
         x = self.block3(x)
         x = nn.ReLU()(x)
-        # x = torch.flatten(x, start_dim=1)
         x = Flatten()(x)
         x = self.fc(x)
         x = nn.ReLU()(x)

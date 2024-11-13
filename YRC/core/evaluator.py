@@ -10,6 +10,7 @@ class Evaluator:
 
     def eval(self, policy, envs, eval_splits, num_episodes=None):
         args = self.args
+        policy.eval()
 
         summary = {}
         for split in eval_splits:
@@ -24,7 +25,6 @@ class Evaluator:
             logging.info(f"Evaluation on {split} for {num_episodes} episodes")
 
             num_iterations = num_episodes // envs[split].num_envs
-
             log = {}
             for _ in range(num_iterations):
                 this_log = self._eval_one_iteration(policy, envs[split])
@@ -50,9 +50,9 @@ class Evaluator:
         args = self.args
 
         log = {
-            "reward": np.array([0.0] * env.num_envs),
-            "env_reward": np.array([0.0] * env.num_envs),
-            "episode_length": np.array([0] * env.num_envs),
+            "reward": [0] * env.num_envs,
+            "env_reward": [0] * env.num_envs,
+            "episode_length": [0] * env.num_envs,
             f"action_{self.LOGGED_ACTION}": 0,
         }
 
@@ -61,31 +61,35 @@ class Evaluator:
         step = 0
         while not has_done.all():
             action = policy.act(obs, greedy=args.act_greedy)
+
             obs, reward, done, info = env.step(action)
+
+            """
             if action.ndim == 0:
                 action = action.reshape(1)
                 reward = reward.reshape(1)
-            log["reward"] += reward * (1 - has_done)
-            if "env_reward" in info:
-                log["env_reward"] += info["env_reward"] * (1 - has_done)
-            log["episode_length"] += 1 - has_done
+            """
 
-            action[has_done] = -1
-            log[f"action_{self.LOGGED_ACTION}"] += (action == self.LOGGED_ACTION).sum()
+            for i in range(env.num_envs):
+
+                if "env_reward" in info[i]:
+                    log["env_reward"][i] += info[i]["env_reward"] * (1 - has_done[i])
+
+                log["reward"][i] += reward[i] * (1 - has_done[i])
+                log["episode_length"][i] += 1 - has_done[i]
+                if not has_done[i]:
+                    log[f"action_{self.LOGGED_ACTION}"] += (
+                        action[i] == self.LOGGED_ACTION
+                    ).sum()
 
             has_done |= done
             step += 1
-
-        log["reward"] = log["reward"].tolist()
-        log["env_reward"] = log["env_reward"].tolist()
-        log["steps"] = int(log["episode_length"].sum())
-        log["episode_length"] = log["episode_length"].tolist()
 
         return log
 
     def summarize(self, log):
         return {
-            "steps": int(log["steps"]),
+            "steps": sum(log["episode_length"]),
             "episode_length_mean": float(np.mean(log["episode_length"])),
             "episode_length_min": int(np.min(log["episode_length"])),
             "episode_length_max": int(np.max(log["episode_length"])),
@@ -94,7 +98,7 @@ class Evaluator:
             "env_reward_mean": float(np.mean(log["env_reward"])),
             "env_reward_std": float(np.std(log["env_reward"])),
             f"action_{self.LOGGED_ACTION}_frac": float(
-                log[f"action_{self.LOGGED_ACTION}"] / log["steps"]
+                log[f"action_{self.LOGGED_ACTION}"] / sum(log["episode_length"])
             ),
         }
 
