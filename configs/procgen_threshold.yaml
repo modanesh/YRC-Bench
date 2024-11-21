@@ -6,7 +6,7 @@ general:
     skyline: 0
     seed: 10
 agents:
-    sim_weak: 'YRC/checkpoints/procgen/coinrun/PPO-easy-200-sim-weak/model_40009728.pth'
-    weak: 'YRC/checkpoints/procgen/coinrun/PPO-easy-200-weak/model_80019456.pth'
-    strong: 'YRC/checkpoints/procgen/coinrun/PPO-hard-500-strong/model_200015872.pth'
+    sim_weak: 'YRC/checkpoints/procgen/coinrun/sim_weak/model_40009728.pth'
+    weak: 'YRC/checkpoints/procgen/coinrun/weak/model_80019456.pth'
+    strong: 'YRC/checkpoints/procgen/coinrun/strong/model_200015872.pth'
 
