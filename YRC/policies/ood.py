@@ -43,15 +43,15 @@ class OODPolicy(Policy):
 
             if get_global_variable("benchmark") == "cliport":
                 obs_features = obs["env_obs"]['img']
-                # randomly keep 0.05 in the observations. do this for memory usage reasons
-                if np.random.rand() < 0.05:
+                # randomly keep 0.01 in the observations. do this for memory usage reasons
+                if np.random.rand() < 0.01:
                     observations.extend(obs_features)
             else:
                 for i in range(env.num_envs):
                     if not has_done[i]:
                         obs_features = obs["env_obs"]
-                        # randomly keep 0.05 in the observations. do this for memory usage reasons
-                        if np.random.rand() < 0.05:
+                        # randomly keep 0.01 in the observations. do this for memory usage reasons
+                        if np.random.rand() < 0.01:
                             observations.extend(obs_features)
 
             action = sample_action(logit)
