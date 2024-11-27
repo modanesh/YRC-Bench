@@ -118,6 +118,6 @@ algorithm:
         use_ae: False
         num_rollouts: 64
         num_thresholds: 10
-        epoch: 1000
-        batch_size: 128
+        epoch: 500
+        batch_size: 64
         feature_size: 64
