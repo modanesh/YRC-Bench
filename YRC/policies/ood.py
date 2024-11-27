@@ -23,7 +23,7 @@ class OODPolicy(Policy):
     def gather_rollouts(self, env, num_rollouts):
         assert num_rollouts % env.num_envs == 0
         observations = []
-        for i in range(2):
+        for i in range(num_rollouts // env.num_envs):
             observations.extend(self._rollout_once(env))
         return np.array(observations)
 

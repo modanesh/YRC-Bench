@@ -34,7 +34,7 @@ environment:
         common:
             env_name: 'coinrun'
             normalize_rew: False
-            num_envs: 256
+            num_envs: 64
             num_threads: 8
         train:
             distribution_mode: 'easy'
@@ -95,7 +95,7 @@ algorithm:
         min_pct: 0
         max_pct: 101
         pct_step: 10
-        num_rollouts: 256
+        num_rollouts: 64
     ppo:
         cls: PPOAlgorithm
         log_freq: 10
@@ -116,7 +116,7 @@ algorithm:
         cls: OODAlgorithm
         contamination: 0.1
         use_ae: False
-        num_rollouts: 256
+        num_rollouts: 64
         num_thresholds: 10
         epoch: 1000
         batch_size: 128
