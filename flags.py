@@ -21,7 +21,7 @@ def make():
     parser.add_argument("-strong", "--agent_strong", type=str, help="path to the strong agent")
     parser.add_argument("-f_n", "--file_name", type=str, help="file name for evaluation")
     parser.add_argument("-agent", "--general.agent", type=str, choices=["weak", "strong"], help="agent to evaluate")
-    parser.add_argument("-cp_f", "--coord_policy.feature_type", type=str, help="Type of features for coordination policy")
+    parser.add_argument("-cp_feature", "--coord_policy.feature_type", type=str, choices=["obs", "hidden", "hidden_obs", "dist"], help="Type of features for coordination policy")
 
     # always policy
     parser.add_argument("-cp_agent", "--coord_policy.agent", type=str,
