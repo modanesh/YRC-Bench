@@ -5,6 +5,9 @@ general:
     device: 0
     skyline: 0
     seed: 10
+coord_policy:
+    cls: OODPolicy
+    feature_type: 'obs'
 agents:
     sim_weak: 'YRC/checkpoints/procgen/coinrun/sim_weak/model_40009728.pth'
     weak: 'YRC/checkpoints/procgen/coinrun/weak/model_80019456.pth'
