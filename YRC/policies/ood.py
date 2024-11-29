@@ -30,9 +30,9 @@ class OODPolicy(Policy):
             image_tensors = []
             feature_tensors = []
             for tensor in observations:
-                if tensor.shape == (1, 3, 64, 64):
+                if tensor.dim() == 4:
                     image_tensors.append(tensor)
-                elif tensor.shape == (1, 256):
+                elif tensor.dim() == 2:
                     feature_tensors.append(tensor)
             observations = [torch.cat(image_tensors, dim=0), torch.cat(feature_tensors, dim=0)]
         else:
@@ -73,7 +73,7 @@ class OODPolicy(Policy):
                         else:
                             raise NotImplementedError
                         # randomly keep 0.005 in the observations. do this for memory usage reasons
-                        if np.random.rand() < 0.05:
+                        if np.random.rand() < 0.005:
                             if not torch.is_tensor(obs["env_obs"]):
                                 if self.feature_type == "hidden_obs":
                                     obs_features[0] = torch.from_numpy(obs_features[0]).float().to(self.device)
