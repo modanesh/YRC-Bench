@@ -36,8 +36,10 @@ class OODAlgorithm(Algorithm):
 
         # Threshold search
         thresholds_min, thresholds_max = policy.clf.decision_scores_.min(), policy.clf.decision_scores_.max()
-        cand_thresholds = np.linspace(thresholds_min, thresholds_max, args.num_thresholds)
-
+        if thresholds_min == thresholds_max:
+            cand_thresholds = [thresholds_min]
+        else:
+            cand_thresholds = np.linspace(thresholds_min, thresholds_max, args.num_thresholds)
         for threshold in cand_thresholds:
             params = {"threshold": threshold}
             logging.info(f"Evaluating threshold: {threshold}")
