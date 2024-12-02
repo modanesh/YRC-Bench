@@ -1,6 +1,8 @@
+experiments/*
+*swp
 .hydra/
 demos.log
-venv/
+venv_*/
 .idea
 tmp*
 wandb/
@@ -9,6 +11,7 @@ __pycache__/
 .DS_Store
 slurm
 logs/
+.scripts
 
 
 # Created by .ignore support plugin (hsz.mobi)

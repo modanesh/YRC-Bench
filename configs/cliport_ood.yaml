@@ -1,0 +1,11 @@
+name: 'cliport_ood'
+general:
+    benchmark: 'cliport'
+    algorithm: 'ood'
+    device: 0
+    skyline: 0
+    seed: 10
+agents:
+    sim_weak: 'YRC/checkpoints/cliport/multi-language-conditioned-cliport-n1-train/checkpoints/steps=300000-val_loss=0.00025047.ckpt'
+    weak: 'YRC/checkpoints/cliport/multi-language-conditioned-cliport-n1000-train/checkpoints/steps=120000-val_loss=0.00014955.ckpt'
+

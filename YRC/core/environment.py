@@ -1,274 +1,251 @@
-import inspect
-
+import importlib
+import logging
 import gym
 import numpy as np
-import torch
+import pprint
+import json
 
-from YRC.algorithms.rl import PPO, PPOFrozen
+from copy import deepcopy as dc
+
+from YRC.core import Evaluator
+from YRC.policies.wrappers import ExploreWrapper
 from YRC.core.configs import get_global_variable
-from cliport import tasks, agents
-from cliport.environments import environment as cliport_environment
-from cliport.utils import utils as cliport_utils
-from procgen import ProcgenEnv
-from . import procgen_wrappers
-from .utils import load_dataset
 
 
-def make_help_envs(config):
-    benchmark = get_global_variable("benchmark")
-    base_envs = make_raw_envs(benchmark, config.environments)
-    obs_shape, action_size = get_env_specs(benchmark, base_envs)
+def make(config):
+    base_envs = make_raw_envs(config)
+    sim_weak_agent, weak_agent, strong_agent = load_agents(config, base_envs["val_true"], base_envs["test"])
 
-    weak_policy, strong_policy = load_agents(benchmark, config.acting_policy, obs_shape, action_size)
+    coord_envs = {}
+    for name in base_envs:
+        if config.general.skyline or name not in ["train", "val_sim"]:
+            if type(strong_agent) is dict:
+                coord_envs[name] = CoordEnv(config.coord_env, base_envs[name], weak_agent, strong_agent[name])
+            else:
+                coord_envs[name] = CoordEnv(config.coord_env, base_envs[name], weak_agent, strong_agent)
+        else:
+            # NOTE: not skyline and name in ["train", "val_sim"]
+            # use weak agent as strong agent
+            # use sim_weak agent as weak agent
+            coord_envs[name] = CoordEnv(config.coord_env, base_envs[name], sim_weak_agent, weak_agent)
+
+    # set costs for getting help from strong agent
+    test_eval_info = get_test_eval_info(config, coord_envs)
+    for name in coord_envs:
+        coord_envs[name].set_costs(test_eval_info)
+
+    # reset
+    for name in coord_envs:
+        coord_envs[name].reset()
+
+    logging.info(
+        f"Strong query cost per action: {coord_envs['train'].strong_query_cost_per_action}"
+    )
+    logging.info(
+        f"Switch agent cost per action: {coord_envs['train'].switch_agent_cost_per_action}"
+    )
+
+    check_coord_envs(coord_envs)
+
+    return coord_envs
+
+
+def check_coord_envs(envs):
+    for name in envs:
+        assert (
+            envs[name].strong_query_cost_per_action
+            == envs["train"].strong_query_cost_per_action
+        )
+        assert (
+            envs[name].switch_agent_cost_per_action
+            == envs["train"].switch_agent_cost_per_action
+        )
+
+
+def get_test_eval_info(config, coord_envs):
+    with open("YRC/core/test_eval_info.json") as f:
+        data = json.load(f)
+
+    backup_data = dc(data)
+
+    benchmark = config.general.benchmark
+    env_name = config.environment.common.env_name
+
+    if env_name not in data[benchmark]:
+        logging.info(f"Missing info about {benchmark}-{env_name}!")
+        logging.info("Calculating missing info (taking a few minutes)...")
+        evaluator = Evaluator(config.evaluation)
+        # eval strong agent on test environment to get statistics
+        summary = evaluator.eval(
+            coord_envs["test"].strong_agent,
+            {"test": coord_envs["test"].base_env},
+            ["test"],
+            num_episodes=coord_envs["test"].num_envs,
+        )["test"]
+        data[benchmark][env_name] = summary
+
+        with open("YRC/core/backup_test_eval_info.json", "w") as f:
+            json.dump(backup_data, f, indent=2)
+        with open("YRC/core/test_eval_info.json", "w") as f:
+            json.dump(data, f, indent=2)
+        logging.info("Saved info!")
+
+    ret = data[benchmark][env_name]
+
+    logging.info(f"{pprint.pformat(ret, indent=2)}")
+    return ret
+
+
+def make_raw_envs(config):
+    module = importlib.import_module(f"YRC.envs.{get_global_variable('benchmark')}")
+    create_fn = getattr(module, "create_env")
 
     envs = {}
-    env_set = ["val_id", "val_ood", "test"] if config.general.offline else ["train", "val_id", "val_ood", "test"]
-    if config.general.offline:
-        envs["train"] = load_dataset(config.offline)
-
-    for name in env_set:
-        current_env = base_envs[name]
-        if benchmark == 'cliport':
-            strong_policy = current_env.task.oracle(current_env)[0]
-            config.help_env.timeout = current_env.task.max_steps
-        envs[name] = HelpEnvironment(config.help_env, current_env, weak_policy, strong_policy)
-    return tuple(envs.values()) if not config.general.offline else (tuple(envs.values()), weak_policy, strong_policy)
-
-
-def get_env_specs(benchmark, base_envs):
-    if benchmark == 'procgen':
-        return base_envs['train'].observation_space.shape, base_envs['train'].action_space.n
-    elif benchmark == 'cliport':
-        return (6, 320, 160), 2
-    else:
-        raise ValueError(f"Unknown benchmark: {benchmark}")
-
-
-def make_raw_envs(benchmark, config):
-    envs = {}
-    create_envs = {"procgen": create_procgen_env, "cliport": create_cliport_env}
-    for name in ["train", "val_id", "val_ood", "test"]:
-        print(f"Creating {benchmark} environment: {name}")
-        env_config = getattr(config, benchmark)
-        specific_config = getattr(env_config, name)
-        env = create_envs[benchmark](name, env_config.common, specific_config)
+    for name in ["train", "val_sim", "val_true", "test"]:
+        if name == "train" and config.general.skyline:
+            env = create_fn("test", config.environment)
+        else:
+            env = create_fn(name, config.environment)
+        # some extra information
+        env.name = config.environment.common.env_name
+        env.obs_shape = env.observation_space.shape
         envs[name] = env
+
     return envs
 
 
-def load_agents(benchmark, config, obs_shape, action_size):
-    if benchmark == 'procgen':
-        weak_agent = load_policy(config.weak, obs_shape[0], action_size, frozen=True)
-        strong_agent = load_policy(config.strong, obs_shape[0], action_size, frozen=True)
-    elif benchmark == 'cliport':
-        weak_agent = load_weak_policy(config)
-        strong_agent = None
-    return weak_agent, strong_agent
+def load_agents(config, env, test_env):
+    module = importlib.import_module(f"YRC.envs.{get_global_variable('benchmark')}")
+    load_fn = getattr(module, "load_policy")
+
+    sim_weak_agent = load_fn(config.agents.sim_weak, env, test_env)
+    weak_agent = load_fn(config.agents.weak, env, test_env)
+    strong_agent = load_fn(config.agents.strong, env, test_env)
+
+    return sim_weak_agent, weak_agent, strong_agent
 
 
-def load_policy(config, obs_size, action_size, frozen=False):
-    policy = PPO(config, in_channels=obs_size, action_size=action_size)
-    policy.to(get_global_variable("device"))
-    policy.eval()
-    agent = PPOFrozen(policy, get_global_variable("device"))
-    print(f"Loading agent from {config.file}")
-    checkpoint = torch.load(config.file)
-    agent.policy.load_state_dict(checkpoint["model_state_dict"])
-    if not frozen:
-        agent.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
-    return agent
+class CoordEnv(gym.Env):
+    WEAK = 0
+    STRONG = 1
 
+    def __init__(self, config, base_env, weak_agent, strong_agent):
+        self.args = config
 
-def load_weak_policy(config):
-    name = f'{config.weak.env_name}-{config.weak.architecture}-n{config.weak.num_demos}'
-    pi_w = agents.names[config.weak.architecture](name, config.weak.to_dict())
-    pi_w.load(config.weak.file)
-    pi_w.eval()
-    return pi_w
-
-
-def to_dict(cls):
-    def _convert(obj):
-        if isinstance(obj, (int, float, str, bool, type(None))):
-            return obj
-        elif isinstance(obj, dict):
-            return {k: _convert(v) for k, v in obj.items()}
-        elif inspect.isclass(obj):
-            return {k: _convert(v) for k, v in obj.__dict__.items()
-                    if not k.startswith('__') and not callable(v)}
-        elif hasattr(obj, '__dict__'):
-            return {k: _convert(v) for k, v in obj.__dict__.items()
-                    if not k.startswith('__')}
-        else:
-            return str(obj)
-
-    attributes = {}
-    for name, value in inspect.getmembers(cls):
-        if not name.startswith('__') and not inspect.ismethod(value) and not inspect.isfunction(value):
-            attributes[name] = _convert(value)
-
-    return attributes
-
-
-def create_procgen_env(env_mode, common_config, specific_config):
-    env = ProcgenEnv(num_envs=int(common_config.num_envs),
-                     env_name=common_config.env_name,
-                     num_levels=specific_config.num_levels,
-                     start_level=specific_config.start_level,
-                     distribution_mode=specific_config.distribution_mode,
-                     num_threads=common_config.num_threads,
-                     random_percent=0,
-                     step_penalty=0,
-                     key_penalty=0,
-                     rand_region=0,
-                     rand_seed=specific_config.seed)
-    env = procgen_wrappers.VecExtractDictObs(env, "rgb")
-    if common_config.normalize_rew:
-        env = procgen_wrappers.VecNormalize(env, ob=False)  # normalizing returns, but not the img frames
-    env = procgen_wrappers.TransposeFrame(env)
-    env = procgen_wrappers.ScaledFloatFrame(env)
-    return env
-
-
-def create_cliport_env(env_mode, common_config, specific_config):
-    tsk = tasks.names[specific_config.env_name]()
-    tsk.mode = env_mode
-    env = cliport_environment.Environment(common_config.assets_root, tsk, common_config.disp, common_config.shared_memory, hz=480)
-    env.seed(specific_config.seed)
-    return env
-
-
-class HelpEnvironment(gym.Env):
-    def __init__(self, config, base_env, weak_policy, strong_policy):
         self.base_env = base_env
-        self.weak_policy = weak_policy
-        self.strong_policy = strong_policy
-
+        self.weak_agent = weak_agent
+        self.strong_agent = strong_agent
+        
         self.action_space = gym.spaces.Discrete(2)
-        self.observation_space = base_env.observation_space
+        self.observation_space = gym.spaces.Dict(
+            {
+                "env_obs": base_env.observation_space,
+                "weak_features": gym.spaces.Box(
+                    -100, 100, shape=(weak_agent.hidden_dim,)
+                ),
+                "weak_logit": gym.spaces.Box(-100, 100, shape=(weak_agent.model.logit_dim,)),
+            }
+        )
 
-        self.timeout = config.timeout
-        self.strong_query_cost = float(config.strong_query_cost)
-        self.switching_cost = float(config.switching_cost)
-        self.strong_query_cost_per_action = (config.reward_max / config.timeout) * self.strong_query_cost
-        self.switching_agent_cost_per_action = (config.reward_max / config.timeout) * self.switching_cost
-        self.action = None
+    def set_costs(self, test_eval_info):
+        length = test_eval_info["episode_length_mean"]
+        reward = test_eval_info["reward_mean"]
+        reward_per_action = reward / length
+
+        self.strong_query_cost_per_action = round(
+            reward_per_action * self.args.strong_query_cost_ratio, 2
+        )
+        self.switch_agent_cost_per_action = round(
+            reward_per_action * self.args.switch_agent_cost_ratio, 2
+        )
+
+    @property
+    def num_envs(self):
+        return self.base_env.num_envs
+
+    @property
+    def num_actions(self):
+        return self.action_space.n
+
+    @property
+    def action_shape(self):
+        return self.action_space.shape
+
+    @property
+    def obs_shape(self):
+        return {
+            "env_obs": self.base_env.observation_space.shape,
+            "weak_features": (self.weak_agent.hidden_dim,),
+            "weak_logit": (self.base_env.action_space.n,),
+        }
+
+    def reset(self):
         self.prev_action = None
-        self.feature_type = config.feature_type
-        self.device = get_global_variable('device')
-        self.benchmark = get_global_variable('benchmark')
+        self.env_obs = self.base_env.reset()
+        self._reset_agents(np.array([True] * self.num_envs))
+        return self.get_obs()
 
-    def strong_query(self, rew):
-        return np.where(self.action == 1, rew - self.strong_query_cost_per_action, rew)
+    def _reset_agents(self, done):
+        self.weak_agent.reset(done)
+        self.strong_agent.reset(done)
 
-    def switching_agent(self, rew, done):
+    def step(self, action):
+        env_action = self._compute_env_action(action)
+        self.env_obs, env_reward, done, env_info = self.base_env.step(env_action)
+
+        info = dc(env_info)
+        for i, item in enumerate(info):
+            if "env_reward" not in item:
+                item["env_reward"] = env_reward[i]
+            item["env_action"] = env_action[i]
+
+        reward = self._get_reward(env_reward, action, done)
+        self._reset_agents(done)
+        self.prev_action = action
+
+        return self.get_obs(), reward, done, info
+
+    def _compute_env_action(self, action):
+        # NOTE: this method only works with non-recurrent agent models
+        greedy = self.args.act_greedy
+        env_action = np.zeros_like(action)
+        is_weak = (action == self.WEAK)
+        if is_weak.sum() > 0:
+            if isinstance(self.env_obs, dict):
+                env_action = self.weak_agent.act(self.env_obs, greedy=greedy)
+            else:
+                env_action[is_weak] = self.weak_agent.act(self.env_obs[is_weak], greedy=greedy)
+        is_strong = ~is_weak
+        if is_strong.sum() > 0:
+            if isinstance(self.env_obs, dict):
+                env_action = self.strong_agent.act(self.env_obs, greedy=greedy)
+            else:
+                env_action[is_strong] = self.strong_agent.act(self.env_obs[is_strong], greedy=greedy)
+        return env_action
+
+    def get_obs(self):
+        obs = {
+            "env_obs": self.env_obs,
+            "weak_features": self.weak_agent.get_hidden(self.env_obs).detach().cpu().numpy(),
+            "weak_logit": self.weak_agent.forward(self.env_obs).detach().cpu().numpy(),
+        }
+        return obs
+
+    def _get_reward(self, env_reward, action, done):
+        # cost of querying strong agent
+        reward = np.where(
+            action == self.STRONG,
+            env_reward - self.strong_query_cost_per_action,
+            env_reward,
+        )
+
+        # cost of switching
         if self.prev_action is not None:
-            switching_idx = np.where((self.action != self.prev_action) & (~done))
-            if switching_idx[0].size > 0:
-                rew[switching_idx] -= self.switching_agent_cost_per_action
-        self.prev_action = self.action
-        return rew
+            switch_indices = ((action != self.prev_action) & (~done)).nonzero()[0]
+            if switch_indices.size > 1:
+                reward[switch_indices] -= self.switch_agent_cost_per_action
 
-    def set_strong_policy(self, strong_policy):
-        self.strong_policy = strong_policy[0]
-
-    def set_costs(self, reward_max):
-        self.strong_query_cost_per_action = (reward_max / self.timeout) * self.strong_query_cost
-        self.switching_agent_cost_per_action = (reward_max / self.timeout) * self.switching_cost
-
-    def get_weak_policy_features(self, obs, info=None):
-        if self.feature_type not in ["T2", "T3"]:
-            return None
-
-        if self.benchmark == "procgen":
-            return self.weak_policy.policy.extract_features(obs)
-        elif self.benchmark == "cliport":
-            pi_w_pick_hidden, pi_w_place_hidden = self.weak_policy.extract_features(obs, info)
-            pi_w_pick_hidden = torch.stack(pi_w_pick_hidden) if isinstance(pi_w_pick_hidden, list) else pi_w_pick_hidden
-            pi_w_place_hidden = torch.stack(pi_w_place_hidden) if isinstance(pi_w_place_hidden, list) else pi_w_place_hidden
-
-            if pi_w_pick_hidden.dim() != 2:
-                pi_w_pick_hidden = pi_w_pick_hidden.unsqueeze(0)
-                pi_w_place_hidden = pi_w_place_hidden.unsqueeze(0)
-
-            return torch.cat([pi_w_pick_hidden, pi_w_place_hidden], dim=-1)
-
-    def reset(self, need_features=True):
-        obs = self.base_env.reset()
-        pi_w_hidden = None
-        if need_features:
-            if self.benchmark == "procgen":
-                obs_tensor = torch.FloatTensor(obs).to(device=self.device)
-                pi_w_hidden = self.get_weak_policy_features(obs_tensor)
-            elif self.benchmark == "cliport":
-                pi_w_hidden = self.get_weak_policy_features([cliport_utils.get_image(obs)], [self.base_env.info])
-        return obs, pi_w_hidden
-
-    def step_async(self, actions):
-        # specific for procgen
-        obs = self.base_env.reset()  # Get current observation
-        zero_mask = actions == 0
-        new_actions = np.empty_like(actions)
-        if np.any(zero_mask):
-            new_actions[zero_mask], _, _ = self.weak_policy.predict(obs[zero_mask])
-        if np.any(~zero_mask):
-            new_actions[~zero_mask], _, _ = self.strong_policy.predict(obs[~zero_mask])
-        self.action = actions
-        self.base_env.step_async(new_actions)
-
-    def step_wait(self):
-        # specific for procgen
-        obs, reward, done, info = self.base_env.step_wait()
-        reward = self.strong_query(reward)
-        reward = self.switching_agent(reward, done)
-        obs_tensor = torch.FloatTensor(obs).to(device=self.device)
-        pi_w_hidden = self.get_weak_policy_features(obs_tensor)
-        return obs, reward, done, info, pi_w_hidden
-
-    def step(self, action=None):
-        self.action = action
-
-        if self.benchmark == "procgen":
-            return self._step_procgen()
-        elif self.benchmark == "cliport":
-            return self._step_cliport(action)
-        else:
-            raise ValueError(f"Unknown benchmark: {self.benchmark}")
-
-    def _step_procgen(self):
-        obs = self.base_env.reset()  # Get current observation
-        zero_mask = self.action == 0
-        new_actions = np.empty_like(self.action)
-        if np.any(zero_mask):
-            new_actions[zero_mask], _, _ = self.weak_policy.predict(obs[zero_mask])
-        if np.any(~zero_mask):
-            new_actions[~zero_mask], _, _ = self.strong_policy.predict(obs[~zero_mask])
-        self.base_env.step_async(new_actions)
-        obs, reward, done, info = self.base_env.step_wait()
-        reward = self.strong_query(reward)
-        reward = self.switching_agent(reward, done)
-        obs_tensor = torch.FloatTensor(obs).to(device=self.device)
-        pi_w_hidden = self.get_weak_policy_features(obs_tensor)
-        return obs, reward, done, info, pi_w_hidden
-
-    def _step_cliport(self, action):
-        if action is not None:
-            obs = self.base_env._get_obs()
-            info = self.base_env.info
-            goal = self.base_env.get_lang_goal()
-            new_action = self.weak_policy.act(obs, info, goal)[0] if action[0] == 0 else self.strong_policy(obs, info)
-            obs, reward, done, info = self.base_env.step(new_action)
-            reward = self.strong_query(reward)
-            reward = self.switching_agent(reward, done)
-            pi_w_hidden = self.get_weak_policy_features([cliport_utils.get_image(obs)], [info])
-            info = [info]
-        else:
-            obs, reward, done, info = self.base_env.step(action)
-            return obs, reward, done, info
-        return obs, reward, done, info, pi_w_hidden
-
-    def render(self, mode='human'):
-        return self.base_env.render(mode)
+        return reward
 
     def close(self):
         return self.base_env.close()
