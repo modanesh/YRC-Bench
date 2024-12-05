@@ -13,7 +13,7 @@ if __name__ == "__main__":
 
     envs = env_factory.make(config)
     policy = policy_factory.make(config, envs["train"])
-    if config.general.algorithm not in ["always", "random"]:
+    if config.general.algorithm != "always":
         policy.load_model(os.path.join(config.experiment_dir, config.file_name))
     evaluator = Evaluator(config.evaluation)
 
