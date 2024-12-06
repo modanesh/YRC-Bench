@@ -118,7 +118,7 @@ class OODPolicy(Policy):
                     observation = obs['weak_logit'].to(self.device)
             score = self.clf.decision_function(observation)
 
-        action = (score < self.params["threshold"]).astype(int)
+        action = 1 - (score < self.clf.threshold_).astype(int)
         if 0 not in action and 1 not in action:
             print("No action is selected as OOD")
         return action
