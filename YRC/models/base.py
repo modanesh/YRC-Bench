@@ -23,6 +23,12 @@ class ImpalaCoordPolicyModel(nn.Module):
             self.hidden_dim = self.embedder.output_dim + coord_env.weak_agent.hidden_dim
         elif self.feature_type == "dist":
             self.hidden_dim = coord_env.base_env.action_space.n
+        elif self.feature_type == "hidden_dist":
+            self.hidden_dim = coord_env.weak_agent.hidden_dim + coord_env.base_env.action_space.n
+        elif self.feature_type == "obs_dist":
+            self.hidden_dim = self.embedder.output_dim + coord_env.base_env.action_space.n
+        elif self.feature_type == "obs_hidden_dist":
+            self.hidden_dim = self.embedder.output_dim + coord_env.weak_agent.hidden_dim + coord_env.base_env.action_space.n
         else:
             raise NotImplementedError
 
@@ -37,6 +43,9 @@ class ImpalaCoordPolicyModel(nn.Module):
         weak_features = obs["weak_features"]
         if not torch.is_tensor(weak_features):
             weak_features = torch.from_numpy(weak_features).float().to(self.device)
+        weak_logit = obs["weak_logit"]
+        if not torch.is_tensor(weak_logit):
+            weak_logit = torch.from_numpy(weak_logit).float().to(self.device)
 
         if self.feature_type == "obs":
             hidden = self.embedder(env_obs)
@@ -45,10 +54,13 @@ class ImpalaCoordPolicyModel(nn.Module):
         elif self.feature_type == "hidden_obs":
             hidden = torch.cat([self.embedder(env_obs), weak_features], dim=-1)
         elif self.feature_type == "dist":
-            weak_logit = obs["weak_logit"]
-            if not torch.is_tensor(weak_logit):
-                weak_logit = torch.from_numpy(weak_logit).float().to(self.device)
             hidden = weak_logit.softmax(dim=-1)
+        elif self.feature_type == "hidden_dist":
+            hidden = torch.cat([weak_features, weak_logit.softmax(dim=-1)], dim=-1)
+        elif self.feature_type == "obs_dist":
+            hidden = torch.cat([self.embedder(env_obs), weak_logit.softmax(dim=-1)], dim=-1)
+        elif self.feature_type == "obs_hidden_dist":
+            hidden = torch.cat([self.embedder(env_obs), weak_features, weak_logit.softmax(dim=-1)], dim=-1)
         else:
             raise NotImplementedError
 

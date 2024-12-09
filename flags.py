@@ -16,12 +16,12 @@ def make():
     parser.add_argument("-query_cost", "--coord_env.strong_query_cost_ratio", type=float, help="Cost of querying strong agent")
     parser.add_argument("-switch_cost", "--coord_env.switch_agent_cost_ratio", type=float, help="Cost of switching agent")
     parser.add_argument("-en", "--environment.common.env_name", type=str, help="name of the environment")
-    parser.add_argument("-sim", "--agent_sim_weak", type=str, help="path to the sim weak agent")
-    parser.add_argument("-weak", "--agent_weak", type=str, help="path to the weak agent")
-    parser.add_argument("-strong", "--agent_strong", type=str, help="path to the strong agent")
+    parser.add_argument("-sim", "--agents.sim_weak", type=str, help="path to the sim weak agent")
+    parser.add_argument("-weak", "--agents.weak", type=str, help="path to the weak agent")
+    parser.add_argument("-strong", "--agents.strong", type=str, help="path to the strong agent")
     parser.add_argument("-f_n", "--file_name", type=str, help="file name for evaluation")
     parser.add_argument("-agent", "--general.agent", type=str, choices=["weak", "strong"], help="agent to evaluate")
-    parser.add_argument("-cp_feature", "--coord_policy.feature_type", type=str, choices=["obs", "hidden", "hidden_obs", "dist"], help="Type of features for coordination policy")
+    parser.add_argument("-cp_feature", "--coord_policy.feature_type", type=str, choices=["obs", "hidden", "hidden_obs", "dist", "hidden_dist", "obs_dist", "obs_hidden_dist"], help="Type of features for coordination policy")
 
     # always policy
     parser.add_argument("-cp_agent", "--coord_policy.agent", type=str,

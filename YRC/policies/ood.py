@@ -26,23 +26,45 @@ class OODPolicy(Policy):
         observations = []
         for i in range(num_rollouts // env.num_envs):
             observations.extend(self._rollout_once(env))
-        if self.feature_type == "hidden_obs":
-            image_tensors = []
-            feature_tensors = []
-            for tensor in observations:
-                if tensor.dim() == 4:
-                    image_tensors.append(tensor)
-                elif tensor.dim() == 2:
-                    feature_tensors.append(tensor)
-            observations = [torch.cat(image_tensors, dim=0), torch.cat(feature_tensors, dim=0)]
+        if self.feature_type in ["hidden_obs", "hidden_dist", "obs_dist"]:
+            feature_tensors = [[], []]
+            for i, tensor in enumerate(observations):
+                feature_tensors[i % 2].append(tensor)
+            observations = [torch.cat(tensors, dim=0) for tensors in feature_tensors]
+        elif self.feature_type == "obs_hidden_dist":
+            feature_tensors = [[], [], []]
+            for i, tensor in enumerate(observations):
+                feature_tensors[i % 3].append(tensor)
+            observations = [torch.cat(tensors, dim=0) for tensors in feature_tensors]
+
         else:
             observations = torch.stack(observations)
         return observations
 
     def _rollout_once(self, env):
         def sample_action(logit):
+            """Samples an action using a categorical distribution with exploration temperature."""
             dist = Categorical(logits=logit / self.params["explore_temp"])
             return dist.sample().cpu().numpy()
+
+        def get_features(obs, feature_type):
+            """Retrieves features based on the specified feature type."""
+            feature_map = {
+                "obs": lambda obs: obs["env_obs"],
+                "hidden": lambda obs: obs["weak_features"],
+                "hidden_obs": lambda obs: [obs["env_obs"], obs["weak_features"]],
+                "dist": lambda obs: obs["weak_logit"],
+                "hidden_dist": lambda obs: [obs["weak_features"], obs["weak_logit"]],
+                "obs_dist": lambda obs: [obs["env_obs"], obs["weak_logit"]],
+                "obs_hidden_dist": lambda obs: [obs["env_obs"], obs["weak_features"], obs["weak_logit"]],
+            }
+            return feature_map[feature_type](obs)
+
+        def maybe_convert_to_tensor(features):
+            """Converts features to tensors if they are not already tensors."""
+            if isinstance(features, list):  # Handle lists of features (e.g., for concatenation)
+                return [self.to_tensor(f) if not torch.is_tensor(f) else f for f in features]
+            return self.to_tensor(features) if not torch.is_tensor(features) else features
 
         agent = self.agent
         agent.eval()
@@ -56,30 +78,14 @@ class OODPolicy(Policy):
             if get_global_variable("benchmark") == "cliport":
                 # todo: fix faeture type for cliport
                 obs_features = obs["env_obs"]['img']
-                # randomly keep 0.005 in the observations. do this for memory usage reasons
-                if np.random.rand() < 0.005:
+                if np.random.rand() < 0.005:  # Randomly sample for memory efficiency
                     observations.extend(obs_features)
             else:
                 for i in range(env.num_envs):
                     if not has_done[i]:
-                        if self.feature_type == "obs":
-                            obs_features = obs["env_obs"]
-                        elif self.feature_type == "hidden":
-                            obs_features = obs["weak_features"]
-                        elif self.feature_type == "hidden_obs":
-                            obs_features = [obs["env_obs"], obs["weak_features"]]
-                        elif self.feature_type == "dist":
-                            obs_features = obs["weak_logit"]
-                        else:
-                            raise NotImplementedError
-                        # randomly keep 0.005 in the observations. do this for memory usage reasons
-                        if np.random.rand() < 0.005:
-                            if not torch.is_tensor(obs["env_obs"]):
-                                if self.feature_type == "hidden_obs":
-                                    obs_features[0] = torch.from_numpy(obs_features[0]).float().to(self.device)
-                                    obs_features[1] = torch.from_numpy(obs_features[1]).float().to(self.device)
-                                else:
-                                    obs_features = torch.from_numpy(obs_features).float().to(self.device)
+                        obs_features = get_features(obs, self.feature_type)
+                        if np.random.rand() < 0.005:  # Randomly sample for memory efficiency
+                            obs_features = maybe_convert_to_tensor(obs_features)
                             observations.extend(obs_features)
 
             action = sample_action(logit)
@@ -95,30 +101,28 @@ class OODPolicy(Policy):
         if get_global_variable("benchmark") == "cliport":
             score = self.clf.decision_function(obs["env_obs"]['img'])
         else:
-            if self.feature_type == "obs":
-                if not torch.is_tensor(obs['env_obs']):
-                    observation = torch.from_numpy(obs['env_obs']).float().to(self.device)
-                else:
-                    observation = obs['env_obs'].to(self.device)
-            elif self.feature_type == "hidden":
-                if not torch.is_tensor(obs['weak_features']):
-                    observation = torch.from_numpy(obs['weak_features']).float().to(self.device)
-                else:
-                    observation = obs['weak_features'].to(self.device)
-            elif self.feature_type == "hidden_obs":
-                if not torch.is_tensor(obs['env_obs']):
-                    obs['env_obs'] = torch.from_numpy(obs['env_obs']).float().to(self.device)
-                if not torch.is_tensor(obs['weak_features']):
-                    obs['weak_features'] = torch.from_numpy(obs['weak_features']).float().to(self.device)
-                observation = [obs['env_obs'], obs['weak_features']]
-            elif self.feature_type == "dist":
-                if not torch.is_tensor(obs['weak_logit']):
-                    observation = torch.from_numpy(obs['weak_logit']).float().to(self.device)
-                else:
-                    observation = obs['weak_logit'].to(self.device)
+            if self.feature_type in ["obs", "hidden", "dist"]:
+                key = {
+                    "obs": "env_obs",
+                    "hidden": "weak_features",
+                    "dist": "weak_logit"
+                }[self.feature_type]
+                observation = self.to_tensor(obs[key])
+            elif self.feature_type in ["hidden_obs", "hidden_dist", "obs_dist"]:
+                keys = {
+                    "hidden_obs": ["env_obs", "weak_features"],
+                    "hidden_dist": ["weak_features", "weak_logit"],
+                    "obs_dist": ["env_obs", "weak_logit"]
+                }[self.feature_type]
+                observation = [self.to_tensor(obs[key]) for key in keys]
+            elif self.feature_type == "obs_hidden_dist":
+                keys = {
+                    "obs_hidden_dist": ["env_obs", "weak_features", "weak_logit"]
+                }[self.feature_type]
+                observation = [self.to_tensor(obs[key]) for key in keys]
             score = self.clf.decision_function(observation)
 
-        action = (score < self.params["threshold"]).astype(int)
+        action = 1 - (score < self.clf.threshold_).astype(int)
         if 0 not in action and 1 not in action:
             print("No action is selected as OOD")
         return action
@@ -126,27 +130,30 @@ class OODPolicy(Policy):
     def initialize_ood_detector(self, args, env):
         if self.args.method == "DeepSVDD":
             dummy_obs = env.reset()
-            if self.feature_type == "obs":
-                dummy_obs = dummy_obs['env_obs']['img'] if get_global_variable("benchmark") == "cliport" else dummy_obs['env_obs']
-                dummy_obs_shape = dummy_obs.shape
-            elif self.feature_type == "hidden":
-                dummy_obs = dummy_obs['weak_features']
-                dummy_obs_shape = dummy_obs.shape
-            elif self.feature_type == "hidden_obs":
-                env_obs = dummy_obs['env_obs']['img'] if get_global_variable("benchmark") == "cliport" else dummy_obs['env_obs']
-                hidden_obs = dummy_obs['weak_features']
-                env_obs_shape = env_obs.shape
-                hidden_obs_shape = hidden_obs.shape
-                dummy_obs_shape = env_obs_shape + hidden_obs_shape[1:]
-            elif self.feature_type == "dist":
-                dummy_obs = dummy_obs['weak_logit']
-                dummy_obs_shape = dummy_obs.shape
+            feature_type_to_shapes = {
+                "obs": lambda dummy_obs: (dummy_obs['env_obs']['img'] if get_global_variable("benchmark") == "cliport" else dummy_obs['env_obs']).shape,
+                "hidden": lambda dummy_obs: dummy_obs['weak_features'].shape,
+                "hidden_obs": lambda dummy_obs: (
+                    (dummy_obs['env_obs']['img'] if get_global_variable("benchmark") == "cliport" else dummy_obs['env_obs']).shape + dummy_obs['weak_features'].shape[1:]
+                ),
+                "dist": lambda dummy_obs: dummy_obs['weak_logit'].shape,
+                "hidden_dist": lambda dummy_obs: (
+                    dummy_obs['weak_features'].shape + dummy_obs['weak_logit'].shape[1:]
+                ),
+                "obs_dist": lambda dummy_obs: (
+                    (dummy_obs['env_obs']['img'] if get_global_variable("benchmark") == "cliport" else dummy_obs['env_obs']).shape + dummy_obs['weak_logit'].shape[1:]
+                ),
+                "obs_hidden_dist": lambda dummy_obs: (
+                    (dummy_obs['env_obs']['img'] if get_global_variable("benchmark") == "cliport" else dummy_obs['env_obs']).shape + dummy_obs['weak_features'].shape[1:] + dummy_obs['weak_logit'].shape[1:]
+                )
+            }
+
+            dummy_obs_shape = feature_type_to_shapes[self.feature_type](dummy_obs)
+
             if get_global_variable("benchmark") == "cliport":
-                dummy_obs = dummy_obs.unsqueeze(0)
-                dummy_obs = dummy_obs.permute(0, 3, 1, 2)
+                dummy_obs = dummy_obs.unsqueeze(0).permute(0, 3, 1, 2)
 
             self.clf_name = 'DeepSVDD'
-
             self.clf = deep_svdd.DeepSVDD(
                             n_features=args.feature_size,
                             use_ae=args.use_ae,
@@ -180,3 +187,9 @@ class OODPolicy(Policy):
         self.clf = state_dict['clf']
         return self
 
+
+    def to_tensor(self, data):
+        """Converts input to a torch tensor if it's not already."""
+        if not torch.is_tensor(data):
+            return torch.from_numpy(data).float().to(self.device)
+        return data
