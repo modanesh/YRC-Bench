@@ -25,6 +25,8 @@ class ImpalaCoordPolicyModel(nn.Module):
             self.hidden_dim = coord_env.base_env.action_space.n
         elif self.feature_type == "hidden_dist":
             self.hidden_dim = coord_env.weak_agent.hidden_dim + coord_env.base_env.action_space.n
+        elif self.feature_type == "obs_dist":
+            self.hidden_dim = self.embedder.output_dim + coord_env.base_env.action_space.n
         else:
             raise NotImplementedError
 
@@ -53,6 +55,8 @@ class ImpalaCoordPolicyModel(nn.Module):
             hidden = weak_logit.softmax(dim=-1)
         elif self.feature_type == "hidden_dist":
             hidden = torch.cat([weak_features, weak_logit.softmax(dim=-1)], dim=-1)
+        elif self.feature_type == "obs_dist":
+            hidden = torch.cat([self.embedder(env_obs), weak_logit.softmax(dim=-1)], dim=-1)
         else:
             raise NotImplementedError
 
