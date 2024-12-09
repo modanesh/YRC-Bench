@@ -26,15 +26,15 @@ class OODPolicy(Policy):
         observations = []
         for i in range(num_rollouts // env.num_envs):
             observations.extend(self._rollout_once(env))
-        if self.feature_type == "hidden_obs":
-            image_tensors = []
-            feature_tensors = []
-            for tensor in observations:
-                if tensor.dim() == 4:
-                    image_tensors.append(tensor)
-                elif tensor.dim() == 2:
-                    feature_tensors.append(tensor)
-            observations = [torch.cat(image_tensors, dim=0), torch.cat(feature_tensors, dim=0)]
+        if self.feature_type in ["hidden_obs", "hidden_dist"]:
+            feature0_tensors = []
+            feature1_tensors = []
+            for i, tensor in enumerate(observations):
+                if i % 2 == 0:
+                    feature0_tensors.append(tensor)
+                else:
+                    feature1_tensors.append(tensor)
+            observations = [torch.cat(feature0_tensors, dim=0), torch.cat(feature1_tensors, dim=0)]
         else:
             observations = torch.stack(observations)
         return observations
@@ -70,12 +70,14 @@ class OODPolicy(Policy):
                             obs_features = [obs["env_obs"], obs["weak_features"]]
                         elif self.feature_type == "dist":
                             obs_features = obs["weak_logit"]
+                        elif self.feature_type == "hidden_dist":
+                            obs_features = [obs["weak_features"], obs["weak_logit"]]
                         else:
                             raise NotImplementedError
                         # randomly keep 0.005 in the observations. do this for memory usage reasons
                         if np.random.rand() < 0.005:
                             if not torch.is_tensor(obs["env_obs"]):
-                                if self.feature_type == "hidden_obs":
+                                if self.feature_type in ["hidden_obs", "hidden_dist"]:
                                     obs_features[0] = torch.from_numpy(obs_features[0]).float().to(self.device)
                                     obs_features[1] = torch.from_numpy(obs_features[1]).float().to(self.device)
                                 else:
@@ -116,6 +118,12 @@ class OODPolicy(Policy):
                     observation = torch.from_numpy(obs['weak_logit']).float().to(self.device)
                 else:
                     observation = obs['weak_logit'].to(self.device)
+            elif self.feature_type == "hidden_dist":
+                if not torch.is_tensor(obs['weak_features']):
+                    obs['weak_features'] = torch.from_numpy(obs['weak_features']).float().to(self.device)
+                if not torch.is_tensor(obs['weak_logit']):
+                    obs['weak_logit'] = torch.from_numpy(obs['weak_logit']).float().to(self.device)
+                observation = [obs['weak_features'], obs['weak_logit']]
             score = self.clf.decision_function(observation)
 
         action = 1 - (score < self.clf.threshold_).astype(int)
@@ -135,12 +143,13 @@ class OODPolicy(Policy):
             elif self.feature_type == "hidden_obs":
                 env_obs = dummy_obs['env_obs']['img'] if get_global_variable("benchmark") == "cliport" else dummy_obs['env_obs']
                 hidden_obs = dummy_obs['weak_features']
-                env_obs_shape = env_obs.shape
-                hidden_obs_shape = hidden_obs.shape
-                dummy_obs_shape = env_obs_shape + hidden_obs_shape[1:]
+                dummy_obs_shape = env_obs.shape + hidden_obs.shape[1:]
             elif self.feature_type == "dist":
                 dummy_obs = dummy_obs['weak_logit']
                 dummy_obs_shape = dummy_obs.shape
+            elif self.feature_type == "hidden_dist":
+                dummy_obs = [dummy_obs['weak_features'], dummy_obs['weak_logit']]
+                dummy_obs_shape = dummy_obs[0].shape + dummy_obs[1].shape[1:]
             if get_global_variable("benchmark") == "cliport":
                 dummy_obs = dummy_obs.unsqueeze(0)
                 dummy_obs = dummy_obs.permute(0, 3, 1, 2)
