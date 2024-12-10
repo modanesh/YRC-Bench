@@ -22,10 +22,10 @@
 - Raw image observations + Weak agent's action distributions
 - Weak agent's hidden features + Weak agent's action distributions
 - Raw image observations + Weak agent's hidden features + Weak agent's action distributions
+- Weighted feature inputs: Raw image observations + Weak agent's hidden features + Weak agent's action distributions 
+  - Instead of using combinations directly, introduce trainable weights for each feature type (obs, hidden, dist) and optimize them during training. This approach can dynamically adjust the importance of each feature type.
 
 
 #### To-Dos
-- Weighted Feature Inputs: 
-  - Instead of using combinations directly, introduce trainable weights for each feature type (obs, hidden, dist) and optimize them during training. This approach can dynamically adjust the importance of each feature type.
 - Ensemble Coordination Policies: 
   - Train multiple coordination policies, each specialized in a different feature subset, and ensemble their decisions using a meta-policy.

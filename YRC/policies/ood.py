@@ -31,12 +31,11 @@ class OODPolicy(Policy):
             for i, tensor in enumerate(observations):
                 feature_tensors[i % 2].append(tensor)
             observations = [torch.cat(tensors, dim=0) for tensors in feature_tensors]
-        elif self.feature_type == "obs_hidden_dist":
+        elif self.feature_type in ["obs_hidden_dist", "learnable_obs_hidden_dist"]:
             feature_tensors = [[], [], []]
             for i, tensor in enumerate(observations):
                 feature_tensors[i % 3].append(tensor)
             observations = [torch.cat(tensors, dim=0) for tensors in feature_tensors]
-
         else:
             observations = torch.stack(observations)
         return observations
@@ -57,6 +56,7 @@ class OODPolicy(Policy):
                 "hidden_dist": lambda obs: [obs["weak_features"], obs["weak_logit"]],
                 "obs_dist": lambda obs: [obs["env_obs"], obs["weak_logit"]],
                 "obs_hidden_dist": lambda obs: [obs["env_obs"], obs["weak_features"], obs["weak_logit"]],
+                "learnable_obs_hidden_dist": lambda obs: [obs["env_obs"], obs["weak_features"], obs["weak_logit"]],
             }
             return feature_map[feature_type](obs)
 
@@ -115,9 +115,10 @@ class OODPolicy(Policy):
                     "obs_dist": ["env_obs", "weak_logit"]
                 }[self.feature_type]
                 observation = [self.to_tensor(obs[key]) for key in keys]
-            elif self.feature_type == "obs_hidden_dist":
+            elif self.feature_type in ["obs_hidden_dist", "learnable_obs_hidden_dist"]:
                 keys = {
-                    "obs_hidden_dist": ["env_obs", "weak_features", "weak_logit"]
+                    "obs_hidden_dist": ["env_obs", "weak_features", "weak_logit"],
+                    "learnable_obs_hidden_dist": ["env_obs", "weak_features", "weak_logit"]
                 }[self.feature_type]
                 observation = [self.to_tensor(obs[key]) for key in keys]
             score = self.clf.decision_function(observation)
@@ -144,6 +145,9 @@ class OODPolicy(Policy):
                     (dummy_obs['env_obs']['img'] if get_global_variable("benchmark") == "cliport" else dummy_obs['env_obs']).shape + dummy_obs['weak_logit'].shape[1:]
                 ),
                 "obs_hidden_dist": lambda dummy_obs: (
+                    (dummy_obs['env_obs']['img'] if get_global_variable("benchmark") == "cliport" else dummy_obs['env_obs']).shape + dummy_obs['weak_features'].shape[1:] + dummy_obs['weak_logit'].shape[1:]
+                ),
+                "learnable_obs_hidden_dist": lambda dummy_obs: (
                     (dummy_obs['env_obs']['img'] if get_global_variable("benchmark") == "cliport" else dummy_obs['env_obs']).shape + dummy_obs['weak_features'].shape[1:] + dummy_obs['weak_logit'].shape[1:]
                 )
             }
