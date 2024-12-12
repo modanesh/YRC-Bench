@@ -41,6 +41,8 @@ def make():
     parser.add_argument("-cp_feature", "--coord_policy.feature_type", type=str, 
                         choices=["obs", "hidden", "hidden_obs", "dist", "hidden_dist", "obs_dist", "obs_hidden_dist", "learnable_obs_hidden_dist"], 
                         help="Type of features for coordination policy")
+    parser.add_argument("-cp_data_agent", "--coord_policy.collect_data_agent", type=str, choices=["weak", "strong"], default="weak",
+                        help="agent to collect data")
 
     # always policy
     parser.add_argument("-cp_agent", "--coord_policy.agent", type=str,

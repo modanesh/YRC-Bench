@@ -31,7 +31,7 @@ class Evaluator:
                 self._update_log(log, this_log)
 
             summary[split] = self.summarize(log)
-            self.write_summary(split, summary[split])
+            self.write_summary(split, summary[split], envs[split].num_envs)
 
             envs[split].close()
 
@@ -102,18 +102,18 @@ class Evaluator:
             ),
         }
 
-    def write_summary(self, split, summary):
+    def write_summary(self, split, summary, num_envs):
         log_str = f"   Steps:       {summary['steps']}\n"
         log_str += "   Episode:    "
         log_str += f"mean {summary['episode_length_mean']:7.2f}  "
         log_str += f"min {summary['episode_length_min']:7.2f}  "
         log_str += f"max {summary['episode_length_max']:7.2f}\n"
         log_str += "   Reward:     "
-        log_str += f"mean {summary['reward_mean']:7.2f}  "
-        log_str += f"std {summary['reward_std']:7.2f}\n"
+        log_str += f"mean {summary['reward_mean']:.2f} "
+        log_str += f"± {(1.96 * summary['reward_std']) / (num_envs ** 0.5):.2f}\n"
         log_str += "   Env Reward: "
-        log_str += f"mean {summary['env_reward_mean']:7.2f}  "
-        log_str += f"std {summary['env_reward_std']:7.2f}\n"
+        log_str += f"mean {summary['env_reward_mean']:.2f} "
+        log_str += f"± {(1.96 * summary['env_reward_std']) / (num_envs ** 0.5):.2f}\n"
         log_str += f"   Action {self.LOGGED_ACTION} fraction: {summary[f'action_{self.LOGGED_ACTION}_frac']:7.2f}"
 
         logging.info(log_str)

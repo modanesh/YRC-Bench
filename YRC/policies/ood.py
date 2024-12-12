@@ -14,7 +14,10 @@ from YRC.core.configs.global_configs import get_global_variable
 class OODPolicy(Policy):
     def __init__(self, config, env):
         self.args = config.coord_policy
-        self.agent = env.weak_agent
+        if config.coord_policy.collect_data_agent == "weak":
+            self.agent = env.weak_agent
+        elif config.coord_policy.collect_data_agent == "strong":
+            self.agent = env.strong_agent
         self.params = {"threshold": 0.0, "explore_temp": 1.0}
         self.clf = None
         self.clf_name = None

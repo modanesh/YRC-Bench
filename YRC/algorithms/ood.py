@@ -30,9 +30,10 @@ class OODAlgorithm(Algorithm):
 
         # Generate rollouts for training OOD detector
         rollout_obs = policy.gather_rollouts(envs["train"], args.num_rollouts)
+        rollout_obs_threshold = policy.gather_rollouts(envs["train"], args.num_rollouts)
 
         # Train OOD detector
-        policy.clf.fit(rollout_obs)
+        policy.clf.fit(rollout_obs, rollout_obs_threshold)
 
         # Threshold search
         thresholds_min, thresholds_max = policy.clf.decision_scores_.min(), policy.clf.decision_scores_.max()
