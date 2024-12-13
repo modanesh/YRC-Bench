@@ -61,6 +61,6 @@ class ThresholdAlgorithm(Algorithm):
                     logging.info(
                         "Parameters: " + pprint.pformat(best_params[split], indent=2)
                     )
-                    evaluator.write_summary(f"best_{split}", best_summary[split])
+                    evaluator.write_summary(f"best_{split}", best_summary[split], envs[split].num_envs)
 
         policy.update_params(best_params)

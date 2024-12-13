@@ -59,7 +59,7 @@ class Algorithm:
                             # policy.save_model(f"best_{iteration}", save_dir)
 
                         logging.info(f"Best {split} so far")
-                        evaluator.write_summary(f"best_{split}", best_summary[split])
+                        evaluator.write_summary(f"best_{split}", best_summary[split], envs[split].num_envs)
 
                         self.update_wandb_log(wandb_log, split, split_summary[split])
                         self.update_wandb_log(

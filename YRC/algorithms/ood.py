@@ -57,7 +57,7 @@ class OODAlgorithm(Algorithm):
                 # Log best result so far
                 logging.info(f"Best {split} so far")
                 logging.info(f"Parameters: {best_params[split]}")
-                evaluator.write_summary(f"best_{split}", best_summary[split])
+                evaluator.write_summary(f"best_{split}", best_summary[split], envs[split].num_envs)
 
         policy.update_params(best_params[eval_splits[0]])  # Update with best params from first eval split
 
