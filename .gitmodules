@@ -9,4 +9,4 @@
 	url = https://github.com/modanesh/pyod.git
 [submodule "Minigrid"]
 	path = Minigrid
-	url = https://github.com/Farama-Foundation/Minigrid.git
+	url = https://github.com/modanesh/Minigrid.git
