@@ -164,6 +164,17 @@
       "env_reward_mean": 0.0,
       "env_reward_std": 0.0,
       "action_1_frac": 0.08087787035155457
+    },
+    "heist": {
+      "steps": 54176,
+      "episode_length_mean": 423.25,
+      "episode_length_min": 1,
+      "episode_length_max": 1000,
+      "reward_mean": 7.03125,
+      "reward_std": 4.5688098491292015,
+      "env_reward_mean": 0.0,
+      "env_reward_std": 0.0,
+      "action_1_frac": 0.05448907265209687
     }
   },
   "cliport": {
@@ -190,5 +201,17 @@
       "action_1_frac": 1.0
     }
   },
-  "mp3d": {}
+  "minigrid": {
+    "MiniGrid-Dynamic-Obstacles-5x5-v0": {
+      "steps": 456,
+      "episode_length_mean": 76.0,
+      "episode_length_min": 33,
+      "episode_length_max": 100,
+      "reward_mean": -0.6666666666666666,
+      "reward_std": 0.4714045207910317,
+      "env_reward_mean": -0.6666666666666666,
+      "env_reward_std": 0.4714045207910317,
+      "action_1_frac": 0.543859649122807
+    }
+  }
 }

@@ -1,6 +1,9 @@
 import importlib
 import logging
-import gym
+if importlib.util.find_spec("gymnasium") is None:
+    import gym
+else:
+    import gymnasium as gym  # used for minigrid
 import numpy as np
 import pprint
 import json
@@ -8,7 +11,6 @@ import json
 from copy import deepcopy as dc
 
 from YRC.core import Evaluator
-from YRC.policies.wrappers import ExploreWrapper
 from YRC.core.configs import get_global_variable
 
 
@@ -131,15 +133,15 @@ class CoordEnv(gym.Env):
 
     def __init__(self, config, base_env, weak_agent, strong_agent):
         self.args = config
-
         self.base_env = base_env
+        obs_space = base_env[0].observation_space if isinstance(base_env.observation_space, list) else base_env.observation_space
         self.weak_agent = weak_agent
         self.strong_agent = strong_agent
         
         self.action_space = gym.spaces.Discrete(2)
         self.observation_space = gym.spaces.Dict(
             {
-                "env_obs": base_env.observation_space,
+                "env_obs": obs_space,
                 "weak_features": gym.spaces.Box(
                     -100, 100, shape=(weak_agent.hidden_dim,)
                 ),
@@ -194,6 +196,8 @@ class CoordEnv(gym.Env):
         self.env_obs, env_reward, done, env_info = self.base_env.step(env_action)
 
         info = dc(env_info)
+        if len(info) == 0:
+            info = [{"env_reward": 0, "env_action": 0}] * self.num_envs
         for i, item in enumerate(info):
             if "env_reward" not in item:
                 item["env_reward"] = env_reward[i]

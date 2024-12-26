@@ -48,7 +48,6 @@ class Evaluator:
 
     def _eval_one_iteration(self, policy, env):
         args = self.args
-
         log = {
             "reward": [0] * env.num_envs,
             "env_reward": [0] * env.num_envs,
@@ -78,9 +77,7 @@ class Evaluator:
                 log["reward"][i] += reward[i] * (1 - has_done[i])
                 log["episode_length"][i] += 1 - has_done[i]
                 if not has_done[i]:
-                    log[f"action_{self.LOGGED_ACTION}"] += (
-                        action[i] == self.LOGGED_ACTION
-                    ).sum()
+                    log[f"action_{self.LOGGED_ACTION}"] += (action[i] == self.LOGGED_ACTION).sum()
 
             has_done |= done
             step += 1
@@ -89,7 +86,7 @@ class Evaluator:
 
     def summarize(self, log):
         return {
-            "steps": sum(log["episode_length"]),
+            "steps": int(sum(log["episode_length"])),
             "episode_length_mean": float(np.mean(log["episode_length"])),
             "episode_length_min": int(np.min(log["episode_length"])),
             "episode_length_max": int(np.max(log["episode_length"])),
