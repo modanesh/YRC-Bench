@@ -29,12 +29,6 @@ class ImpalaCoordPolicyModel(nn.Module):
             self.hidden_dim = self.embedder.output_dim + coord_env.base_env.action_space.n
         elif self.feature_type == "obs_hidden_dist":
             self.hidden_dim = self.embedder.output_dim + coord_env.weak_agent.hidden_dim + coord_env.base_env.action_space.n
-        elif self.feature_type == "learnable_obs_hidden_dist":
-            self.hidden_dim = self.embedder.output_dim + coord_env.weak_agent.hidden_dim + coord_env.base_env.action_space.n
-            # learnable weights for each feature
-            self.w_obs = nn.Parameter(torch.randn(1))
-            self.w_hidden = nn.Parameter(torch.randn(1))
-            self.w_dist = nn.Parameter(torch.randn(1))
         else:
             raise NotImplementedError
 
@@ -67,8 +61,6 @@ class ImpalaCoordPolicyModel(nn.Module):
             hidden = torch.cat([self.embedder(env_obs), weak_logit.softmax(dim=-1)], dim=-1)
         elif self.feature_type == "obs_hidden_dist":
             hidden = torch.cat([self.embedder(env_obs), weak_features, weak_logit.softmax(dim=-1)], dim=-1)
-        elif self.feature_type == "learnable_obs_hidden_dist":
-            hidden = torch.cat([self.w_obs * self.embedder(env_obs), self.w_hidden * weak_features, self.w_dist * weak_logit.softmax(dim=-1)], dim=-1)
         else:
             raise NotImplementedError
 
