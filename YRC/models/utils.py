@@ -1,7 +1,13 @@
 import math
-
+import importlib
 import torch
 import torch.nn as nn
+if importlib.util.find_spec("gymnasium") is None:
+    import gym
+else:
+    import gymnasium as gym
+import numpy as np
+import re
 
 
 def orthogonal_init(module, gain=nn.init.calculate_gain("relu")):
@@ -109,3 +115,102 @@ def init_params(m):
         m.weight.data *= 1 / torch.sqrt(m.weight.data.pow(2).sum(1, keepdim=True))
         if m.bias is not None:
             m.bias.data.fill_(0)
+
+
+
+class DictList(dict):
+    """A dictionnary of lists of same size. Dictionnary items can be
+    accessed using `.` notation and list items using `[]` notation.
+
+    Example:
+        >>> d = DictList({"a": [[1, 2], [3, 4]], "b": [[5], [6]]})
+        >>> d.a
+        [[1, 2], [3, 4]]
+        >>> d[0]
+        DictList({"a": [1, 2], "b": [5]})
+    """
+
+    __getattr__ = dict.__getitem__
+    __setattr__ = dict.__setitem__
+
+    def __len__(self):
+        return len(next(iter(dict.values(self))))
+
+    def __getitem__(self, index):
+        return DictList({key: value[index] for key, value in dict.items(self)})
+
+    def __setitem__(self, index, d):
+        for key, value in d.items():
+            dict.__getitem__(self, key)[index] = value
+
+
+class Vocabulary:
+    """A mapping from tokens to ids with a capacity of `max_size` words.
+    It can be saved in a `vocab.json` file."""
+
+    def __init__(self, max_size):
+        self.max_size = max_size
+        self.vocab = {}
+
+    def load_vocab(self, vocab):
+        self.vocab = vocab
+
+    def __getitem__(self, token):
+        if not token in self.vocab.keys():
+            if len(self.vocab) >= self.max_size:
+                raise ValueError("Maximum vocabulary capacity reached")
+            self.vocab[token] = len(self.vocab) + 1
+        return self.vocab[token]
+
+
+def preprocess_images(images, device=None):
+    # Bug of Pytorch: very slow if not first converted to np array
+    return torch.tensor(images, device=device, dtype=torch.float)
+
+
+def preprocess_texts(texts, vocab, device=None):
+    var_indexed_texts = []
+    max_text_len = 0
+
+    for text in texts:
+        tokens = re.findall("([a-z]+)", text.lower())
+        var_indexed_text = np.array([vocab[token] for token in tokens])
+        var_indexed_texts.append(var_indexed_text)
+        max_text_len = max(len(var_indexed_text), max_text_len)
+
+    indexed_texts = np.zeros((len(texts), max_text_len))
+
+    for i, indexed_text in enumerate(var_indexed_texts):
+        indexed_texts[i, :len(indexed_text)] = indexed_text
+
+    return torch.tensor(indexed_texts, device=device, dtype=torch.long)
+
+
+def get_obss_preprocessor(obs_space):
+    # Check if obs_space is an image space
+    if isinstance(obs_space, gym.spaces.Box):
+        obs_space = {"image": obs_space.shape}
+
+        def preprocess_obss(obss, device=None):
+            return DictList({
+                "image": preprocess_images(obss, device=device)
+            })
+
+    # Check if it is a MiniGrid observation space
+    elif isinstance(obs_space, gym.spaces.Dict) and "image" in obs_space.spaces.keys():
+        obs_space = {"image": obs_space.spaces["image"].shape, "text": 100}
+
+        vocab = Vocabulary(obs_space["text"])
+
+        def preprocess_obss(obss, device=None):
+            return DictList({
+                "image": preprocess_images(obss['image'], device=device),
+                "text": preprocess_texts(obss["mission"], vocab, device=device)
+            })
+
+        preprocess_obss.vocab = vocab
+
+    else:
+        raise ValueError("Unknown observation space: " + str(obs_space))
+
+    return obs_space, preprocess_obss
