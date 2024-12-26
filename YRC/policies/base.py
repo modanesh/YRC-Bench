@@ -71,9 +71,19 @@ class AlwaysPolicy(Policy):
         self.choice = env.WEAK if agent == "weak" else env.STRONG
 
     def act(self, obs, greedy=False):
-        if type(obs["env_obs"]) is dict:
-            return np.ones((1,), dtype=np.int64) * self.choice
-        return np.ones((obs["env_obs"].shape[0],), dtype=np.int64) * self.choice
+        benchmark = get_global_variable("benchmark")
+        env_obs = obs["env_obs"]
+
+        if isinstance(env_obs, dict):
+            if benchmark == "cliport":
+                action_shape = (1,)
+            elif benchmark == "minigrid":
+                action_shape = (env_obs["direction"].shape[0],)
+        else:
+            action_shape = (env_obs.shape[0],)
+
+        action = np.ones(action_shape, dtype=np.int64) * self.choice
+        return action
 
 
 class RandomPolicy(Policy):
@@ -82,10 +92,18 @@ class RandomPolicy(Policy):
         self.device = get_global_variable("device")
 
     def act(self, obs, greedy=False):
-        if isinstance(obs['env_obs'], dict):
-            action = torch.rand((1,)).to(self.device) < self.prob
+        benchmark = get_global_variable("benchmark")
+        env_obs = obs["env_obs"]
+
+        if isinstance(env_obs, dict):
+            if benchmark == "cliport":
+                action_shape = (1,)
+            elif benchmark == "minigrid":
+                action_shape = (env_obs["direction"].shape[0],)
         else:
-            action = torch.rand((obs["env_obs"].shape[0],)).to(self.device) < self.prob
+            action_shape = (env_obs.shape[0],)
+
+        action = torch.rand(action_shape).to(self.device) < self.prob
         action = action.int()
         return action.cpu().numpy()
 
