@@ -1,0 +1,16 @@
+name: 'minigrid_ood'
+general:
+    benchmark: 'minigrid'
+    algorithm: 'ood'
+    device: 0
+    skyline: 0
+    seed: 10
+coord_policy:
+    cls: OODPolicy
+    feature_type: 'obs'
+    collect_data_agent: 'weak'
+agents:
+    sim_weak: 'YRC/checkpoints/minigrid/dynamic/sim_weak/status.pt'
+    weak: 'YRC/checkpoints/minigrid/dynamic/weak/status.pt'
+    strong: 'YRC/checkpoints/minigrid/dynamic/strong/status.pt'
+
