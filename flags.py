@@ -28,7 +28,7 @@ def make():
                         help="Cost of switching agent")
     parser.add_argument("-en", "--environment.common.env_name", type=str, 
                         help="name of the environment")
-    parser.add_argument("-sim", "--agents.sim_weak", type=str, 
+    parser.add_argument("-sim", "--agents.sim_weak", type=str,
                         help="path to the sim weak agent")
     parser.add_argument("-weak", "--agents.weak", type=str, 
                         help="path to the weak agent")
@@ -58,6 +58,12 @@ def make():
     parser.add_argument("-cp_method", "--coord_policy.method", type=str,
                         choices=["DeepSVDD"],
                         help="method for detecting OOD samples")
+
+    # minigrid
+    parser.add_argument("-en_tr_suffix", "--environment.train.env_name_suffix", type=str,
+                        help="suffix for the train environment name")
+    parser.add_argument("-en_te_suffix", "--environment.test.env_name_suffix", type=str,
+                        help="suffix for the test environment name")
 
     args = parser.parse_args()
 
