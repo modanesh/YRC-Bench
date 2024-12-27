@@ -110,7 +110,6 @@ def make_raw_envs(config):
             env = create_fn(name, config.environment)
         # some extra information
         env.name = config.environment.common.env_name
-        env.obs_shape = env.observation_space.shape
         envs[name] = env
 
     return envs
@@ -134,7 +133,12 @@ class CoordEnv(gym.Env):
     def __init__(self, config, base_env, weak_agent, strong_agent):
         self.args = config
         self.base_env = base_env
-        obs_space = base_env[0].observation_space if isinstance(base_env.observation_space, list) else base_env.observation_space
+        if isinstance(base_env.observation_space, list):
+            obs_space = base_env.observation_space[0]
+        elif isinstance(base_env.observation_space, gym.spaces.Dict):
+            obs_space = base_env.observation_space.spaces['image']
+        else:
+            obs_space = base_env.observation_space
         self.weak_agent = weak_agent
         self.strong_agent = strong_agent
         
@@ -176,7 +180,7 @@ class CoordEnv(gym.Env):
     @property
     def obs_shape(self):
         return {
-            "env_obs": self.base_env.observation_space.shape,
+            "env_obs": self.base_env.obs_shape,
             "weak_features": (self.weak_agent.hidden_dim,),
             "weak_logit": (self.base_env.action_space.n,),
         }

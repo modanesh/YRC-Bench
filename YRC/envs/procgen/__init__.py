@@ -32,7 +32,7 @@ def create_env(name, config):
     env = wrappers.ScaledFloatFrame(env)
     # NOTE: this must be done last
     env = wrappers.HardResetWrapper(env)
-
+    env.obs_shape = env.observation_space.shape
     return env
 
 
