@@ -44,7 +44,7 @@ class PPOAlgorithm(Algorithm):
         if isinstance(self.obs_shape, dict):
             ret = {}
             for k, shape in self.obs_shape.items():
-                ret[k] = torch.from_numpy(obs[k]).to(device).float()
+                ret[k] = torch.from_numpy(obs[k] if not isinstance(obs[k], dict) else obs[k]['image']).to(device).float()
             return ret
         return torch.from_numpy(obs).to(device).float()
 

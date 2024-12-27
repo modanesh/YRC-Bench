@@ -30,9 +30,10 @@ class OODAlgorithm(Algorithm):
 
         # Generate rollouts for training OOD detector
         rollout_obs = policy.gather_rollouts(envs["train"], args.num_rollouts)
+        rollout_obs_threshold = policy.gather_rollouts(envs["train"], args.num_rollouts)
 
         # Train OOD detector
-        policy.clf.fit(rollout_obs)
+        policy.clf.fit(rollout_obs, rollout_obs_threshold)
 
         # Threshold search
         thresholds_min, thresholds_max = policy.clf.decision_scores_.min(), policy.clf.decision_scores_.max()
@@ -56,7 +57,7 @@ class OODAlgorithm(Algorithm):
                 # Log best result so far
                 logging.info(f"Best {split} so far")
                 logging.info(f"Parameters: {best_params[split]}")
-                evaluator.write_summary(f"best_{split}", best_summary[split])
+                evaluator.write_summary(f"best_{split}", best_summary[split], envs[split].num_envs)
 
         policy.update_params(best_params[eval_splits[0]])  # Update with best params from first eval split
 

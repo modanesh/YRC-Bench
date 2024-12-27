@@ -46,6 +46,9 @@ def load(yaml_file_or_str, flags=None):
         update_config(flags.as_dict(), config_dict)
         config = ConfigDict(**config_dict)
 
+    config.environment.val_sim.env_name_suffix = config.environment.train.env_name_suffix
+    config.environment.val_true.env_name_suffix = config.environment.test.env_name_suffix
+
     config.data_dir = os.getenv("SM_DATA_DIR", config.data_dir)
     output_dir = os.getenv("SM_OUTPUT_DIR", "experiments")
     config.experiment_dir = "%s/%s" % (output_dir, config.name)
@@ -99,17 +102,6 @@ def load(yaml_file_or_str, flags=None):
         mode="online" if config.use_wandb else "disabled",
     )
     wandb.config.update(config)
-
-
-    """
-    if config.agents.sim_weak is not None:
-        config.agents.sim_weak = f"YRC/checkpoints/{config.general.benchmark}/{config.agent_sim_weak}"
-    if config.agents.weak is not None:
-        config.agents.weak = f"YRC/checkpoints/{config.general.benchmark}/{config.agent_weak}"
-    if config.agents.strong is not None:
-        config.agents.strong = f"YRC/checkpoints/{config.general.benchmark}/{config.agent_strong}"
-    """
-
     return config
 
 

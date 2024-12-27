@@ -1,0 +1,12 @@
+name: 'minigrid_threshold'
+general:
+    benchmark: 'minigrid'
+    algorithm: 'threshold'
+    device: 0
+    skyline: 0
+    seed: 10
+agents:
+    sim_weak: 'YRC/checkpoints/minigrid/dynamic/sim_weak/status.pt'
+    weak: 'YRC/checkpoints/minigrid/dynamic/weak/status.pt'
+    strong: 'YRC/checkpoints/minigrid/dynamic/strong/status.pt'
+

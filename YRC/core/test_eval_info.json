@@ -201,5 +201,28 @@
       "action_1_frac": 1.0
     }
   },
-  "mp3d": {}
+  "minigrid": {
+    "MiniGrid-Dynamic-Obstacles-5x5-v0": {
+      "steps": 456,
+      "episode_length_mean": 76.0,
+      "episode_length_min": 33,
+      "episode_length_max": 100,
+      "reward_mean": -0.6666666666666666,
+      "reward_std": 0.4714045207910317,
+      "env_reward_mean": -0.6666666666666666,
+      "env_reward_std": 0.4714045207910317,
+      "action_1_frac": 0.543859649122807
+    },
+    "MiniGrid-Dynamic-Obstacles-Random-8x8-v0": {
+      "steps": 1724,
+      "episode_length_mean": 13.46875,
+      "episode_length_min": 2,
+      "episode_length_max": 59,
+      "reward_mean": 0.8604370117187501,
+      "reward_std": 0.41419815702271245,
+      "env_reward_mean": 0.8604370117187501,
+      "env_reward_std": 0.41419815702271245,
+      "action_1_frac": 0.2842227378190255
+    }
+  }
 }
