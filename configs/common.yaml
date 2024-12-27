@@ -20,12 +20,20 @@ coord_env:
         strong_query_cost_ratio: 0.4
         switch_agent_cost_ratio: 0.0
         act_greedy: False
+    minigrid:
+        strong_query_cost_ratio: 0.4
+        switch_agent_cost_ratio: 0.0
+        act_greedy: False
 evaluation:
     procgen:
         validation_episodes: 256
         test_episodes: 256
         act_greedy: False
     cliport:
+        validation_episodes: 256
+        test_episodes: 256
+        act_greedy: False
+    minigrid:
         validation_episodes: 256
         test_episodes: 256
         act_greedy: False
@@ -85,6 +93,23 @@ environment:
             seed: 0
             start_level: 0
             num_levels: 100000
+    minigrid:
+        common:
+            env_name: 'MiniGrid-Dynamic-Obstacles'
+            num_envs: 64
+            num_threads: 8
+        train:
+            env_name_suffix: '-6x6-v0'
+            seed: 0
+        val_sim:
+            env_name_suffix: '-6x6-v0'
+            seed: 0
+        val_true:
+            env_name_suffix: '-Random-8x8-v0'
+            seed: 0
+        test:
+            env_name_suffix: '-Random-8x8-v0'
+            seed: 0
 algorithm:
     always:
         dummy: null
