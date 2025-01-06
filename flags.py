@@ -65,6 +65,8 @@ def make():
     parser.add_argument("-en_te_suffix", "--environment.test.env_name_suffix", type=str,
                         help="suffix for the test environment name")
 
+    parser.add_argument("-seed", "--general.seed", type=int,
+                        help="random seed")
     args = parser.parse_args()
 
     return args
