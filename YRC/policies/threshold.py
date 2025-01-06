@@ -18,16 +18,16 @@ class ThresholdPolicy(Policy):
 
     def act(self, obs, greedy=False):
         if get_global_variable("benchmark") == "cliport":
-            attention_size = 320 * 160  # todo: get this shape automatically
-            attention_flat = obs["weak_logit"][:attention_size]
-            transport_flat = obs["weak_logit"][attention_size:]
+            attention_size = 3  # todo: get this shape automatically
+            attention_flat = obs["weak_logit"][:, :attention_size]
+            transport_flat = obs["weak_logit"][:, attention_size:]
             if not torch.is_tensor(attention_flat):
                 attention_flat = torch.from_numpy(attention_flat).float().to(self.device)
             if not torch.is_tensor(transport_flat):
                 transport_flat = torch.from_numpy(transport_flat).float().to(self.device)
             attention_score = self._compute_score(attention_flat)
             transport_score = self._compute_score(transport_flat)
-            score = torch.mean(torch.stack([attention_score, transport_score]))
+            score = torch.mean(torch.stack([attention_score, transport_score])).unsqueeze(0)
         else:
             weak_logit = obs["weak_logit"]
             if not torch.is_tensor(weak_logit):

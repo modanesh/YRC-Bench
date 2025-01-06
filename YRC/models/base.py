@@ -37,7 +37,7 @@ class ImpalaCoordPolicyModel(nn.Module):
         )
 
     def forward(self, obs, ret_hidden=False):
-        env_obs = obs["env_obs"] if not isinstance(obs['env_obs'], dict) else obs['env_obs']['image']
+        env_obs = obs['env_obs']['image'] if isinstance(obs['env_obs'], dict) else obs['env_obs']
         if not torch.is_tensor(env_obs):
             env_obs = torch.from_numpy(env_obs).float().to(self.device)
         weak_features = obs["weak_features"]

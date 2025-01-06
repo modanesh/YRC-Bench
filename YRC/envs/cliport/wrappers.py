@@ -26,7 +26,7 @@ class HardResetWrapper(gym.Wrapper):
             for subspace in space.spaces:
                 total_dim += subspace.shape[0]
         self.action_space.shape = ()  # placeholder for the moment
-        self.action_space.n = total_dim
+        self.action_space.n = 4  # placeholder for the moment
 
     def reset(self):
         new_seed = random.randint(self.start_level, self.start_level + self.num_levels - 1)
@@ -34,7 +34,8 @@ class HardResetWrapper(gym.Wrapper):
         obs = self.env.reset()
         obs = utils.get_image(obs)
         self.env_step = 0
-        return {"img": obs, "info": self.info}
+        obs = np.expand_dims(obs, axis=0)
+        return {"image": obs, "info": self.info}
 
     def step(self, np_action):
         if np.any(np_action == None):
@@ -59,6 +60,7 @@ class HardResetWrapper(gym.Wrapper):
         if self.env_step == self.task.max_steps:
             done = True
         self.env_step += 1
-        return {"img": obs, "info": self.info}, reward, done, info
+        obs = np.expand_dims(obs, axis=0)
+        return {"image": obs, "info": self.info}, np.array([reward]), np.array([done]), [info]
 
 
