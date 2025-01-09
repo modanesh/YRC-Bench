@@ -78,7 +78,7 @@ def load(yaml_file_or_str, flags=None):
 
     if config.eval_mode:
         if config.file_name is None:
-            log_file = os.path.join(config.experiment_dir, "eval.log")
+            log_file = os.path.join(config.experiment_dir, f"eval_seed_{seed}.log")
         elif config.file_name.__contains__("sim"):
             log_file = os.path.join(config.experiment_dir, f"eval_sim_seed_{seed}.log")
         elif config.file_name.__contains__("true"):
