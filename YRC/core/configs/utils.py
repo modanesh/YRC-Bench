@@ -85,7 +85,7 @@ def load(yaml_file_or_str, flags=None):
             log_file = os.path.join(config.experiment_dir, f"eval_true_seed_{seed}.log")
     else:
         log_file = os.path.join(config.experiment_dir, "run.log")
-
+    assert not os.path.exists(log_file), f"Log file {log_file} already exists!"
     set_global_variable("log_file", log_file)
 
     if os.path.isfile(log_file):
