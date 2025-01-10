@@ -31,7 +31,7 @@ class Evaluator:
                 self._update_log(log, this_log)
 
             summary[split] = self.summarize(log)
-            self.write_summary(split, summary[split], envs[split].num_envs)
+            self.write_summary(split, summary[split])
 
             envs[split].close()
 
@@ -91,6 +91,7 @@ class Evaluator:
             "episode_length_min": int(np.min(log["episode_length"])),
             "episode_length_max": int(np.max(log["episode_length"])),
             "reward_mean": float(np.mean(log["reward"])),
+            "raw_reward": log["reward"],
             "reward_std": float(np.std(log["reward"])),
             "env_reward_mean": float(np.mean(log["env_reward"])),
             "env_reward_std": float(np.std(log["env_reward"])),
@@ -99,7 +100,7 @@ class Evaluator:
             ),
         }
 
-    def write_summary(self, split, summary, num_envs):
+    def write_summary(self, split, summary):
         log_str = f"   Steps:       {summary['steps']}\n"
         log_str += "   Episode:    "
         log_str += f"mean {summary['episode_length_mean']:7.2f}  "
@@ -107,12 +108,14 @@ class Evaluator:
         log_str += f"max {summary['episode_length_max']:7.2f}\n"
         log_str += "   Reward:     "
         log_str += f"mean {summary['reward_mean']:.2f} "
-        log_str += f"± {(1.96 * summary['reward_std']) / (num_envs ** 0.5):.2f}\n"
+        log_str += f"± {(1.96 * summary['reward_std']) / (len(summary['raw_reward']) ** 0.5):.2f}\n"
         log_str += "   Env Reward: "
         log_str += f"mean {summary['env_reward_mean']:.2f} "
-        log_str += f"± {(1.96 * summary['env_reward_std']) / (num_envs ** 0.5):.2f}\n"
-        log_str += f"   Action {self.LOGGED_ACTION} fraction: {summary[f'action_{self.LOGGED_ACTION}_frac']:7.2f}"
-
+        log_str += f"± {(1.96 * summary['env_reward_std']) / (len(summary['raw_reward']) ** 0.5):.2f}\n"
+        log_str += f"   Action {self.LOGGED_ACTION} fraction: {summary[f'action_{self.LOGGED_ACTION}_frac']:7.2f}\n"
+        log_str += "   Raw Rewards: "
+        for r in summary["raw_reward"]:
+            log_str += f"{r:.2f},"
         logging.info(log_str)
 
         return summary

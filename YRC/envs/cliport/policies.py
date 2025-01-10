@@ -15,7 +15,7 @@ class CliportPolicy(Policy):
         return dist
 
     def act(self, obs, greedy=False):
-        img = obs['img']
+        img = obs['image'][0]
         info = obs['info']
         action, _, _ = self.model.act(img, info)
         if action is None:
@@ -49,7 +49,7 @@ class CliportPolicyOracle(Policy):
         self.model = model
 
     def act(self, obs, greedy=False):
-        img = obs['img']
+        img = obs['image']
         info = obs['info']
         action = self.model(img, info)
         if action is None:

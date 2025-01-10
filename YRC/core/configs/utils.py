@@ -78,14 +78,14 @@ def load(yaml_file_or_str, flags=None):
 
     if config.eval_mode:
         if config.file_name is None:
-            log_file = os.path.join(config.experiment_dir, "eval.log")
+            log_file = os.path.join(config.experiment_dir, f"eval_seed_{seed}.log")
         elif config.file_name.__contains__("sim"):
-            log_file = os.path.join(config.experiment_dir, "eval_sim.log")
+            log_file = os.path.join(config.experiment_dir, f"eval_sim_seed_{seed}.log")
         elif config.file_name.__contains__("true"):
-            log_file = os.path.join(config.experiment_dir, "eval_true.log")
+            log_file = os.path.join(config.experiment_dir, f"eval_true_seed_{seed}.log")
     else:
         log_file = os.path.join(config.experiment_dir, "run.log")
-
+    assert not os.path.exists(log_file), f"Log file {log_file} already exists!"
     set_global_variable("log_file", log_file)
 
     if os.path.isfile(log_file):

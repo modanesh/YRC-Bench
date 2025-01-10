@@ -30,8 +30,8 @@ evaluation:
         test_episodes: 256
         act_greedy: False
     cliport:
-        validation_episodes: 256
-        test_episodes: 256
+        validation_episodes: 64
+        test_episodes: 64
         act_greedy: False
     minigrid:
         validation_episodes: 256
@@ -74,25 +74,17 @@ environment:
             disp: False
             shared_memory: False
         train:
-            distribution_mode: 'easy'
+            distribution_mode: 'seen'
             seed: 0
-            start_level: 0
-            num_levels: 100000
         val_sim:
-            distribution_mode: 'easy'
+            distribution_mode: 'seen'
             seed: 0
-            start_level: 50000
-            num_levels: 64
         val_true:
-            distribution_mode: 'hard'
+            distribution_mode: 'unseen'
             seed: 0
-            start_level: 50000
-            num_levels: 64
         test:
-            distribution_mode: 'hard'
+            distribution_mode: 'unseen'
             seed: 0
-            start_level: 0
-            num_levels: 100000
     minigrid:
         common:
             env_name: 'MiniGrid-Dynamic-Obstacles'

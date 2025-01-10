@@ -4,7 +4,7 @@
     - Useful link: https://medium.com/@limyoonaxi/common-bugs-you-may-encounter-while-installing-cliport-ef1790e1cc0a
 
   **IMPORTANT**: Cliport is heavily based on Ravens (link: https://github.com/google-research/ravens). Cliport contains additional tasks that incorporate human language instructions as additional inputs to the agent. 
-
+- MiniGrid
 
 #### Supported Algorithms
 - Random
@@ -22,10 +22,27 @@
 - Raw image observations + Weak agent's action distributions
 - Weak agent's hidden features + Weak agent's action distributions
 - Raw image observations + Weak agent's hidden features + Weak agent's action distributions
-- Weighted feature inputs: Raw image observations + Weak agent's hidden features + Weak agent's action distributions 
-  - Instead of using combinations directly, introduce trainable weights for each feature type (obs, hidden, dist) and optimize them during training. This approach can dynamically adjust the importance of each feature type.
 
 
-#### To-Dos
-- Ensemble Coordination Policies: 
-  - Train multiple coordination policies, each specialized in a different feature subset, and ensemble their decisions using a meta-policy.
+
+#### Experiments
+- procgen:
+  - DONE: train always, threshold, ood
+  - TO DO: 
+    - train rl
+    - eval sim with correct command all algs
+    - eval sim and true for multiple seeds
+
+- minigrid:
+  - DONE: train always, threshold, ood
+  - TO DO: 
+    - train rl
+    - eval sim with correct command all algs
+    - eval sim and true for multiple seeds
+  
+- cliport:
+  - TO DO: 
+    - train always
+    - train threshold
+    - train ood
+    - train rl

@@ -13,7 +13,7 @@ algorithm:
     cls: PPOAlgorithm
     log_freq: 10
     num_steps: 256
-    total_timesteps: 200000000
+    total_timesteps: 1500000
     update_epochs: 3
     gamma: 0.999
     gae_lambda: 0.95
@@ -26,6 +26,6 @@ algorithm:
     max_grad_norm: 0.5
     learning_rate: 0.0005
 agents:
-    sim_weak: 'YRC/checkpoints/procgen/coinrun/sim_weak/model_40009728.pth'
+    sim_weak: 'YRC/checkpoints/procgen/coinrun/sim_ weak/model_40009728.pth'
     weak: 'YRC/checkpoints/procgen/coinrun/weak/model_80019456.pth'
     strong: 'YRC/checkpoints/procgen/coinrun/strong/model_200015872.pth'

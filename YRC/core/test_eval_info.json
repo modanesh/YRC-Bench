@@ -223,6 +223,94 @@
       "env_reward_mean": 0.8604370117187501,
       "env_reward_std": 0.41419815702271245,
       "action_1_frac": 0.2842227378190255
+    },
+    "MiniGrid-Dynamic-Obstacles": {
+      "steps": 14232,
+      "episode_length_mean": 222.375,
+      "episode_length_min": 4,
+      "episode_length_max": 993,
+      "reward_mean": 0.4499450683593751,
+      "reward_std": 0.7850376206306138,
+      "env_reward_mean": 0.4499450683593751,
+      "env_reward_std": 0.7850376206306138,
+      "action_1_frac": 0.28766160764474424
+    },
+    "MiniGrid-DistShift": {
+      "steps": 1390,
+      "episode_length_mean": 21.71875,
+      "episode_length_min": 2,
+      "episode_length_max": 42,
+      "reward_mean": 0.89140625,
+      "reward_std": 0.16149083071436302,
+      "env_reward_mean": 0.89140625,
+      "env_reward_std": 0.16149083071436302,
+      "action_1_frac": 0.09784172661870504
+    },
+    "MiniGrid-LavaGap": {
+      "steps": 1104,
+      "episode_length_mean": 17.25,
+      "episode_length_min": 2,
+      "episode_length_max": 42,
+      "reward_mean": 0.8610172193877551,
+      "reward_std": 0.22380744291534374,
+      "env_reward_mean": 0.8610172193877551,
+      "env_reward_std": 0.22380744291534374,
+      "action_1_frac": 0.1431159420289855
+    },
+    "MiniGrid-Fetch": {
+      "steps": 2888,
+      "episode_length_mean": 45.125,
+      "episode_length_min": 1,
+      "episode_length_max": 179,
+      "reward_mean": 0.20205078125,
+      "reward_std": 0.38292381941320786,
+      "env_reward_mean": 0.20205078125,
+      "env_reward_std": 0.38292381941320786,
+      "action_1_frac": 0.16066481994459833
+    },
+    "MiniGrid-GoToObject": {
+      "steps": 1750,
+      "episode_length_mean": 27.34375,
+      "episode_length_min": 1,
+      "episode_length_max": 115,
+      "reward_mean": 0.084873046875,
+      "reward_std": 0.2640555178830876,
+      "env_reward_mean": 0.084873046875,
+      "env_reward_std": 0.2640555178830876,
+      "action_1_frac": 0.38057142857142856
+    },
+    "MiniGrid-GoToDoor": {
+      "steps": 1936,
+      "episode_length_mean": 30.25,
+      "episode_length_min": 2,
+      "episode_length_max": 141,
+      "reward_mean": 0.12005615234375,
+      "reward_std": 0.3176659285538692,
+      "env_reward_mean": 0.12005615234375,
+      "env_reward_std": 0.3176659285538692,
+      "action_1_frac": 0.23243801652892562
+    },
+    "MiniGrid-DoorKey": {
+      "steps": 2818,
+      "episode_length_mean": 44.03125,
+      "episode_length_min": 16,
+      "episode_length_max": 97,
+      "reward_mean": 0.9380810546875,
+      "reward_std": 0.0248554547645713,
+      "env_reward_mean": 0.9380810546875,
+      "env_reward_std": 0.0248554547645713,
+      "action_1_frac": 0.14549325762952448
+    },
+    "MiniGrid-Empty": {
+      "steps": 7938,
+      "episode_length_mean": 62.015625,
+      "episode_length_min": 5,
+      "episode_length_max": 233,
+      "reward_mean": 0.9454940795898438,
+      "reward_std": 0.0407915401527758,
+      "env_reward_mean": 0.9454940795898438,
+      "env_reward_std": 0.0407915401527758,
+      "action_1_frac": 0.07407407407407407
     }
   }
 }

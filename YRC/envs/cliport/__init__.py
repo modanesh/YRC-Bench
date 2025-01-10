@@ -15,13 +15,11 @@ def create_env(name, config):
     common_config = config.common
     specific_config = getattr(config, name)
 
-    name_appendix = "seen" if specific_config.distribution_mode == "easy" else "unseen"
-
     env_name = common_config.env_name
     if env_name in task_category["color"]:
-        task_name = f"{env_name}-{name_appendix}-colors"
+        task_name = f"{env_name}-{specific_config.distribution_mode}-colors"
     elif env_name in task_category["object"]:
-        task_name = f"packing-{name_appendix}{env_name[7:]}"
+        task_name = f"packing-{specific_config.distribution_mode}{env_name[7:]}"
 
     tsk = tasks.names[task_name]()
     tsk.mode = name if name in ['train', 'test'] else 'val'
@@ -32,6 +30,7 @@ def create_env(name, config):
         specific_config.num_levels,
         specific_config.distribution_mode
     )
+    env.obs_shape = env.observation_space.shape
     return env
 
 
