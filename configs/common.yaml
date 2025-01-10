@@ -76,23 +76,15 @@ environment:
         train:
             distribution_mode: 'seen'
             seed: 0
-            start_level: 0
-            num_levels: 100000
         val_sim:
             distribution_mode: 'seen'
             seed: 0
-            start_level: 50000
-            num_levels: 64
         val_true:
             distribution_mode: 'unseen'
             seed: 0
-            start_level: 50000
-            num_levels: 64
         test:
             distribution_mode: 'unseen'
             seed: 0
-            start_level: 0
-            num_levels: 100000
     minigrid:
         common:
             env_name: 'MiniGrid-Dynamic-Obstacles'

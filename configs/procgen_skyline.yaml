@@ -13,7 +13,7 @@ algorithm:
     cls: PPOAlgorithm
     log_freq: 10
     num_steps: 256
-    total_timesteps: 800000
+    total_timesteps: 1500000
     update_epochs: 3
     gamma: 0.999
     gae_lambda: 0.95
