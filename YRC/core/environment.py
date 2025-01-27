@@ -16,7 +16,7 @@ from YRC.core.configs import get_global_variable
 
 def make(config):
     base_envs = make_raw_envs(config)
-    sim_weak_agent, weak_agent, strong_agent = load_agents(config, base_envs["val_true"], base_envs["test"])
+    sim_weak_agent, weak_agent, strong_agent = load_agents(config, base_envs["val_sim"], base_envs["test"])
 
     coord_envs = {}
     for name in base_envs:

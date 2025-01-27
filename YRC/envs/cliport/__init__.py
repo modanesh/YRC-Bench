@@ -55,8 +55,13 @@ def load_policy(path, env, test_env):
     else:
         # oracle policy
         model = env.task.oracle(env)[0]
-        val_policy = CliportPolicyOracle(model)
+        train_policy = CliportPolicyOracle(model)
+        val_sim_policy = CliportPolicyOracle(model)
         model = test_env.task.oracle(test_env)[0]
+        val_true_policy = CliportPolicyOracle(model)
         test_policy = CliportPolicyOracle(model)
-        policy = {"val_true": val_policy, "test": test_policy}
+        policy = {
+            "train": train_policy, "val_sim": val_sim_policy,
+            "val_true": val_true_policy, "test": test_policy
+        }
     return policy
