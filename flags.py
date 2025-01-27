@@ -59,6 +59,10 @@ def make():
                         choices=["DeepSVDD"],
                         help="method for detecting OOD samples")
 
+    # random baseline policy
+    parser.add_argument("-cp_base", "--coord_policy.baseline", action="store_true",
+                        help="baseline policy with random action 0.5 probability")
+
     # minigrid
     parser.add_argument("-en_tr_suffix", "--environment.train.env_name_suffix", type=str,
                         help="suffix for the train environment name")

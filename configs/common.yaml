@@ -7,6 +7,7 @@ coord_policy:
         metric: 'logit'
     random:
         cls: RandomPolicy
+        baseline: False
     ppo:
         cls: PPOPolicy
     ood:
