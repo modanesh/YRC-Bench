@@ -22,7 +22,6 @@ kiwisolver==1.4.7
 llvmlite==0.41.1
 MarkupSafe==2.1.5
 matplotlib==3.7.5
--e git+https://github.com/modanesh/Minigrid.git@1eae02b3561e0cce827d0509d904d053f437b08c#egg=minigrid&subdirectory=../../Minigrid
 mpmath==1.3.0
 networkx==3.1
 numba==0.58.1
@@ -45,7 +44,6 @@ platformdirs==4.3.6
 protobuf==5.29.2
 psutil==6.1.0
 pygame==2.6.1
--e git+https://github.com/modanesh/pyod.git@4a2080874ac999ad40de6e3ade846f35b5788da9#egg=pyod&subdirectory=../../pyod
 pyparsing==3.1.4
 python-dateutil==2.9.0.post0
 PyYAML==6.0.2
