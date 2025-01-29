@@ -1,12 +1,3 @@
 [submodule "procgenAISC"]
 	path = procgenAISC
 	url = https://github.com/JacobPfau/procgenAISC.git
-[submodule "cliport"]
-	path = cliport
-	url = https://github.com/modanesh/cliport.git
-[submodule "pyod"]
-	path = pyod
-	url = https://github.com/modanesh/pyod.git
-[submodule "Minigrid"]
-	path = Minigrid
-	url = https://github.com/modanesh/Minigrid.git
