@@ -123,7 +123,7 @@ To extend the benchmark with a new environment suite, follow the steps discussed
 Also, to extend the benchmark with a new algorithm or feature type, follow the steps discussed in the "[Add a new algorithm to the benchmark](https://github.com/modanesh/yield_request_control/wiki/Add-a-new-suite-to-the-benchmark)" wiki page.
 
 ### Citation
-If you use this benchmark in your research, please cite the following:
+If you use this benchmark in your research, please cite the following: # TODO
 ```bibtex
 @article{danesh2025yrc,
   title={Learning to Coordinate with Experts},
