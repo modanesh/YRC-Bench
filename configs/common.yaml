@@ -71,7 +71,7 @@ environment:
             normalize_rew: False
             num_envs: 1
             num_threads: 1
-            assets_root: './cliport/cliport/environments/assets'
+            assets_root: './lib/cliport/cliport/environments/assets'
             disp: False
             shared_memory: False
         train:

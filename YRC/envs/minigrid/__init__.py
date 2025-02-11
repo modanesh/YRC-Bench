@@ -2,8 +2,8 @@ import logging
 
 import torch
 import gymnasium as gym
-import Minigrid.minigrid as minigrid
-from Minigrid.minigrid.wrappers import StochasticActionWrapper
+import lib.Minigrid.minigrid as minigrid
+from lib.Minigrid.minigrid.wrappers import StochasticActionWrapper
 import YRC.envs.minigrid.wrappers as wrappers
 from YRC.envs.minigrid.models import MinigridModel
 from YRC.envs.minigrid.policies import MinigridPolicy
@@ -21,14 +21,7 @@ def create_env(name, config):
     return envs
 
 
-def create_policy(env):
-    model = MinigridModel(env)
-    model.to(get_global_variable("device"))
-    policy = MinigridPolicy(model)
-    return policy
-
-
-def load_policy(path, env, test_env):
+def load_policy(path, env):
     model = MinigridModel(env)
     model.to(get_global_variable("device"))
     model.eval()
