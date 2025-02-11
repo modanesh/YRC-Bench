@@ -45,15 +45,16 @@ class CliportPolicy(Policy):
 
 
 class CliportPolicyOracle(Policy):
-    def __init__(self, model):
-        self.model = model
+    def __init__(self):
+        super().__init__()
 
-    def act(self, obs, greedy=False):
-        img = obs['image']
-        info = obs['info']
-        action = self.model(img, info)
+    def act(self, base_env, obs, greedy=False):
+        img, info = obs['image'], obs['info']
+        default_action = np.full((1, 14), None, dtype=object)
+        if not base_env.task.goals:
+            return default_action
+        action = base_env.task.oracle(base_env).act(img, info)
         if action is None:
-            np_action = np.array([None] * 14)[np.newaxis, :]
-        else:
-            np_action = np.concatenate([array for key in action for array in action[key]])[np.newaxis, :]
+            return default_action
+        np_action = np.concatenate([np.asarray(array) for key in action for array in action[key]])[np.newaxis, :]
         return np_action

@@ -1,8 +1,8 @@
 import logging
 
 import re
-from cliport import tasks
-from cliport.environments.environment import Environment
+from lib.cliport.cliport import tasks
+from lib.cliport.cliport.environments.environment import Environment
 import YRC.envs.cliport.wrappers as wrappers
 from YRC.envs.cliport.models import CliportModel
 from YRC.envs.cliport.policies import CliportPolicy, CliportPolicyOracle
@@ -10,8 +10,10 @@ from YRC.core.configs.global_configs import get_global_variable
 
 
 def create_env(name, config):
-    task_category = {"color": ["assembling-kits-seq", "packing-boxes-pairs", "put-block-in-bowl", "stack-block-pyramid-seq", "separating-piles", "towers-of-hanoi-seq"],
-                     "object": ["packing-google-objects-seq", "packing-google-objects-group"],}
+    task_category = {
+        "color": ["assembling-kits-seq", "packing-boxes-pairs", "put-block-in-bowl", "stack-block-pyramid-seq", "separating-piles", "towers-of-hanoi-seq"],
+        "object": ["packing-google-objects-seq", "packing-google-objects-group"],
+    }
     common_config = config.common
     specific_config = getattr(config, name)
 
@@ -34,7 +36,7 @@ def create_env(name, config):
     return env
 
 
-def load_policy(path, env, test_env):
+def load_policy(path, env):
     if path is not None:
         pattern = r'^(multi-language-conditioned)-cliport-n(\d+)-(train|val|test)$'
         match = re.match(pattern, path.split("/")[-3])
@@ -53,15 +55,5 @@ def load_policy(path, env, test_env):
         policy = CliportPolicy(model)
         policy.eval()
     else:
-        # oracle policy
-        model = env.task.oracle(env)[0]
-        train_policy = CliportPolicyOracle(model)
-        val_sim_policy = CliportPolicyOracle(model)
-        model = test_env.task.oracle(test_env)[0]
-        val_true_policy = CliportPolicyOracle(model)
-        test_policy = CliportPolicyOracle(model)
-        policy = {
-            "train": train_policy, "val_sim": val_sim_policy,
-            "val_true": val_true_policy, "test": test_policy
-        }
+        policy = {key: CliportPolicyOracle() for key in ["train", "val_sim", "val_true", "test"]}
     return policy

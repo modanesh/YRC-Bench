@@ -1,4 +1,4 @@
-from cliport.agents.transporter_lang_goal import TwoStreamClipLingUNetLatTransporterAgent
+from lib.cliport.cliport.agents.transporter_lang_goal import TwoStreamClipLingUNetLatTransporterAgent
 import torch
 from YRC.core.configs.global_configs import get_global_variable
 import numpy as np
