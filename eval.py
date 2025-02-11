@@ -18,5 +18,3 @@ if __name__ == "__main__":
     evaluator = Evaluator(config.evaluation)
 
     evaluator.eval(policy, envs, ["test"])
-
-
