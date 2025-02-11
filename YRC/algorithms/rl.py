@@ -71,7 +71,7 @@ class PPOAlgorithm(Algorithm):
             return ret
         return b_obs[indices]
 
-    def train_one_iteration(self, iteration, policy, train_env=None, dataset=None):
+    def train_one_iteration(self, iteration, policy, train_env=None):
         args = self.args
         device = get_global_variable("device")
         log = {}
@@ -111,7 +111,7 @@ class PPOAlgorithm(Algorithm):
             log["action_1"].extend((action == 1).long().tolist())
             log["action_prob"].extend(logprob.exp().tolist())
 
-            #action = torch.ones_like(action)
+            # action = torch.ones_like(action)
 
             # TRY NOT TO MODIFY: execute the game and log data.
             next_obs, reward, next_done, info = train_env.step(action.cpu().numpy())
@@ -122,7 +122,7 @@ class PPOAlgorithm(Algorithm):
                 if "env_reward" in info[i]:
                     self.total_reward["env_reward"][i] += info[i]["env_reward"]
                 if next_done[i]:
-                    #print("===>", step, reward[i], np.mean(log["reward"]))
+                    # print("===>", step, reward[i], np.mean(log["reward"]))
                     log["reward"].append(self.total_reward["reward"][i])
                     log["env_reward"].append(self.total_reward["env_reward"][i])
                     self.total_reward["reward"][i] = 0
@@ -147,12 +147,12 @@ class PPOAlgorithm(Algorithm):
                     nextnonterminal = 1.0 - self.dones[t + 1]
                     nextvalues = self.values[t + 1]
                 delta = (
-                    self.rewards[t]
-                    + args.gamma * nextvalues * nextnonterminal
-                    - self.values[t]
+                        self.rewards[t]
+                        + args.gamma * nextvalues * nextnonterminal
+                        - self.values[t]
                 )
                 advantages[t] = lastgaelam = (
-                    delta + args.gamma * args.gae_lambda * nextnonterminal * lastgaelam
+                        delta + args.gamma * args.gae_lambda * nextnonterminal * lastgaelam
                 )
             returns = advantages + self.values
 
@@ -193,7 +193,7 @@ class PPOAlgorithm(Algorithm):
                 log["advantage"].extend(mb_advantages.tolist())
                 if args.norm_adv:
                     mb_advantages = (mb_advantages - mb_advantages.mean()) / (
-                        mb_advantages.std() + 1e-8
+                            mb_advantages.std() + 1e-8
                     )
 
                 # Policy loss
@@ -287,7 +287,6 @@ class PPOAlgorithm(Algorithm):
 
         log_str += f"   Action 1 frac: {summary['action_1']:7.2f}\n"
         log_str += f"   Action prob: {summary['action_prob']:7.2f}"
-
 
         logging.info(log_str)
 

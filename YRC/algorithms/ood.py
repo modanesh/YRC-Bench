@@ -4,7 +4,6 @@ from YRC.core import Algorithm
 from YRC.core.configs.global_configs import get_global_variable
 
 
-
 class OODAlgorithm(Algorithm):
     def __init__(self, config, env):
         super().__init__()
@@ -13,13 +12,12 @@ class OODAlgorithm(Algorithm):
         self.save_dir = get_global_variable("experiment_dir")
 
     def train(
-        self,
-        policy,
-        envs,
-        evaluator=None,
-        train_split=None,
-        eval_splits=None,
-        dataset=None,
+            self,
+            policy,
+            envs,
+            evaluator=None,
+            train_split=None,
+            eval_splits=None,
     ):
         args = self.args
         best_summary = {split: {"reward_mean": -1e9} for split in eval_splits}
@@ -60,4 +58,3 @@ class OODAlgorithm(Algorithm):
                 evaluator.write_summary(f"best_{split}", best_summary[split])
 
         policy.update_params(best_params[eval_splits[0]])  # Update with best params from first eval split
-

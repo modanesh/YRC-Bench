@@ -300,6 +300,17 @@
       "env_reward_mean": 0.9380810546875,
       "env_reward_std": 0.0248554547645713,
       "action_1_frac": 0.14549325762952448
+    },
+    "MiniGrid-Empty": {
+      "steps": 7938,
+      "episode_length_mean": 62.015625,
+      "episode_length_min": 5,
+      "episode_length_max": 233,
+      "reward_mean": 0.9454940795898438,
+      "reward_std": 0.0407915401527758,
+      "env_reward_mean": 0.9454940795898438,
+      "env_reward_std": 0.0407915401527758,
+      "action_1_frac": 0.07407407407407407
     }
   }
 }
