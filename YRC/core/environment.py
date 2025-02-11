@@ -1,5 +1,6 @@
 import importlib
 import logging
+
 if importlib.util.find_spec("gymnasium") is None:
     import gym
 else:
@@ -16,7 +17,7 @@ from YRC.core.configs import get_global_variable
 
 def make(config):
     base_envs = make_raw_envs(config)
-    sim_weak_agent, weak_agent, strong_agent = load_agents(config, base_envs["val_sim"], base_envs["test"])
+    sim_weak_agent, weak_agent, strong_agent = load_agents(config, base_envs["val_sim"])
 
     coord_envs = {}
     for name in base_envs:
@@ -55,12 +56,12 @@ def make(config):
 def check_coord_envs(envs):
     for name in envs:
         assert (
-            envs[name].strong_query_cost_per_action
-            == envs["train"].strong_query_cost_per_action
+                envs[name].strong_query_cost_per_action
+                == envs["train"].strong_query_cost_per_action
         )
         assert (
-            envs[name].switch_agent_cost_per_action
-            == envs["train"].switch_agent_cost_per_action
+                envs[name].switch_agent_cost_per_action
+                == envs["train"].switch_agent_cost_per_action
         )
 
 
@@ -115,13 +116,13 @@ def make_raw_envs(config):
     return envs
 
 
-def load_agents(config, env, test_env):
+def load_agents(config, env):
     module = importlib.import_module(f"YRC.envs.{get_global_variable('benchmark')}")
     load_fn = getattr(module, "load_policy")
 
-    sim_weak_agent = load_fn(config.agents.sim_weak, env, test_env)
-    weak_agent = load_fn(config.agents.weak, env, test_env)
-    strong_agent = load_fn(config.agents.strong, env, test_env)
+    sim_weak_agent = load_fn(config.agents.sim_weak, env)
+    weak_agent = load_fn(config.agents.weak, env)
+    strong_agent = load_fn(config.agents.strong, env)
 
     return sim_weak_agent, weak_agent, strong_agent
 
@@ -141,7 +142,7 @@ class CoordEnv(gym.Env):
             obs_space = base_env.observation_space
         self.weak_agent = weak_agent
         self.strong_agent = strong_agent
-        
+
         self.action_space = gym.spaces.Discrete(2)
         self.observation_space = gym.spaces.Dict(
             {
@@ -216,18 +217,22 @@ class CoordEnv(gym.Env):
     def _compute_env_action(self, action):
         # NOTE: this method only works with non-recurrent agent models
         greedy = self.args.act_greedy
-        env_action = np.zeros_like(action)
         is_weak = (action == self.WEAK)
-        if is_weak.sum() > 0:
-            if isinstance(self.env_obs, dict):
-                env_action = self.weak_agent.act(self.env_obs, greedy=greedy)
-            else:
-                env_action[is_weak] = self.weak_agent.act(self.env_obs[is_weak], greedy=greedy)
         is_strong = ~is_weak
-        if is_strong.sum() > 0:
-            if isinstance(self.env_obs, dict):
-                env_action = self.strong_agent.act(self.env_obs, greedy=greedy)
-            else:
+
+        if isinstance(self.env_obs, dict):
+            if is_weak.any():
+                env_action = self.weak_agent.act(self.env_obs, greedy=greedy)
+            if is_strong.any():
+                if get_global_variable('benchmark') == 'cliport':
+                    env_action = self.strong_agent.act(self.base_env, self.env_obs, greedy=greedy)
+                else:
+                    env_action = self.strong_agent.act(self.env_obs, greedy=greedy)
+        else:
+            env_action = np.zeros_like(action)
+            if is_weak.any():
+                env_action[is_weak] = self.weak_agent.act(self.env_obs[is_weak], greedy=greedy)
+            if is_strong.any():
                 env_action[is_strong] = self.strong_agent.act(self.env_obs[is_strong], greedy=greedy)
         return env_action
 
