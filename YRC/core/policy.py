@@ -2,7 +2,6 @@ import logging
 import importlib
 
 
-#TODO: change coord_policy to policy
 def make(config, env):
     coord_policy_cls = getattr(
         importlib.import_module("YRC.policies"), config.coord_policy.cls

@@ -10,13 +10,12 @@ class RandomAlgorithm(Algorithm):
         self.args = config
 
     def train(
-        self,
-        policy,
-        envs,
-        evaluator=None,
-        train_split=None,
-        eval_splits=None,
-        dataset=None,
+            self,
+            policy,
+            envs,
+            evaluator=None,
+            train_split=None,
+            eval_splits=None,
     ):
         args = self.args
         save_dir = get_global_variable("experiment_dir")
@@ -32,15 +31,15 @@ class RandomAlgorithm(Algorithm):
 
         for prob in cand_probs:
 
-            logging.info(f"Prob: {prob}" )
+            logging.info(f"Prob: {prob}")
 
             policy.update_params(prob)
             split_summary = evaluator.eval(policy, envs, eval_splits)
 
             for split in eval_splits:
                 if (
-                    split_summary[split]["reward_mean"]
-                    > best_summary[split]["reward_mean"]
+                        split_summary[split]["reward_mean"]
+                        > best_summary[split]["reward_mean"]
                 ):
                     best_prob[split] = prob
                     best_summary[split] = split_summary[split]

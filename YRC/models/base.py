@@ -1,7 +1,5 @@
-
 import torch
 import torch.nn as nn
-
 
 from YRC.models.utils import orthogonal_init, ImpalaModel
 from YRC.core.configs.global_configs import get_global_variable

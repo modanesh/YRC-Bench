@@ -21,7 +21,6 @@ class Algorithm:
         evaluator=None,
         train_split=None,
         eval_splits=None,
-        dataset=None,
     ):
         self.init(policy, envs)
 
@@ -70,9 +69,7 @@ class Algorithm:
 
                 wandb.log(wandb_log)
 
-            this_train_log = self.train_one_iteration(
-                iteration, policy, train_env=envs[train_split], dataset=dataset
-            )
+            this_train_log = self.train_one_iteration(iteration, policy, train_env=envs[train_split])
             self.aggregate_log(train_log, this_train_log)
 
         # close env after training

@@ -7,6 +7,7 @@ coord_policy:
         metric: 'logit'
     random:
         cls: RandomPolicy
+        baseline: False
     ppo:
         cls: PPOPolicy
     ood:
@@ -70,21 +71,29 @@ environment:
             normalize_rew: False
             num_envs: 1
             num_threads: 1
-            assets_root: './cliport/cliport/environments/assets'
+            assets_root: './lib/cliport/cliport/environments/assets'
             disp: False
             shared_memory: False
         train:
             distribution_mode: 'seen'
             seed: 0
+            start_level: 0
+            num_levels: 100000
         val_sim:
             distribution_mode: 'seen'
             seed: 0
+            start_level: 50000
+            num_levels: 64
         val_true:
             distribution_mode: 'unseen'
             seed: 0
+            start_level: 50000
+            num_levels: 64
         test:
             distribution_mode: 'unseen'
             seed: 0
+            start_level: 0
+            num_levels: 100000
     minigrid:
         common:
             env_name: 'MiniGrid-Dynamic-Obstacles'

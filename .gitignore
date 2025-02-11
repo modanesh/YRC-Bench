@@ -1,9 +1,9 @@
 experiments/*
+YRC/checkpoints/*
 *swp
 .hydra/
 demos.log
 venv_*/
-.idea
 tmp*
 wandb/
 __pycache__/
@@ -12,6 +12,7 @@ __pycache__/
 slurm
 logs/
 .scripts
+analyzing/
 
 
 # Created by .ignore support plugin (hsz.mobi)
@@ -33,7 +34,6 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
 lib64/
 parts/
 sdist/
@@ -110,7 +110,6 @@ ENV/
 # http://iamzed.com/2009/05/07/a-primer-on-virtualenv/
 [Bb]in
 [Ii]nclude
-[Ll]ib
 [Ll]ib64
 [Ll]ocal
 [Ss]cripts
@@ -198,4 +197,4 @@ fabric.properties
 .idea/caches/build_file_checksums.ser
 
 # idea folder, uncomment if you don't need it
-# .idea
+.idea

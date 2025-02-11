@@ -199,6 +199,21 @@
       "env_reward_mean": 0.0,
       "env_reward_std": 0.0,
       "action_1_frac": 1.0
+    },
+    "packing-boxes-pairs": {
+      "steps": 18,
+      "episode_length_mean": 9.0,
+      "episode_length_min": 9,
+      "episode_length_max": 9,
+      "reward_mean": 1.0,
+      "raw_reward": [
+        1.0,
+        1.0
+      ],
+      "reward_std": 0.0,
+      "env_reward_mean": 0.0,
+      "env_reward_std": 0.0,
+      "action_1_frac": 1.0
     }
   },
   "minigrid": {
