@@ -28,12 +28,8 @@ class ExploreWrapper(Policy):
     def _set_parameter_distribution(self):
         args = self.args
         if args.dist == "uniform":
-            min_val = (
-                torch.ones((self.batch_size,)).to(self.device).float() * args.min_val
-            )
-            max_val = (
-                torch.ones((self.batch_size,)).to(self.device).float() * args.max_val
-            )
+            min_val = (torch.ones((self.batch_size,)).to(self.device).float() * args.min_val)
+            max_val = (torch.ones((self.batch_size,)).to(self.device).float() * args.max_val)
             self.param_dist = Uniform(min_val, max_val)
         else:
             raise NotImplementedError(f"Unrecognized distribution {args.dist}")

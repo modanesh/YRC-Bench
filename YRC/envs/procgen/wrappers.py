@@ -258,13 +258,13 @@ class VecFrameStack(VecEnvWrapper):
         for i, new in enumerate(news):
             if new:
                 self.stackedobs[i] = 0
-        self.stackedobs[..., -obs.shape[-1] :] = obs
+        self.stackedobs[..., -obs.shape[-1]:] = obs
         return self.stackedobs, rews, news, infos
 
     def reset(self):
         obs = self.venv.reset()
         self.stackedobs[...] = 0
-        self.stackedobs[..., -obs.shape[-1] :] = obs
+        self.stackedobs[..., -obs.shape[-1]:] = obs
         return self.stackedobs
 
 
@@ -299,7 +299,7 @@ class RunningMeanStd(object):
 
 
 def update_mean_var_count_from_moments(
-    mean, var, count, batch_mean, batch_var, batch_count
+        mean, var, count, batch_mean, batch_var, batch_count
 ):
     delta = batch_mean - mean
     tot_count = count + batch_count
@@ -321,14 +321,14 @@ class VecNormalize(VecEnvWrapper):
     """
 
     def __init__(
-        self,
-        venv,
-        ob=True,
-        ret=True,
-        clipob=10.0,
-        cliprew=10.0,
-        gamma=0.99,
-        epsilon=1e-8,
+            self,
+            venv,
+            ob=True,
+            ret=True,
+            clipob=10.0,
+            cliprew=10.0,
+            gamma=0.99,
+            epsilon=1e-8,
     ):
         VecEnvWrapper.__init__(self, venv)
 

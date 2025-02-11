@@ -2,7 +2,7 @@ import logging
 
 import torch
 
-from procgen import ProcgenEnv
+from lib.procgenAISC.procgen import ProcgenEnv
 import YRC.envs.procgen.wrappers as wrappers
 from YRC.envs.procgen.models import ProcgenModel
 from YRC.envs.procgen.policies import ProcgenPolicy
@@ -36,13 +36,7 @@ def create_env(name, config):
     return env
 
 
-def create_policy(env):
-    model = ProcgenModel(env)
-    model.to(get_global_variable("device"))
-    policy = ProcgenPolicy(model)
-    return policy
-
-def load_policy(path, env, test_env):
+def load_policy(path, env):
     model = ProcgenModel(env)
     model.to(get_global_variable("device"))
     model.eval()

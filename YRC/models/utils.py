@@ -2,6 +2,7 @@ import math
 import importlib
 import torch
 import torch.nn as nn
+
 if importlib.util.find_spec("gymnasium") is None:
     import gym
 else:
@@ -115,7 +116,6 @@ def init_params(m):
         m.weight.data *= 1 / torch.sqrt(m.weight.data.pow(2).sum(1, keepdim=True))
         if m.bias is not None:
             m.bias.data.fill_(0)
-
 
 
 class DictList(dict):
