@@ -1,5 +1,11 @@
-# YRC-Bench
+<p align="center">
+    <img src="configs/assets/pipeline.png" width="200" height="200">
+</p>
+
+
 YRC-Bench is a benchmark for learning a coordination strategy the problem of yielding and requesting control between novice (weak) and expert (strong) policies. The benchmark is designed to train and evaluate the performance of the coordination policy in a variety of environments, algorithms, and feature types. The benchmark is designed to be modular and extensible, allowing for easy integration of new environment suites, algorithms, and feature types.
+
+For further details, check the paper: # TODO arxiv url
 
 ### Supported Suites
 - MiniGrid:
