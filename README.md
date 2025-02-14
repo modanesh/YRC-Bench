@@ -4,7 +4,7 @@
 
 YRC-Bench is a benchmark for learning a coordination strategy the problem of yielding and requesting control between novice (weak) and expert (strong) policies. The benchmark is designed to train and evaluate the performance of the coordination policy in a variety of environments, algorithms, and feature types. The benchmark is designed to be modular and extensible, allowing for easy integration of new environment suites, algorithms, and feature types.
 
-For further details, check the paper: # TODO arxiv url
+For further details, check the paper: https://arxiv.org/abs/2502.09583
 
 ### Supported Suites
 - MiniGrid:
@@ -128,11 +128,16 @@ To extend the benchmark with a new environment suite, follow the steps discussed
 Also, to extend the benchmark with a new algorithm or feature type, follow the steps discussed in the "[Add a new algorithm to the benchmark](https://github.com/modanesh/yield_request_control/wiki/Add-a-new-suite-to-the-benchmark)" wiki page.
 
 ### Citation
-If you use this benchmark in your research, please cite the following: # TODO
+If you use this benchmark in your research, please cite the following:
 ```bibtex
-@article{danesh2025yrc,
-  title={Learning to Coordinate with Experts},
-  author={Danesh, Mohamad H., Trinh, Tu, Plaut, Benjamin, and Nguyen, Khanh Xuan},
+@misc{danesh2025learningcoordinateexperts,
+      title={Learning to Coordinate with Experts}, 
+      author={Mohamad H. Danesh and Tu Trinh and Benjamin Plaut and Nguyen X. Khanh},
+      year={2025},
+      eprint={2502.09583},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/2502.09583}, 
 }
 ```
 ```bibtex
