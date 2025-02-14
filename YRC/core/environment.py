@@ -225,7 +225,7 @@ class CoordEnv(gym.Env):
                 env_action = self.weak_agent.act(self.env_obs, greedy=greedy)
             if is_strong.any():
                 if get_global_variable('benchmark') == 'cliport':
-                    env_action = self.strong_agent.act(self.base_env, self.env_obs, greedy=greedy)
+                    env_action = self.strong_agent.act(self.env_obs, self.base_env, greedy=greedy)
                 else:
                     env_action = self.strong_agent.act(self.env_obs, greedy=greedy)
         else:

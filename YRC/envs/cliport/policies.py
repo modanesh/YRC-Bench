@@ -14,7 +14,7 @@ class CliportPolicy(Policy):
         dist, value = self.model(obs)
         return dist
 
-    def act(self, obs, greedy=False):
+    def act(self, obs, base_env=None, greedy=False):
         img = obs['image'][0]
         info = obs['info']
         action, _, _ = self.model.act(img, info)
@@ -48,7 +48,7 @@ class CliportPolicyOracle(Policy):
     def __init__(self):
         super().__init__()
 
-    def act(self, base_env, obs, greedy=False):
+    def act(self, obs, base_env=None, greedy=False):
         img, info = obs['image'], obs['info']
         default_action = np.full((1, 14), None, dtype=object)
         if not base_env.task.goals:

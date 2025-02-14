@@ -149,7 +149,7 @@ class OODPolicy(Policy):
             dummy_obs = env.reset()
             feature_type_to_shapes = {
                 "obs": lambda dummy_obs: (
-                    dummy_obs['env_obs']['image'] if isinstance(dummy_obs, dict) else
+                    dummy_obs['env_obs']['image'] if get_global_variable("benchmark") in ["cliport", "minigrid"] else
                     dummy_obs['env_obs']
                 ).shape,
                 "hidden": lambda dummy_obs: dummy_obs['weak_features'].shape,
