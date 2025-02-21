@@ -12,7 +12,7 @@ For further details, check the paper: https://arxiv.org/abs/2502.09583
 - Procgen:
   - Containing the "Goal Misgeneralization" environments from the original Procgen: https://github.com/JacobPfau/procgenAISC/tree/7821f2c00be9a4ff753c6d54b20aed26028ca812 
 - Cliport:
-  - Forked from the `cliport/cliport` with minor changes: https://github.com/modanesh/cliport/tree/962ac8ef696334cd4ce5566c44cd8ebc25078b84
+  - Forked from the `cliport/cliport` with minor changes: https://github.com/modanesh/cliport/tree/ff9fe042c0c2bf0d98c6354d3b5ce2a0a8de97c2
   - Useful link for cliport's installation: https://medium.com/@limyoonaxi/common-bugs-you-may-encounter-while-installing-cliport-ef1790e1cc0a
 
 ### Supported Algorithms
