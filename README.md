@@ -36,8 +36,8 @@ For RL-based and OOD detection-based algorithms, the following feature types are
 ### Installation
 1. Clone the repository:
 ```bash
-git clone https://github.com/modanesh/yield_request_control.git
-cd yield_request_control
+git clone https://github.com/modanesh/YRC-Bench.git
+cd YRC-Bench
 git submodule update --init --recursive
 ```
 
@@ -64,7 +64,17 @@ where `LIBRARY_NAME` is the name of the library you want to install from the `li
 
 ### Usage
 #### Training
-To train an algorithm on an environment with a specific feature type, run the following command:
+First checkpoints for the acting policies should be provided. For the acting policies (sim weak, weak, and strong), the checkpoints should be located in the `YRC/checkpoints` directory. The checkpoints for each environment suite are obtained by:
+- MiniGrid: Training RL policies using https://github.com/lcswillems/rl-starter-files
+- Procgen: Training RL policies using https://github.com/jbkjr/train-procgen-pytorch
+- Cliport: The provided checkpoints in the `cliport` repository https://github.com/cliport/cliport
+
+A zip file containing the checkpoints for the acting policies can be downloaded from the following link: [Google Drive Link](https://drive.google.com/file/d/1Tix3PO8gwJljwHLcolaQo5Moaci-apF8/view?usp=sharing)
+
+
+---
+
+Once the acting policies are set, to train an algorithm on an environment with a specific feature type, run the following command:
 ```bash
 python train.py -c configs/CONFIG.yaml -n RUN_NAME -en ENV_NAME -sim PATH/TO/SIM_WEAK_AGENT.pt -weak PATH/TO/WEAK_AGENT.pt -strong PATH/TO/STRONG_AGENT.pt -query_cost QUERY_COST -cp_feature FEATURE_TYPE
 ```
@@ -72,14 +82,6 @@ where `CONFIG.yaml` is the configuration file, `RUN_NAME` is the name of the run
 
 During the training, 3 checkpoints are saved: best_val_sim.ckpt, best_val_true.ckpt, and last.ckpt. The best_val_sim.ckpt is the checkpoint with the best validation performance on the simulated case, the best_val_true.ckpt is the checkpoint with the best validation performance on the true case, and the last.ckpt is the last checkpoint of the training.
 
----
-
-For the acting policies (sim weak, weak, and strong), the checkpoints are located in the `YRC/checkpoints` directory. The checkpoints for each environment suite are obtained by:
-- MiniGrid: Training RL policies using https://github.com/lcswillems/rl-starter-files
-- Procgen: Training RL policies using https://github.com/jbkjr/train-procgen-pytorch
-- Cliport: The provided checkpoints in the `cliport` repository https://github.com/cliport/cliport
-
-A zip file containing the checkpoints for the acting policies can be downloaded from the following link: [Google Drive Link](https://drive.google.com/file/d/1Tix3PO8gwJljwHLcolaQo5Moaci-apF8/view?usp=sharing)
 
 ---
 
