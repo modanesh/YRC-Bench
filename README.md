@@ -124,6 +124,17 @@ python eval.py -c configs/minigrid_random.yaml -n DoorKey_always_random_qc02 -en
 python eval.py -c configs/procgen_threshold.yaml -n coinrun_threshold_margin_qc06 -en coinrun -sim YRC/checkpoints/procgen/coinrun/sim_weak/model_40009728.pth -weak YRC/checkpoints/procgen/coinrun/weak/model_80019456.pth -strong YRC/checkpoints/procgen/coinrun/strong/model_200015872.pth -cp_metric margin -f_n best_val_true.ckpt -query_cost 0.6 -seed 12
 ```
 
+### Analyzing the Results
+All the scripts required to analyze the results are located in the `analyzing` directory. The scripts are designed to analyze the results of the experiments and generate the plots and tables presented in the paper. To do so, once the experiments are done, run the following command first to extract the raw results from the `experiments` directory:
+```bash
+python parse.py
+```
+This will create a file named `raw_results.json` in the `analyzing` directory. Then, run the following command to aggregate the results:
+```bash
+python aggregate.py
+```
+This will create a file named `aggregated_results.json` in the `analyzing` directory. Finally, to reproduce the plots and tables, run any of the other scripts in the `analyzing` directory. Each will store the generated plots and tables in the `final_plots` sub-directory.
+
 
 ### Extending the Benchmark
 To extend the benchmark with a new environment suite, follow the steps discussed in the "[Add a new environment suite to the benchmark](https://github.com/modanesh/yield_request_control/wiki/Add-a-new-suite-to-the-benchmark)" wiki page.
