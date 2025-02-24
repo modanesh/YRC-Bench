@@ -125,7 +125,7 @@ python eval.py -c configs/procgen_threshold.yaml -n coinrun_threshold_margin_qc0
 ```
 
 ### Analyzing the Results
-All the scripts required to analyze the results are located in the `analyzing` directory. The scripts are designed to analyze the results of the experiments and generate the plots and tables presented in the paper. To do so, once the experiments are done, run the following command first to extract the raw results from the `experiments` directory:
+All the scripts required to analyze the results are located in the `analyzing` directory. The scripts are designed to analyze the results of the experiments and generate the plots and tables presented in the paper. To do so, once the experiments are done, edit the `constants.py` file according to the environments and algorithms used in the experiments. Then, run the following command first to extract the raw results from the `experiments` directory:
 ```bash
 python parse.py
 ```
