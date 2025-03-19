@@ -21,6 +21,9 @@ def create_env(name, config):
         start_level=specific_config.start_level,
         distribution_mode=specific_config.distribution_mode,
         rand_seed=specific_config.seed,
+        use_backgrounds=specific_config.use_backgrounds,
+        use_monochrome_assets=specific_config.use_monochrome_assets,
+        restrict_themes=specific_config.restrict_themes,
     )
 
     env = wrappers.VecExtractDictObs(env, "rgb")

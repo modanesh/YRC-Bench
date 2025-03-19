@@ -1,4 +1,5 @@
 import jsonargparse
+from wandb.vendor.pygments.lexer import default
 
 
 def make():
@@ -68,6 +69,14 @@ def make():
                         help="suffix for the train environment name")
     parser.add_argument("-en_te_suffix", "--environment.test.env_name_suffix", type=str,
                         help="suffix for the test environment name")
+
+    # procgen
+    parser.add_argument("-use_bg", "--environment.common.use_background", type=bool, default=True,
+                        help="use background - only for procgen envs")
+    parser.add_argument("-use_mono_asset", "--environment.common.use_monochrome_assets", type=bool, default=False,
+                        help="use monochrome assets - only for procgen envs")
+    parser.add_argument("-res_theme", "--environment.common.restrict_themes", type=bool, default=False,
+                        help="restrict themes - only for procgen envs")
 
     parser.add_argument("-seed", "--general.seed", type=int,
                         help="random seed")

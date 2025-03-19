@@ -45,6 +45,9 @@ environment:
             normalize_rew: False
             num_envs: 64
             num_threads: 8
+            use_backgrounds: True
+            use_monochrome_assets: False
+            restrict_themes: False
         train:
             distribution_mode: 'easy'
             seed: 0
