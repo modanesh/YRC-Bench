@@ -80,7 +80,7 @@ def create_grouped_bar_chart_with_legends_side_by_side(data, output_filename):
 
     # Add legend for hatch patterns
     hatch_handles = [plt.Rectangle((0, 0), 1, 1, facecolor='white', hatch=h, edgecolor='black') for h in hatches]
-    hatch_labels = ["Best method", "+oracle validator", "+oracle policy proposer"]
+    hatch_labels = ["Best method", "+oracle validator", "+oracle proposer"]
     #hatch_labels = [f"Result {i+1}" for i in range(n_groups)]
 
     # Add legend for colors

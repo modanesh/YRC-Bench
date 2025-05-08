@@ -2,6 +2,9 @@ import json
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy import stats
+import matplotlib.gridspec as gridspec
+
+
 
 # Load JSON data
 with open('./aggregated_results.json', 'r') as f:
@@ -33,80 +36,109 @@ for key in data:
         elif method_type.startswith('ood'):
             merged_data[env]['ood'].append(data[key][0])
 
-# Calculate number of rows and columns needed
 n_envs = len(merged_data)
-n_cols = 7
-n_rows = (n_envs + n_cols - 1) // n_cols  # Ceiling division
+n_cols = 12
+last_row_items = n_envs - n_cols  # e.g. 19 envs → 9 in bottom row
 
-# Create figure with adjusted layout
-fig = plt.figure(figsize=(14, 12))  # Slightly wider figure
-gs = fig.add_gridspec(n_rows, n_cols, wspace=0.4, hspace=0.3)  # Increased spacing
+# Create figure
+fig = plt.figure(figsize=(16, 6))
 
-# Centering for last row
-last_row_items = n_envs - (n_rows - 1) * n_cols
-start_col = (n_cols - last_row_items) // 2 if last_row_items < n_cols else 0
+# Outer GridSpec: 2 rows, 1 column
+outer = gridspec.GridSpec(
+    nrows=2, ncols=1,
+    height_ratios=[1, 1],
+    hspace=0.3
+)
 
+# Top row: 1×10 sub-GridSpec
+top_gs = outer[0].subgridspec(
+    nrows=1, ncols=n_cols,
+    wspace=0.4
+)
+
+# Bottom row: 1×9 sub-GridSpec
+bottom_gs = outer[1].subgridspec(
+    nrows=1, ncols=last_row_items,
+    wspace=0.5
+)
+
+# Colors for bars
 colors = {'threshold': '#d62728', 'ood': '#9467bd'}
 
-# Plot each environment with thinner bars
+# Loop through environments and plot
 for idx, (env, methods) in enumerate(merged_data.items()):
-    row = idx // n_cols
-    col = idx % n_cols
+    # Choose which GridSpec to use
+    if idx < n_cols:
+        ax = fig.add_subplot(top_gs[0, idx])
+    else:
+        ax = fig.add_subplot(bottom_gs[0, idx - n_cols])
 
-    if row == n_rows - 1:
-        col = start_col + (idx - (n_rows - 1) * n_cols)
-
-    ax = fig.add_subplot(gs[row, col])
-
-    labels = []
-    means = []
-    stds = []
-    color_list = []
-
-    # Process threshold data
-    if methods['threshold']:
+    # Prepare data for bars
+    labels, means, stds, color_list = [], [], [], []
+    if methods.get('threshold'):
         labels.append('threshold')
         means.append(np.mean(methods['threshold']))
         stds.append(np.std(methods['threshold']))
         color_list.append(colors['threshold'])
-
-    # Process OOD data
-    if methods['ood']:
+    if methods.get('ood'):
         labels.append('ood')
         means.append(np.mean(methods['ood']))
         stds.append(np.std(methods['ood']))
         color_list.append(colors['ood'])
 
-    # Adjust bar parameters
-    bar_width = 0.25  # Reduced bar width
-    num_bars = len(labels)
-    total_width = bar_width * num_bars
+    # Bar positioning
+    bar_width = 0.25
+    total_width = bar_width * len(labels)
     start_x = (1 - total_width) / 2
-    x_positions = [start_x + i * bar_width for i in range(num_bars)]
+    x_positions = [start_x + i * bar_width for i in range(len(labels))]
 
-    # Create bars with error caps
-    ax.bar(x_positions, means, yerr=stds, color=color_list, alpha=0.7,
-           capsize=3, width=bar_width, linewidth=0.5)
+    # Plot bars with error bars
+    ax.bar(
+        x_positions, means,
+        yerr=stds,
+        color=color_list,
+        alpha=0.7,
+        capsize=4,
+        width=bar_width,
+        linewidth=0.5
+    )
 
-    # Formatting
-    env = env.replace('-', '\n', 1)
-    ax.set_title(f'{env}', fontsize=14, pad=8)
+    # Title and styling
+    env_display = env.replace('-', '\n', 1)
+    ax.set_title(env_display, fontsize=13, pad=8)
     ax.grid(True, axis='y', linestyle=':', alpha=0.6)
     ax.set_xticks([])
     ax.tick_params(axis='y', labelsize=8)
 
-    # Add y-label to leftmost plots
-    if col == (start_col if row == n_rows - 1 else 0):
+    # Add y-label to first column of each row
+    row = 0 if idx < n_cols else 1
+    col_in_row = idx if row == 0 else idx - n_cols
+    if col_in_row == 0:
         ax.set_ylabel('Performance', fontsize=14, labelpad=5)
 
-# Add legend
+# Global legend
 legend_elements = [
     plt.Rectangle((0, 0), 1, 1, color=colors['threshold'], alpha=0.7, label='Logit'),
-    plt.Rectangle((0, 0), 1, 1, color=colors['ood'], alpha=0.7, label='OOD')
+    plt.Rectangle((0, 0), 1, 1, color=colors['ood'],       alpha=0.7, label='OOD')
 ]
-fig.legend(handles=legend_elements, loc='upper center',
-           bbox_to_anchor=(0.5, 0.95), ncol=2, fontsize=16)
+fig.legend(
+    handles=legend_elements,
+    loc='upper center',
+    bbox_to_anchor=(0.5, 0.99),
+    ncol=2,
+    fontsize=16
+)
 
-plt.tight_layout()
-plt.savefig("./final_plots/logit_ood_summary.pdf", bbox_inches='tight', format="pdf")
+# Save and close
+plt.savefig(
+    "./final_plots/logit_ood_summary.pdf",
+    bbox_inches='tight',
+    format="pdf"
+)
 plt.close()
+
+
+
+
+
+
