@@ -21,9 +21,9 @@ def create_env(name, config):
         start_level=specific_config.start_level,
         distribution_mode=specific_config.distribution_mode,
         rand_seed=specific_config.seed,
-        use_backgrounds=specific_config.use_backgrounds,
-        use_monochrome_assets=specific_config.use_monochrome_assets,
-        restrict_themes=specific_config.restrict_themes,
+        use_backgrounds=common_config.use_backgrounds,
+        use_monochrome_assets=common_config.use_monochrome_assets,
+        restrict_themes=common_config.restrict_themes,
     )
 
     env = wrappers.VecExtractDictObs(env, "rgb")
@@ -41,9 +41,10 @@ def create_env(name, config):
 
 def load_policy(path, env):
     model = ProcgenModel(env)
-    model.to(get_global_variable("device"))
+    device = get_global_variable("device")
+    model.to(device)
     model.eval()
-    checkpoint = torch.load(path)
+    checkpoint = torch.load(path, map_location=device)
     model.load_state_dict(checkpoint["model_state_dict"])
     logging.info(f"Loaded model from {path}")
 
