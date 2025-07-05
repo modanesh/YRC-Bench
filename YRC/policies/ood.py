@@ -134,14 +134,6 @@ class OODPolicy(Policy):
     def update_params(self, params):
         self.params.update(params)
 
-    def fit(self, x, x_threshold, y=None):
-        if self.clf_name == "DeepSVDD":
-            x = x.to(self.device)
-            x_threshold = x_threshold.to(self.device)
-            self.clf.fit(X=x, X_threshold=x_threshold, y=y)
-        else:
-            raise ValueError(f"Unknown OOD detector type: {self.clf_name}")
-
     def act(self, obs, greedy=False):
         keys = {
             "obs": ["env_obs"],
