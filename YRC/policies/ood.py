@@ -86,38 +86,61 @@ class OODPolicy(Policy):
             }
             return feature_map[feature_type](obs)
 
+        def create_coord_obs(env_obs, weak_agent):
+            """Creates a CoordEnv-like observation structure for feature extraction."""
+            with torch.no_grad():
+                # Get weak agent features
+                weak_features = weak_agent.get_hidden(env_obs).detach().cpu().numpy()
+                weak_logit = weak_agent.forward(env_obs).detach().cpu().numpy()
+
+            return {
+                "env_obs": env_obs,
+                "weak_features": weak_features,
+                "weak_logit": weak_logit
+            }
+
         agent = self.agent
         agent.eval()
-        obs = env.reset()
+        env_obs = env.reset()
         has_done = np.array([False] * env.num_envs)
         observations = []
 
-        while not has_done.all():
-            logit = agent.forward(obs["env_obs"])
+        with torch.no_grad():
+            while not has_done.all():
+                coord_obs = create_coord_obs(env_obs, agent)
+                logit = agent.forward(env_obs)
 
-            if get_global_variable("benchmark") == "cliport":
-                obs_features = get_features(obs, self.feature_type)
-                obs_features = self.maybe_convert_to_tensor(obs_features)
-                observations.extend(obs_features)
-            else:
-                for i in range(env.num_envs):
-                    if not has_done[i]:
-                        obs_features = get_features(obs, self.feature_type)
-                        if np.random.rand() < 0.005:  # Randomly sample for memory efficiency
-                            obs_features = self.maybe_convert_to_tensor(obs_features)
-                            if isinstance(obs_features, dict):
-                                observations.extend(v for k, v in obs_features.items())
-                            else:
-                                observations.extend(obs_features)
+                if get_global_variable("benchmark") == "cliport":
+                    obs_features = get_features(coord_obs, self.feature_type)
+                    obs_features = self.maybe_convert_to_tensor(obs_features)
+                    observations.extend(obs_features)
+                else:
+                    for i in range(env.num_envs):
+                        if not has_done[i]:
+                            obs_features = get_features(coord_obs, self.feature_type)
+                            if np.random.rand() < 0.005:  # Randomly sample for memory efficiency
+                                obs_features = self.maybe_convert_to_tensor(obs_features)
+                                if isinstance(obs_features, dict):
+                                    observations.extend(v for k, v in obs_features.items())
+                                else:
+                                    observations.extend(obs_features)
 
-            action = sample_action(logit)
-            obs, reward, done, info = env.step(action)
-            has_done |= done
+                action = sample_action(logit)
+                env_obs, reward, done, info = env.step(action)
+                has_done |= done
 
         return observations
 
     def update_params(self, params):
-        self.params = dc(params)
+        self.params.update(params)
+
+    def fit(self, x, x_threshold, y=None):
+        if self.clf_name == "DeepSVDD":
+            x = x.to(self.device)
+            x_threshold = x_threshold.to(self.device)
+            self.clf.fit(X=x, X_threshold=x_threshold, y=y)
+        else:
+            raise ValueError(f"Unknown OOD detector type: {self.clf_name}")
 
     def act(self, obs, greedy=False):
         keys = {
@@ -139,9 +162,9 @@ class OODPolicy(Policy):
             observation = observation[0]
         score = self.clf.decision_function(observation)
 
-        action = 1 - (score < self.clf.threshold_).astype(int)
+        action = 1 - (score < self.params["threshold"]).astype(int)
         if 0 not in action and 1 not in action:
-            print("No action is selected as OOD")
+            logging.warning("No action is selected as OOD")
         return action
 
     def initialize_ood_detector(self, args, env):
@@ -200,6 +223,7 @@ class OODPolicy(Policy):
                 'contamination': self.clf.contamination,
             },
             'clf_name': self.clf_name,
+            'params': self.params,  # Save current parameters
         }
         if type(self.clf) == deep_svdd.DeepSVDD:
             state_dict['config']['use_ae'] = self.clf.use_ae
@@ -209,6 +233,9 @@ class OODPolicy(Policy):
     def load_model(self, load_dir):
         state_dict = load(f"{load_dir}")
         self.clf = state_dict['clf']
+        self.clf_name = state_dict['clf_name']
+        if 'params' in state_dict:
+            self.params.update(state_dict['params'])
         return self
 
     def to_tensor(self, data):
