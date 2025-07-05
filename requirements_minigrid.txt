@@ -41,9 +41,10 @@ nvidia-nvtx-cu12==12.1.105
 packaging==24.2
 pillow==10.4.0
 platformdirs==4.3.6
-protobuf==5.29.2
+protobuf==3.20.1
 psutil==6.1.0
 pygame==2.6.1
+Pygments==2.3.1
 pyparsing==3.1.4
 python-dateutil==2.9.0.post0
 PyYAML==6.0.2
@@ -62,5 +63,5 @@ torch-ac==1.4.0
 triton==3.0.0
 typing-extensions==4.12.2
 urllib3==2.2.3
-wandb==0.17.3
+wandb==0.10.15
 zipp==3.20.2
