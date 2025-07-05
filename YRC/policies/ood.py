@@ -108,12 +108,12 @@ class OODPolicy(Policy):
         with torch.no_grad():
             while not has_done.all():
                 coord_obs = create_coord_obs(env_obs, agent)
-                logit = agent.forward(env_obs)
 
                 if get_global_variable("benchmark") == "cliport":
                     obs_features = get_features(coord_obs, self.feature_type)
                     obs_features = self.maybe_convert_to_tensor(obs_features)
                     observations.extend(obs_features)
+                    env_action = agent.act(env_obs, env, greedy=self.args.act_greedy)
                 else:
                     for i in range(env.num_envs):
                         if not has_done[i]:
@@ -124,9 +124,9 @@ class OODPolicy(Policy):
                                     observations.extend(v for k, v in obs_features.items())
                                 else:
                                     observations.extend(obs_features)
+                    env_action = agent.act(env_obs, greedy=self.args.act_greedy)
 
-                action = sample_action(logit)
-                env_obs, reward, done, info = env.step(action)
+                env_obs, reward, done, info = env.step(env_action)
                 has_done |= done
 
         return observations
