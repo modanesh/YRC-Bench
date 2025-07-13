@@ -1,0 +1,13 @@
+name: 'minigrid_random'
+general:
+    benchmark: 'minigrid'
+    algorithm: 'random'
+    device: 0
+    skyline: 0
+    seed: 10
+agents:
+    sim_weak: 'YRC/checkpoints/minigrid/dynamic/sim_weak/status.pt'
+    weak: 'YRC/checkpoints/minigrid/dynamic/weak/status.pt'
+    strong: 'YRC/checkpoints/minigrid/dynamic/strong/status.pt'
+
+

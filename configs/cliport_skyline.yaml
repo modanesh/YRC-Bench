@@ -1,0 +1,31 @@
+name: 'cliport_skyline'
+general:
+    benchmark: 'cliport'
+    algorithm: 'skyline'
+    device: 0
+    skyline: 1
+    seed: 10
+coord_policy:
+    cls: PPOPolicy
+    model_cls: ImpalaCoordPolicyModel
+    feature_type: 'hidden_obs'
+algorithm:
+    cls: PPOAlgorithm
+    log_freq: 10
+    num_steps: 3
+    total_timesteps: 512
+    update_epochs: 3
+    gamma: 0.999
+    gae_lambda: 0.95
+    num_minibatches: 1
+    clip_coef: 0.2
+    norm_adv: True
+    clip_vloss: True
+    vf_coef: 0.5
+    ent_coef: 0.01
+    max_grad_norm: 0.5
+    learning_rate: 0.0005
+agents:
+    sim_weak: 'YRC/checkpoints/cliport/multi-language-conditioned-cliport-n1-train/checkpoints/steps=300000-val_loss=0.00025047.ckpt'
+    weak: 'YRC/checkpoints/cliport/multi-language-conditioned-cliport-n1000-train/checkpoints/steps=120000-val_loss=0.00014955.ckpt'
+

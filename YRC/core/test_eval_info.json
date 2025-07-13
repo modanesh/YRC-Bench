@@ -1,0 +1,331 @@
+{
+  "procgen": {
+    "coinrun": {
+      "steps": 10622,
+      "episode_length_mean": 82.984375,
+      "episode_length_min": 20,
+      "episode_length_max": 320,
+      "reward_mean": 9.0625,
+      "reward_std": 2.9148059540902547,
+      "env_reward_mean": 0.0,
+      "env_reward_std": 0.0,
+      "action_1_frac": 0.019958576539258144
+    },
+    "bigfish": {
+      "steps": 98404,
+      "episode_length_mean": 768.78125,
+      "episode_length_min": 14,
+      "episode_length_max": 1975,
+      "reward_mean": 16.03125,
+      "reward_std": 17.308748465371494,
+      "env_reward_mean": 0.0,
+      "env_reward_std": 0.0,
+      "action_1_frac": 0.07694809154099427
+    },
+    "bossfight": {
+      "steps": 67770,
+      "episode_length_mean": 529.453125,
+      "episode_length_min": 26,
+      "episode_length_max": 1362,
+      "reward_mean": 11.796875,
+      "reward_std": 4.542093706031944,
+      "env_reward_mean": 0.0,
+      "env_reward_std": 0.0,
+      "action_1_frac": 0.09420097388224878
+    },
+    "chaser": {
+      "steps": 43594,
+      "episode_length_mean": 340.578125,
+      "episode_length_min": 80,
+      "episode_length_max": 591,
+      "reward_mean": 9.473124893032946,
+      "reward_std": 5.577053645890089,
+      "env_reward_mean": 0.0,
+      "env_reward_std": 0.0,
+      "action_1_frac": 0.08372711841079047
+    },
+    "jumper": {
+      "steps": 33542,
+      "episode_length_mean": 262.046875,
+      "episode_length_min": 1,
+      "episode_length_max": 1000,
+      "reward_mean": 7.1875,
+      "reward_std": 4.4960920531056745,
+      "env_reward_mean": 0.0,
+      "env_reward_std": 0.0,
+      "action_1_frac": 0.08538548685230457
+    },
+    "leaper": {
+      "steps": 23360,
+      "episode_length_mean": 182.5,
+      "episode_length_min": 23,
+      "episode_length_max": 500,
+      "reward_mean": 8.75,
+      "reward_std": 3.307189138830738,
+      "env_reward_mean": 0.0,
+      "env_reward_std": 0.0,
+      "action_1_frac": 0.06104452054794521
+    },
+    "miner": {
+      "steps": 52690,
+      "episode_length_mean": 411.640625,
+      "episode_length_min": 122,
+      "episode_length_max": 1000,
+      "reward_mean": 18.375,
+      "reward_std": 5.46723193215726,
+      "env_reward_mean": 0.0,
+      "env_reward_std": 0.0,
+      "action_1_frac": 0.07394192446384514
+    },
+    "fruitbot": {
+      "steps": 51704,
+      "episode_length_mean": 403.9375,
+      "episode_length_min": 37,
+      "episode_length_max": 420,
+      "reward_mean": 24.8125,
+      "reward_std": 7.576433445230018,
+      "env_reward_mean": 0.0,
+      "env_reward_std": 0.0,
+      "action_1_frac": 0.05693950177935943
+    },
+    "starpilot": {
+      "steps": 54496,
+      "episode_length_mean": 425.75,
+      "episode_length_min": 62,
+      "episode_length_max": 570,
+      "reward_mean": 28.84375,
+      "reward_std": 14.330058825332854,
+      "env_reward_mean": 0.0,
+      "env_reward_std": 0.0,
+      "action_1_frac": 0.02796535525543159
+    },
+    "caveflyer": {
+      "steps": 22640,
+      "episode_length_mean": 176.875,
+      "episode_length_min": 2,
+      "episode_length_max": 1000,
+      "reward_mean": 11.34375,
+      "reward_std": 3.889966058656553,
+      "env_reward_mean": 0.0,
+      "env_reward_std": 0.0,
+      "action_1_frac": 0.07818021201413428
+    },
+    "ninja": {
+      "steps": 10126,
+      "episode_length_mean": 79.109375,
+      "episode_length_min": 10,
+      "episode_length_max": 331,
+      "reward_mean": 9.53125,
+      "reward_std": 2.1137108216357317,
+      "env_reward_mean": 0.0,
+      "env_reward_std": 0.0,
+      "action_1_frac": 0.0333794193166107
+    },
+    "dodgeball": {
+      "steps": 51366,
+      "episode_length_mean": 401.296875,
+      "episode_length_min": 1,
+      "episode_length_max": 1000,
+      "reward_mean": 12.34375,
+      "reward_std": 8.112911680617508,
+      "env_reward_mean": 0.0,
+      "env_reward_std": 0.0,
+      "action_1_frac": 0.04894288050461395
+    },
+    "plunder": {
+      "steps": 85002,
+      "episode_length_mean": 664.078125,
+      "episode_length_min": 214,
+      "episode_length_max": 1402,
+      "reward_mean": 18.625,
+      "reward_std": 12.236599813673731,
+      "env_reward_mean": 0.0,
+      "env_reward_std": 0.0,
+      "action_1_frac": 0.08479800475282935
+    },
+    "climber": {
+      "steps": 23774,
+      "episode_length_mean": 185.734375,
+      "episode_length_min": 13,
+      "episode_length_max": 1000,
+      "reward_mean": 11.484375,
+      "reward_std": 3.486546408607664,
+      "env_reward_mean": 0.0,
+      "env_reward_std": 0.0,
+      "action_1_frac": 0.08050811811222344
+    },
+    "maze": {
+      "steps": 9842,
+      "episode_length_mean": 76.890625,
+      "episode_length_min": 2,
+      "episode_length_max": 500,
+      "reward_mean": 9.375,
+      "reward_std": 2.4206145913796355,
+      "env_reward_mean": 0.0,
+      "env_reward_std": 0.0,
+      "action_1_frac": 0.08087787035155457
+    },
+    "heist": {
+      "steps": 54176,
+      "episode_length_mean": 423.25,
+      "episode_length_min": 1,
+      "episode_length_max": 1000,
+      "reward_mean": 7.03125,
+      "reward_std": 4.5688098491292015,
+      "env_reward_mean": 0.0,
+      "env_reward_std": 0.0,
+      "action_1_frac": 0.05448907265209687
+    }
+  },
+  "cliport": {
+    "stack-block-pyramid-seq": {
+      "steps": 14,
+      "episode_length_mean": 7.0,
+      "episode_length_min": 7,
+      "episode_length_max": 7,
+      "reward_mean": 0.9999999999999999,
+      "reward_std": 0.0,
+      "env_reward_mean": 0.0,
+      "env_reward_std": 0.0,
+      "action_1_frac": 1.0
+    },
+    "assembling-kits-seq": {
+      "steps": 10,
+      "episode_length_mean": 5.0,
+      "episode_length_min": 5,
+      "episode_length_max": 5,
+      "reward_mean": 1.0,
+      "reward_std": 0.0,
+      "env_reward_mean": 0.0,
+      "env_reward_std": 0.0,
+      "action_1_frac": 1.0
+    },
+    "packing-boxes-pairs": {
+      "steps": 18,
+      "episode_length_mean": 9.0,
+      "episode_length_min": 9,
+      "episode_length_max": 9,
+      "reward_mean": 1.0,
+      "raw_reward": [
+        1.0,
+        1.0
+      ],
+      "reward_std": 0.0,
+      "env_reward_mean": 0.0,
+      "env_reward_std": 0.0,
+      "action_1_frac": 1.0
+    }
+  },
+  "minigrid": {
+    "MiniGrid-Dynamic-Obstacles-5x5-v0": {
+      "steps": 456,
+      "episode_length_mean": 76.0,
+      "episode_length_min": 33,
+      "episode_length_max": 100,
+      "reward_mean": -0.6666666666666666,
+      "reward_std": 0.4714045207910317,
+      "env_reward_mean": -0.6666666666666666,
+      "env_reward_std": 0.4714045207910317,
+      "action_1_frac": 0.543859649122807
+    },
+    "MiniGrid-Dynamic-Obstacles-Random-8x8-v0": {
+      "steps": 1724,
+      "episode_length_mean": 13.46875,
+      "episode_length_min": 2,
+      "episode_length_max": 59,
+      "reward_mean": 0.8604370117187501,
+      "reward_std": 0.41419815702271245,
+      "env_reward_mean": 0.8604370117187501,
+      "env_reward_std": 0.41419815702271245,
+      "action_1_frac": 0.2842227378190255
+    },
+    "MiniGrid-Dynamic-Obstacles": {
+      "steps": 14232,
+      "episode_length_mean": 222.375,
+      "episode_length_min": 4,
+      "episode_length_max": 993,
+      "reward_mean": 0.4499450683593751,
+      "reward_std": 0.7850376206306138,
+      "env_reward_mean": 0.4499450683593751,
+      "env_reward_std": 0.7850376206306138,
+      "action_1_frac": 0.28766160764474424
+    },
+    "MiniGrid-DistShift": {
+      "steps": 1390,
+      "episode_length_mean": 21.71875,
+      "episode_length_min": 2,
+      "episode_length_max": 42,
+      "reward_mean": 0.89140625,
+      "reward_std": 0.16149083071436302,
+      "env_reward_mean": 0.89140625,
+      "env_reward_std": 0.16149083071436302,
+      "action_1_frac": 0.09784172661870504
+    },
+    "MiniGrid-LavaGap": {
+      "steps": 1104,
+      "episode_length_mean": 17.25,
+      "episode_length_min": 2,
+      "episode_length_max": 42,
+      "reward_mean": 0.8610172193877551,
+      "reward_std": 0.22380744291534374,
+      "env_reward_mean": 0.8610172193877551,
+      "env_reward_std": 0.22380744291534374,
+      "action_1_frac": 0.1431159420289855
+    },
+    "MiniGrid-Fetch": {
+      "steps": 2888,
+      "episode_length_mean": 45.125,
+      "episode_length_min": 1,
+      "episode_length_max": 179,
+      "reward_mean": 0.20205078125,
+      "reward_std": 0.38292381941320786,
+      "env_reward_mean": 0.20205078125,
+      "env_reward_std": 0.38292381941320786,
+      "action_1_frac": 0.16066481994459833
+    },
+    "MiniGrid-GoToObject": {
+      "steps": 1750,
+      "episode_length_mean": 27.34375,
+      "episode_length_min": 1,
+      "episode_length_max": 115,
+      "reward_mean": 0.084873046875,
+      "reward_std": 0.2640555178830876,
+      "env_reward_mean": 0.084873046875,
+      "env_reward_std": 0.2640555178830876,
+      "action_1_frac": 0.38057142857142856
+    },
+    "MiniGrid-GoToDoor": {
+      "steps": 1936,
+      "episode_length_mean": 30.25,
+      "episode_length_min": 2,
+      "episode_length_max": 141,
+      "reward_mean": 0.12005615234375,
+      "reward_std": 0.3176659285538692,
+      "env_reward_mean": 0.12005615234375,
+      "env_reward_std": 0.3176659285538692,
+      "action_1_frac": 0.23243801652892562
+    },
+    "MiniGrid-DoorKey": {
+      "steps": 2818,
+      "episode_length_mean": 44.03125,
+      "episode_length_min": 16,
+      "episode_length_max": 97,
+      "reward_mean": 0.9380810546875,
+      "reward_std": 0.0248554547645713,
+      "env_reward_mean": 0.9380810546875,
+      "env_reward_std": 0.0248554547645713,
+      "action_1_frac": 0.14549325762952448
+    },
+    "MiniGrid-Empty": {
+      "steps": 7938,
+      "episode_length_mean": 62.015625,
+      "episode_length_min": 5,
+      "episode_length_max": 233,
+      "reward_mean": 0.9454940795898438,
+      "reward_std": 0.0407915401527758,
+      "env_reward_mean": 0.9454940795898438,
+      "env_reward_std": 0.0407915401527758,
+      "action_1_frac": 0.07407407407407407
+    }
+  }
+}
