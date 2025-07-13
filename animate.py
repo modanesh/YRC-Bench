@@ -45,12 +45,13 @@ def create_gif(env_data, env_index, save_dir):
             reds = [int(val * 255) for val in [1, 0.8902]]
             greens = [int(val * 255) for val in [0.8, 0.7137]]
             blues = [int(val * 255) for val in [0, 0.0078]]
+            height, width, _ = obs.shape
             coin_present = False
-            for x in range(len(obs[0])):
-                for y in range(len(obs[0][0])):
-                    if obs[RED][x][y] in reds:
-                        if obs[GREEN][x][y] in greens:
-                            if obs[BLUE][x][y] in blues:
+            for y in range(height):
+                for x in range(width):
+                    if obs[y, x, RED] in reds:
+                        if obs[y, x, GREEN] in greens:
+                            if obs[y, x, BLUE] in blues:
                                 coin_present = True
             coin_presents.append(coin_present)
 
@@ -65,8 +66,9 @@ def create_gif(env_data, env_index, save_dir):
     # gif_path = os.path.join(save_dir, f"env_{env_index}_trajectory.gif")
     # frames[0].save(gif_path, save_all = True, append_images = frames[1:], duration = 250, loop = 0)
     # print(f"GIF {env_index} saved at {gif_path}")
-    coin_presents = np.array(coin_presents).astype(int)
-    ask_for_helps = np.array(ask_for_helps).astype(int)
+    min_length = min(len(coin_presents), len(ask_for_helps))
+    coin_presents = np.array(coin_presents).astype(int)[:min_length]
+    ask_for_helps = np.array(ask_for_helps).astype(int)[:min_length]
     no_coin_and_help = (coin_presents == 0) & (ask_for_helps == 1)
     no_coin = (coin_presents == 0)
     p_ask_help_when_no_coin = no_coin_and_help.sum() / no_coin.sum()
@@ -83,7 +85,7 @@ def animate(env_data, save_dir):
         p_no_coin, p_yes_coin = create_gif(env_data[env_index], env_index, save_dir)
         p_no_coin_avg.append(p_no_coin)
         p_yes_coin_avg.append(p_yes_coin)
-    print("NO COIN ASK FOR HELP:", np.mean(p_yes_coin_avg))
+    print("NO COIN ASK FOR HELP:", np.mean(p_no_coin_avg))
     print("YES COIN ASK FOR HELP:", np.mean(p_yes_coin_avg))
 
 if __name__ == "__main__":
