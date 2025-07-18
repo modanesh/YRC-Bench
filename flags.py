@@ -71,7 +71,7 @@ def make():
                         help="suffix for the test environment name")
 
     # procgen
-    parser.add_argument("-use_bg", "--environment.common.use_background", type=bool, default=True,
+    parser.add_argument("-use_bg", "--environment.common.use_backgrounds", type=bool, default=True,
                         help="use background - only for procgen envs")
     parser.add_argument("-use_mono_asset", "--environment.common.use_monochrome_assets", type=bool, default=False,
                         help="use monochrome assets - only for procgen envs")
