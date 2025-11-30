@@ -2,6 +2,8 @@
     <img src="configs/assets/pipeline.png" width="900" height="350">
 </p>
 
+## **This repo enables the reproduction of the results reported in the paper. For a clean and extensible codebase that allows you to incorporate new algorithms and environments, check out [DuoAI](https://github.com/khanhptnk/duo-ai).**
+
 YRC-Bench is a benchmark for learning a coordination strategy the problem of yielding and requesting control between novice (weak) and expert (strong) policies. The benchmark is designed to train and evaluate the performance of the coordination policy in a variety of environments, algorithms, and feature types. The benchmark is designed to be modular and extensible, allowing for easy integration of new environment suites, algorithms, and feature types.
 
 For further details, check the paper: https://arxiv.org/abs/2502.09583
