@@ -2,11 +2,11 @@
     <img src="configs/assets/pipeline.png" width="900" height="350">
 </p>
 
-## **This repo enables the reproduction of the results reported in the paper. For a clean and extensible codebase that allows you to incorporate new algorithms and environments, check out [DuoAI](https://github.com/khanhptnk/duo-ai).**
+#### **This repo enables the reproduction of the results reported in the paper. For a clean and extensible codebase that allows you to incorporate new algorithms and environments, check out [DuoAI](https://github.com/khanhptnk/duo-ai).**
 
 YRC-Bench is a benchmark for learning a coordination strategy the problem of yielding and requesting control between novice (weak) and expert (strong) policies. The benchmark is designed to train and evaluate the performance of the coordination policy in a variety of environments, algorithms, and feature types. The benchmark is designed to be modular and extensible, allowing for easy integration of new environment suites, algorithms, and feature types.
 
-For further details, check the paper: https://arxiv.org/abs/2502.09583
+For further details, check the paper: [https://openreview.net/forum?id=YOE0TRK8oU](https://openreview.net/forum?id=YOE0TRK8oU)
 
 ### Supported Suites
 - MiniGrid:
@@ -145,14 +145,14 @@ Also, to extend the benchmark with a new algorithm or feature type, follow the s
 ### Citation
 If you use this benchmark in your research, please cite the following:
 ```bibtex
-@misc{danesh2025learningcoordinateexperts,
-      title={Learning to Coordinate with Experts}, 
-      author={Mohamad H. Danesh and Tu Trinh and Benjamin Plaut and Nguyen X. Khanh},
-      year={2025},
-      eprint={2502.09583},
-      archivePrefix={arXiv},
-      primaryClass={cs.LG},
-      url={https://arxiv.org/abs/2502.09583}, 
+@article{danesh2025learning,
+    title={Learning to Coordinate with Experts},
+    author={Mohamad H. Danesh and Khanh Xuan Nguyen and Tu Trinh and Benjamin Plaut},
+    journal={Transactions on Machine Learning Research},
+    issn={2835-8856},
+    year={2025},
+    url={https://openreview.net/forum?id=YOE0TRK8oU},
+    note={}
 }
 ```
 ```bibtex
